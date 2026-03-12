@@ -1,50 +1,77 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, Dimensions } from 'react-native';
 import { Camera } from 'expo-camera';
 import * as tf from '@tensorflow/tfjs';
-import { bundleResourceIO } from '@tensorflow/tfjs-react-native';
+import { cameraWithTensors } from '@tensorflow/tfjs-react-native';
+
+// Criamos uma câmera especial que já entrega "tensores" (números para a IA)
+const TensorCamera = cameraWithTensors(Camera);
+
+const { width, height } = Dimensions.get('window');
 
 export default function App() {
-  const [hasPermission, setHasPermission] = useState(null);
-  const [isTfReady, setIsTfReady] = useState(false);
+  const [isModelReady, setIsModelReady] = useState(false);
+  const [detections, setDetections] = useState([]);
+  const rafId = useRef(null); // Para controlar o loop de repetição
 
   useEffect(() => {
     (async () => {
-      // 1. Pede permissão da câmera
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-
-      // 2. Espera o TensorFlow inicializar
+      await Camera.requestCameraPermissionsAsync();
       await tf.ready();
-      setIsTfReady(true);
-      console.log("TensorFlow pronto!");
+      // Aqui o modelo será carregado de fato na próxima etapa
+      setIsModelReady(true);
     })();
+
+    // Limpa a memória quando fechar o app
+    return () => {
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+    };
   }, []);
 
-  // Tela de carregamento enquanto a IA não acorda
-  if (hasPermission === null || !isTfReady) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0000ff" />
-        <Text>Iniciando Inteligência Artificial...</Text>
-      </View>
-    );
+  // FUNÇÃO MÁGICA: Processa cada frame da câmera
+  const handleCameraStream = (images) => {
+    const loop = async () => {
+      const nextImageTensor = images.next().value;
+
+      if (nextImageTensor) {
+        // 1. O modelo analisa o tensor (imagem em números)
+        // 2. O resultado (quadrados) vai para o estado 'detections'
+        
+        // Por enquanto, apenas liberamos a memória do tensor
+        tf.dispose([nextImageTensor]);
+      }
+
+      rafId.current = requestAnimationFrame(loop);
+    };
+    loop();
+  };
+
+  if (!isModelReady) {
+    return <View style={styles.container}><Text>Carregando Inteligência...</Text></View>;
   }
 
   return (
     <View style={styles.container}>
-      <Camera style={styles.camera} type={'back'}>
-        <View style={styles.overlay}>
-          <Text style={styles.text}>📸 Cont.IA: IA Ativa</Text>
-        </View>
-      </Camera>
+      <TensorCamera
+        style={styles.camera}
+        type={Camera.Constants.Type.back}
+        onReady={handleCameraStream}
+        autorender={true}
+        resizeHeight={640} // Tamanho padrão do YOLO
+        resizeWidth={640}
+        resizeDepth={3}
+      />
+      {/* Aqui vamos desenhar os quadrados dos parafusos depois */}
+      <View style={styles.overlay}>
+        <Text style={styles.text}>Aponte para os parafusos</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  camera: { flex: 1, width: '100%' },
-  overlay: { flex: 1, backgroundColor: 'transparent', alignItems: 'center', marginTop: 60 },
-  text: { fontSize: 20, color: 'white', fontWeight: 'bold', backgroundColor: 'rgba(0,0,0,0.5)', padding: 10, borderRadius: 10 },
+  container: { flex: 1, backgroundColor: 'black' },
+  camera: { flex: 1 },
+  overlay: { position: 'absolute', top: 50, width: '100%', alignItems: 'center' },
+  text: { color: 'white', fontSize: 18, fontWeight: 'bold', backgroundColor: 'rgba(0,0,0,0.5)', padding: 10 }
 });
