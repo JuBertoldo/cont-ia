@@ -73,7 +73,11 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.buttonText}>INICIAR SCANNER</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.secondaryButton}>
+        {/* 👇 AQUI ESTÁ A MÁGICA ADICIONADA 👇 */}
+        <TouchableOpacity 
+          style={styles.secondaryButton}
+          onPress={() => navigation.navigate('History')}
+        >
           <Text style={styles.buttonTextSec}>HISTÓRICO COMPLETO</Text>
         </TouchableOpacity>
       </View>
