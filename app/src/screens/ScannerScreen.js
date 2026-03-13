@@ -1,46 +1,69 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import { Camera } from 'expo-camera';
+import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
+import { CameraView, Camera } from 'expo-camera';
 
 export default function ScannerScreen({ navigation }) {
   const [hasPermission, setHasPermission] = useState(null);
   const videoRef = useRef(null);
-  const streamRef = useRef(null); // Referência para o fluxo de vídeo
+  const streamRef = useRef(null);
+  const cameraRef = useRef(null);
 
   useEffect(() => {
     (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-
-      if (Platform.OS === 'web' && status === 'granted') {
+      if (Platform.OS === 'web') {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          streamRef.current = stream; // Guarda o stream para desligar depois
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-          }
+          streamRef.current = stream;
+          setHasPermission(true); // Diz que temos permissão para desenhar o ecrã
         } catch (err) {
-          console.error("Erro na webcam:", err);
+          setHasPermission(false);
         }
+      } else {
+        const { status } = await Camera.requestCameraPermissionsAsync();
+        setHasPermission(status === 'granted');
       }
     })();
 
-    // Função de limpeza: Executa quando o usuário sai da tela
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
-        console.log("Câmera desligada com sucesso.");
       }
     };
   }, []);
 
-  const tirarFoto = () => {
-    console.log("Capturando frame para análise...");
-    // Aqui no futuro conectaremos a IA para analisar o frame atual do videoRef
-    alert("Foto capturada! Analisando parafuso...");
+  // A MÁGICA ACONTECE AQUI: Assim que tiver permissão e a tag de vídeo existir, ligamos o vídeo!
+  useEffect(() => {
+    if (Platform.OS === 'web' && hasPermission === true && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [hasPermission]);
+
+  const tirarFoto = async () => {
+    if (Platform.OS === 'web') {
+      alert("Flash! 📸 (Foto simulada na Web)");
+    } else {
+      if (cameraRef.current) {
+        const photo = await cameraRef.current.takePictureAsync();
+        alert("Foto tirada com sucesso! 📸\nCaminho: " + photo.uri);
+      }
+    }
   };
 
-  if (hasPermission === null) return <View style={styles.container}><Text style={styles.text}>Carregando...</Text></View>;
+  if (hasPermission === null) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.hintText}>A solicitar permissão da câmara...</Text>
+      </View>
+    );
+  }
+
+  if (hasPermission === false) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.hintText}>Acesso à câmara negado.</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -48,20 +71,30 @@ export default function ScannerScreen({ navigation }) {
         <View style={styles.cameraContainer}>
           <video ref={videoRef} autoPlay playsInline muted style={styles.webVideo} />
           
-          {/* INTERFACE SOBREPOSTA (HUD) */}
           <View style={styles.overlay}>
-             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                <Text style={styles.backButtonText}>✕</Text>
-             </TouchableOpacity>
-             
-             <View style={styles.scanTarget} />
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+              <Text style={styles.backButtonText}>X</Text>
+            </TouchableOpacity>
+            <View style={styles.scanTarget} />
           </View>
         </View>
       ) : (
-        <Camera style={styles.camera} type={Camera.Constants.Type.back} />
+        <View style={styles.cameraContainer}>
+          <CameraView 
+            style={styles.camera} 
+            facing="back" 
+            ref={cameraRef}
+          >
+            <View style={styles.overlay}>
+              <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                <Text style={styles.backButtonText}>X</Text>
+              </TouchableOpacity>
+              <View style={styles.scanTarget} />
+            </View>
+          </CameraView>
+        </View>
       )}
 
-      {/* CONTROLES INFERIORES */}
       <View style={styles.controls}>
         <TouchableOpacity style={styles.captureBtn} onPress={tirarFoto}>
           <View style={styles.captureBtnInner} />
@@ -75,19 +108,14 @@ export default function ScannerScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   cameraContainer: { flex: 1 },
+  camera: { flex: 1 },
   webVideo: { width: '100%', height: '100%', objectFit: 'cover' },
   overlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' },
-  
-  // Botão de Voltar (X)
-  backButton: { position: 'absolute', top: 50, left: 30, backgroundColor: 'rgba(0,0,0,0.5)', width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center' },
+  backButton: { position: 'absolute', top: 50, left: 30, backgroundColor: 'rgba(0,0,0,0.5)', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   backButtonText: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
-
-  // Mira do Scanner
-  scanTarget: { width: 250, height: 250, borderWidth: 2, borderColor: '#00FF88', borderRadius: 20, backgroundColor: 'rgba(0,255,136,0.05)' },
-
-  // Barra de Controles
-  controls: { position: 'absolute', bottom: 50, width: '100%', alignItems: 'center' },
-  captureBtn: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.3)', justifyContent: 'center', alignItems: 'center' },
-  captureBtnInner: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#fff' },
-  hintText: { color: '#00FF88', fontSize: 10, fontWeight: 'bold', marginTop: 15, letterSpacing: 1 }
+  scanTarget: { width: 250, height: 250, borderWidth: 2, borderColor: '#0f0', borderRadius: 20 },
+  controls: { padding: 30, alignItems: 'center', backgroundColor: '#000', paddingBottom: 50 },
+  captureBtn: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+  captureBtnInner: { width: 70, height: 70, borderRadius: 35, borderWidth: 2, borderColor: '#000' },
+  hintText: { color: '#fff', fontSize: 14, fontWeight: '500' }
 });
