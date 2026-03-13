@@ -7,7 +7,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const { width } = Dimensions.get('window');
 const GOOGLE_CLOUD_VISION_API_KEY = "AIzaSyCEPbm9ksYvZ24XhupJQ6m8r-w5dPrUvjI";
 
-// Dicionário de Segurança (Tradução Manual)
 const TRADUTOR = {
   "Chair": "Cadeira",
   "Bottle": "Garrafa",
@@ -65,21 +64,35 @@ export default function ScannerScreen({ navigation }) {
       const objetos = data.responses[0]?.localizedObjectAnnotations || [];
       const contagem = {};
 
+      // 🛡️ FILTRO DE UNICIDADE
       objetos.forEach(obj => {
-        if (!IGNORAR.includes(obj.name)) {
-          const nomeFinal = TRADUTOR[obj.name] || obj.name;
-          contagem[nomeFinal] = (contagem[nomeFinal] || 0) + 1;
+        let nomeOriginal = obj.name;
+        
+        // Ignora nomes genéricos longos (Ex: "Bottled and jarred...")
+        if (nomeOriginal.length > 25) return; 
+
+        if (!IGNORAR.includes(nomeOriginal)) {
+          const nomeFinal = TRADUTOR[nomeOriginal] || nomeOriginal;
+          
+          // Se não estiver na lista, adiciona. Se já estiver, ignora o duplicado.
+          if (!contagem[nomeFinal]) {
+             contagem[nomeFinal] = 1;
+          }
         }
       });
 
-      if (Object.keys(contagem).length > 0) {
+      const chavesEncontradas = Object.keys(contagem);
+
+      if (chavesEncontradas.length > 0) {
         setStatusMsg('✅ SALVANDO...');
-        const registros = Object.keys(contagem).map(nome => ({
+        
+        // Criando os registros que faltavam no seu código anterior
+        const registros = chavesEncontradas.map(nome => ({
           id: `ID-${Date.now()}-${nome}`,
           itemName: nome,
           quantity: contagem[nome],
           date: new Date().toLocaleTimeString('pt-BR'),
-          imageUri: null, // Mantemos null para não estourar o limite da Web
+          imageUri: null,
           confidence: "Google Vision"
         }));
 
