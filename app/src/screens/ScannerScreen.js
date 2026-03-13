@@ -38,13 +38,15 @@ export default function ScannerScreen({ navigation }) {
     }
   }, [hasPermission]);
 
-  const tirarFoto = async () => {
+ const tirarFoto = async () => {
     if (Platform.OS === 'web') {
       alert("Flash! 📸 (Foto simulada na Web)");
     } else {
+      // Tira foto de verdade no celular
       if (cameraRef.current) {
         const photo = await cameraRef.current.takePictureAsync();
-        alert("Foto tirada com sucesso! 📸\nCaminho: " + photo.uri);
+        // Tiramos o caminho feio e deixamos só a confirmação!
+        alert("Foto capturada com sucesso! 📸"); 
       }
     }
   };
