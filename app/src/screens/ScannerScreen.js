@@ -1,100 +1,117 @@
 import React, { useState, useRef } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
-// Importamos o CameraView para a imagem real
+import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Dimensions, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const { width } = Dimensions.get('window');
+const GOOGLE_CLOUD_VISION_API_KEY = "AIzaSyCEPbm9ksYvZ24XhupJQ6m8r-w5dPrUvjI";
+
+// Dicionário de Segurança (Tradução Manual)
+const TRADUTOR = {
+  "Chair": "Cadeira",
+  "Bottle": "Garrafa",
+  "Mobile phone": "Smartphone",
+  "Remote control": "Splitter / Controle",
+  "Monitor": "Monitor / TV",
+  "Desk": "Mesa",
+  "Laptop": "Notebook"
+};
+
+const IGNORAR = ["Room", "Wall", "Floor", "White", "Person", "Hand", "Finger"];
+
 export default function ScannerScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [statusMsg, setStatusMsg] = useState('PRONTO PARA SCANNER'); 
   const cameraRef = useRef(null);
 
-  // 1. Verificação de Permissão
-  if (!permission) {
-    return <View style={styles.container}><Text style={styles.text}>Carregando...</Text></View>;
-  }
-
-  if (!permission.granted) {
+  if (!permission || !permission.granted) {
     return (
       <View style={styles.container}>
-        <Text style={styles.text}>O aplicativo precisa de acesso à câmera.</Text>
-        <TouchableOpacity style={styles.button} onPress={requestPermission}>
-          <Text style={styles.buttonText}>Conceder Permissão</Text>
+        <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
+          <Text style={styles.btnText}>Ativar Câmera</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  // 📸 FUNÇÃO DE DISPARO E SALVAMENTO
-  const tirarFoto = async () => {
-    // Simulando o que a IA faria (sorteando quantidade)
-    const qtdSorteada = Math.floor(Math.random() * 50) + 10; 
-    
-    const novoLote = {
-      id: Math.random().toString(), 
-      itemName: 'Peça Identificada (IA)',
-      quantity: qtdSorteada,
-      confidence: '95%',
-      date: new Date().toLocaleString('pt-BR'),
-      imageUri: 'https://images.unsplash.com/photo-1585202656335-519a48f41348?w=200&h=200&fit=crop'
-    };
+  const analisarComGoogle = async () => {
+    if (!cameraRef.current || isProcessing) return;
+    setIsProcessing(true);
+    setStatusMsg('📸 TIRANDO FOTO...');
 
     try {
-      // Salva no AsyncStorage (Memória Local)
-      const dadosSalvos = await AsyncStorage.getItem('@contia_historico');
-      let historicoAtual = dadosSalvos ? JSON.parse(dadosSalvos) : [];
-      historicoAtual.unshift(novoLote);
-      await AsyncStorage.setItem('@contia_historico', JSON.stringify(historicoAtual));
+      const photo = await cameraRef.current.takePictureAsync({ base64: true, quality: 0.5 });
+      const base64Limpo = photo.base64.replace(/^data:image\/(png|jpg|jpeg);base64,/, "");
 
-      // Tenta o flash da câmera física
-      if (cameraRef.current) {
-        // takePictureAsync funciona no Mobile e em alguns navegadores modernos
-        await cameraRef.current.takePictureAsync().catch(e => console.log("Erro foto:", e));
+      setStatusMsg('☁️ ENVIANDO AO GOOGLE...');
+
+      const response = await fetch(
+        `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_CLOUD_VISION_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            requests: [{
+              image: { content: base64Limpo },
+              features: [{ type: "OBJECT_LOCALIZATION", maxResults: 10 }]
+            }]
+          })
+        }
+      );
+
+      const data = await response.json();
+      const objetos = data.responses[0]?.localizedObjectAnnotations || [];
+      const contagem = {};
+
+      objetos.forEach(obj => {
+        if (!IGNORAR.includes(obj.name)) {
+          const nomeFinal = TRADUTOR[obj.name] || obj.name;
+          contagem[nomeFinal] = (contagem[nomeFinal] || 0) + 1;
+        }
+      });
+
+      if (Object.keys(contagem).length > 0) {
+        setStatusMsg('✅ SALVANDO...');
+        const registros = Object.keys(contagem).map(nome => ({
+          id: `ID-${Date.now()}-${nome}`,
+          itemName: nome,
+          quantity: contagem[nome],
+          date: new Date().toLocaleTimeString('pt-BR'),
+          imageUri: null, // Mantemos null para não estourar o limite da Web
+          confidence: "Google Vision"
+        }));
+
+        const stored = await AsyncStorage.getItem('@contia_historico');
+        const history = stored ? JSON.parse(stored) : [];
+        await AsyncStorage.setItem('@contia_historico', JSON.stringify([...registros, ...history]));
+
+        navigation.navigate('Home');
+      } else {
+        setStatusMsg('⚠️ NADA ENCONTRADO');
+        setIsProcessing(false);
       }
-
-      alert(`✅ Lote de ${qtdSorteada} peças registrado!`);
-      navigation.navigate('Home');
-
-    } catch (error) {
-      alert("Erro ao processar imagem.");
+    } catch (err) {
+      console.log(err);
+      setStatusMsg('❌ ERRO NO SCANNER');
+      setIsProcessing(false);
     }
   };
 
   return (
     <View style={styles.container}>
-      {/* CABEÇALHO */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color="#00FF88" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>SCANNER EM TEMPO REAL</Text>
-        <View style={{ width: 28 }} />
-      </View>
+      <CameraView style={styles.camera} ref={cameraRef} />
+      <View style={styles.uiLayer}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <View style={styles.badge}><Text style={styles.badgeText}>{statusMsg}</Text></View>
+        </View>
 
-      {/* ÁREA DA CÂMERA */}
-      <View style={styles.cameraContainer}>
-        <CameraView 
-          style={styles.camera} 
-          facing="back" 
-          ref={cameraRef}
-        >
-          {/* OVERLAY DE MIRA */}
-          <View style={styles.overlay}>
-            <View style={styles.scanFrame}>
-              <View style={styles.cornerTopLeft} />
-              <View style={styles.cornerTopRight} />
-              <View style={styles.cornerBottomLeft} />
-              <View style={styles.cornerBottomRight} />
-            </View>
-          </View>
-        </CameraView>
-      </View>
-
-      {/* RODAPÉ E BOTÃO */}
-      <View style={styles.footer}>
-        <Text style={styles.instructionText}>Posicione os componentes no centro</Text>
-        <TouchableOpacity style={styles.captureButton} onPress={tirarFoto}>
-          <View style={styles.captureInner} />
+        <TouchableOpacity style={styles.captureBtn} onPress={analisarComGoogle} disabled={isProcessing}>
+          {isProcessing ? <ActivityIndicator color="#000" /> : <Ionicons name="scan-outline" size={32} color="#000" />}
         </TouchableOpacity>
       </View>
     </View>
@@ -103,45 +120,13 @@ export default function ScannerScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  header: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    paddingTop: 50, 
-    paddingHorizontal: 20, 
-    paddingBottom: 20, 
-    backgroundColor: '#050505' 
-  },
-  headerTitle: { color: '#fff', fontSize: 14, fontWeight: 'bold', letterSpacing: 1 },
-  cameraContainer: { flex: 1 },
   camera: { flex: 1 },
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
-  scanFrame: { width: 260, height: 260, position: 'relative' },
-  // Estilos para as "quinas" verdes da mira
-  cornerTopLeft: { position: 'absolute', top: 0, left: 0, width: 40, height: 40, borderLeftWidth: 3, borderTopWidth: 3, borderColor: '#00FF88' },
-  cornerTopRight: { position: 'absolute', top: 0, right: 0, width: 40, height: 40, borderRightWidth: 3, borderTopWidth: 3, borderColor: '#00FF88' },
-  cornerBottomLeft: { position: 'absolute', bottom: 0, left: 0, width: 40, height: 40, borderLeftWidth: 3, borderBottomWidth: 3, borderColor: '#00FF88' },
-  cornerBottomRight: { position: 'absolute', bottom: 0, right: 0, width: 40, height: 40, borderRightWidth: 3, borderBottomWidth: 3, borderColor: '#00FF88' },
-  
-  footer: { backgroundColor: '#050505', paddingVertical: 40, alignItems: 'center' },
-  instructionText: { color: '#666', marginBottom: 20, fontSize: 12, fontWeight: '600' },
-  captureButton: { 
-    width: 80, 
-    height: 80, 
-    borderRadius: 40, 
-    backgroundColor: 'rgba(0, 255, 136, 0.2)', 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#00FF88'
-  },
-  captureInner: { 
-    width: 60, 
-    height: 60, 
-    borderRadius: 30, 
-    backgroundColor: '#00FF88' 
-  },
-  text: { color: '#fff', textAlign: 'center' },
-  button: { backgroundColor: '#00FF88', padding: 15, borderRadius: 10, alignSelf: 'center', marginTop: 20 },
-  buttonText: { color: '#000', fontWeight: 'bold' }
+  uiLayer: { ...StyleSheet.absoluteFillObject, justifyContent: 'space-between', padding: 30 },
+  header: { flexDirection: 'row', alignItems: 'center', marginTop: 20 },
+  backBtn: { padding: 10, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 10 },
+  badge: { backgroundColor: '#00FF88', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, marginLeft: 15 },
+  badgeText: { fontWeight: 'bold', fontSize: 12 },
+  captureBtn: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#00FF88', alignSelf: 'center', marginBottom: 30, justifyContent: 'center', alignItems: 'center' },
+  permissionBtn: { backgroundColor: '#00FF88', padding: 20, borderRadius: 10, alignSelf: 'center', marginTop: 100 },
+  btnText: { fontWeight: 'bold' }
 });
