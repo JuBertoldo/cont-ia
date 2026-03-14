@@ -1,3 +1,5 @@
+import { auth } from '../config/firebaseConfig'; 
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import React, { useState } from 'react';
 import { 
   StyleSheet, 
@@ -37,11 +39,11 @@ export default function RegisterScreen({ navigation }) {
     }
     const mockBancoDeDados = ['teste@teste.com', 'admin@cont.ia', 'joao@silva.com'];
     if (mockBancoDeDados.includes(email.toLowerCase())) {
-      alert('❌ Este e-mail já está cadastrado no sistema!');
+      alert('Este e-mail já está cadastrado no sistema!');
       return;
     }
 
-    alert('✅ Conta criada com sucesso!\nFaça login para continuar.');
+    alert('Conta criada com sucesso!\nFaça login para continuar.');
     navigation.goBack(); 
   };
 

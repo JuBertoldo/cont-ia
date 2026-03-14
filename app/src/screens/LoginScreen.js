@@ -1,104 +1,134 @@
-import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  TextInput, 
-  TouchableOpacity, 
-  KeyboardAvoidingView, 
-  Platform 
-} from 'react-native';
-import { AntDesign } from '@expo/vector-icons';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ActivityIndicator, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { auth } from '../config/firebaseConfig';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { Ionicons, FontAwesome } from '@expo/vector-icons'; 
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [senha, setSenha] = useState('');
+  const [lembrar, setLembrar] = useState(false);
+  const [verSenha, setVerSenha] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const carregarEmailSalvo = async () => {
+      const emailSalvo = await AsyncStorage.getItem('@contia_email_salvo');
+      if (emailSalvo) {
+        setEmail(emailSalvo);
+        setLembrar(true);
+      }
+    };
+    carregarEmailSalvo();
+  }, []);
+
+  const handleLogin = async () => {
+    const emailLimpo = email.trim();
+    
+    if (!emailLimpo || !senha) {
+      Alert.alert("Atenção", "Preencha todos os campos!");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // 🚀 Tentativa de Login
+      await signInWithEmailAndPassword(auth, emailLimpo, senha);
+      
+      if (lembrar) {
+        await AsyncStorage.setItem('@contia_email_salvo', emailLimpo);
+      } else {
+        await AsyncStorage.removeItem('@contia_email_salvo');
+      }
+
+      navigation.replace('Home');
+    } catch (error) {
+      console.error("Erro Firebase:", error.code);
+      // Aqui exibimos o código real do erro para você me falar qual é
+      Alert.alert("Erro no Login", `Código: ${error.code}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>
-          CONT.<Text style={{color: '#00FF88'}}>IA</Text>
-        </Text>
-        <Text style={styles.subTitle}>Contagem Inteligente de Peças</Text>
-      </View>
-
-      <View style={styles.formContainer}>
-        <TextInput 
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>CONT.<Text style={{color: '#00FF88'}}>IA</Text></Text>
+        
+        <TextInput
           style={styles.input}
           placeholder="E-mail"
           placeholderTextColor="#666"
           value={email}
           onChangeText={setEmail}
-          keyboardType="email-address"
           autoCapitalize="none"
-        />
-        <TextInput 
-          style={styles.input}
-          placeholder="Senha"
-          placeholderTextColor="#666"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
+          keyboardType="email-address"
         />
 
-        {/* 👇 AQUI ESTÁ O BOTÃO CORRIGIDO 👇 */}
-        <TouchableOpacity 
-          style={styles.forgotPassword}
-          onPress={() => navigation.navigate('ForgotPassword')}
-        >
-          <Text style={styles.forgotPasswordText}>Esqueci minha senha</Text>
+        <View style={styles.passwordContainer}>
+          <TextInput
+            style={styles.inputPassword}
+            placeholder="Senha"
+            placeholderTextColor="#666"
+            value={senha}
+            onChangeText={setSenha}
+            secureTextEntry={!verSenha}
+          />
+          <TouchableOpacity style={styles.eyeIcon} onPress={() => setVerSenha(!verSenha)}>
+            <Ionicons name={verSenha ? "eye-off-outline" : "eye-outline"} size={22} color="#666" />
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={styles.rememberContainer} onPress={() => setLembrar(!lembrar)}>
+          <View style={[styles.checkbox, lembrar && styles.checkboxChecked]}>
+            {lembrar && <View style={styles.checkboxInner} />}
+          </View>
+          <Text style={styles.rememberText}>Lembrar meu e-mail</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.loginButton}
-          onPress={() => navigation.replace('Home')}
-        >
-          <Text style={styles.loginButtonText}>ENTRAR</Text>
+        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+          {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.buttonText}>ENTRAR</Text>}
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+          <Text style={styles.link}>Não tem conta? Cadastre-se</Text>
         </TouchableOpacity>
 
         <View style={styles.dividerContainer}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>OU</Text>
-          <View style={styles.dividerLine} />
+          <View style={styles.line} />
+          <Text style={styles.dividerText}>ou entre com</Text>
+          <View style={styles.line} />
         </View>
 
-        <TouchableOpacity style={styles.googleButton}>
-          <AntDesign name="google" size={22} color="#000" style={{ marginRight: 10 }} />
-          <Text style={styles.googleButtonText}>Continuar com o Google</Text>
+        <TouchableOpacity style={styles.googleButton} onPress={() => Alert.alert("Google", "Em breve")}>
+          <FontAwesome name="google" size={18} color="#fff" style={{ marginRight: 12 }} />
+          <Text style={styles.googleButtonText}>Continuar com Google</Text>
         </TouchableOpacity>
-
-        <View style={styles.registerContainer}>
-          <Text style={styles.registerText}>Ainda não tem acesso? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.registerLink}>Cadastre-se</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#050505', justifyContent: 'center', padding: 20 },
-  logoContainer: { alignItems: 'center', marginBottom: 50 },
-  logoText: { color: '#fff', fontSize: 48, fontWeight: '900', letterSpacing: 2 },
-  subTitle: { color: '#888', fontSize: 14, marginTop: 5, letterSpacing: 1 },
-  formContainer: { width: '100%', maxWidth: 400, alignSelf: 'center' },
-  input: { backgroundColor: '#111', color: '#fff', padding: 18, borderRadius: 12, marginBottom: 15, borderWidth: 1, borderColor: '#222', fontSize: 16 },
-  forgotPassword: { alignSelf: 'flex-end', marginBottom: 25 },
-  forgotPasswordText: { color: '#00FF88', fontSize: 12, fontWeight: '600' },
-  loginButton: { backgroundColor: '#00FF88', padding: 18, borderRadius: 12, alignItems: 'center', marginBottom: 20 },
-  loginButtonText: { color: '#000', fontSize: 16, fontWeight: '900' },
-  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#333' },
-  dividerText: { color: '#666', paddingHorizontal: 15, fontSize: 12, fontWeight: 'bold' },
-  googleButton: { backgroundColor: '#fff', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 30 },
-  googleButtonText: { color: '#000', fontSize: 15, fontWeight: 'bold' },
-  registerContainer: { flexDirection: 'row', justifyContent: 'center' },
-  registerText: { color: '#888', fontSize: 14 },
-  registerLink: { color: '#00FF88', fontSize: 14, fontWeight: 'bold' }
+  container: { flexGrow: 1, backgroundColor: '#050505', justifyContent: 'center', padding: 30 },
+  title: { color: '#fff', fontSize: 42, fontWeight: '900', marginBottom: 40, textAlign: 'center' },
+  input: { backgroundColor: '#111', color: '#fff', padding: 18, borderRadius: 15, marginBottom: 15, borderWidth: 1, borderColor: '#222' },
+  passwordContainer: { flexDirection: 'row', backgroundColor: '#111', borderRadius: 15, marginBottom: 15, borderWidth: 1, borderColor: '#222', alignItems: 'center' },
+  inputPassword: { flex: 1, color: '#fff', padding: 18 },
+  eyeIcon: { padding: 15 },
+  rememberContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 25, marginLeft: 5 },
+  checkbox: { width: 20, height: 20, borderRadius: 6, borderWidth: 2, borderColor: '#00FF88', marginRight: 10, justifyContent: 'center', alignItems: 'center' },
+  checkboxChecked: { backgroundColor: '#00FF88' },
+  checkboxInner: { width: 10, height: 10, backgroundColor: '#000', borderRadius: 2 },
+  rememberText: { color: '#999', fontSize: 14 },
+  button: { backgroundColor: '#00FF88', padding: 20, borderRadius: 15, alignItems: 'center' },
+  buttonText: { color: '#000', fontWeight: 'bold', fontSize: 16 },
+  link: { color: '#00FF88', textAlign: 'center', marginTop: 25, fontWeight: '600' },
+  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 30 },
+  line: { flex: 1, height: 1, backgroundColor: '#222' },
+  dividerText: { color: '#666', paddingHorizontal: 15, fontSize: 12, fontWeight: '600', textTransform: 'uppercase' },
+  googleButton: { flexDirection: 'row', backgroundColor: '#111', padding: 18, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#333' },
+  googleButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 }
 });

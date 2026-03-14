@@ -1,132 +1,127 @@
 import React, { useState, useRef } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Dimensions, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { moveAsync, documentDirectory } from 'expo-file-system/legacy'; // Padrão novo do Expo
 
-const { width } = Dimensions.get('window');
-const GOOGLE_CLOUD_VISION_API_KEY = "AIzaSyCEPbm9ksYvZ24XhupJQ6m8r-w5dPrUvjI";
-
-const TRADUTOR = {
-  "Chair": "Cadeira",
-  "Bottle": "Garrafa",
-  "Mobile phone": "Smartphone",
-  "Remote control": "Splitter / Controle",
-  "Monitor": "Monitor / TV",
-  "Desk": "Mesa",
-  "Laptop": "Notebook"
-};
-
-const IGNORAR = ["Room", "Wall", "Floor", "White", "Person", "Hand", "Finger"];
+const GOOGLE_API_KEY = 'AIzaSyC3AF72DaXWY2jSk1LGtMS9CVIwE2mlKVk';
 
 export default function ScannerScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [statusMsg, setStatusMsg] = useState('PRONTO PARA SCANNER'); 
+  const [scanning, setScanning] = useState(false);
   const cameraRef = useRef(null);
 
-  if (!permission || !permission.granted) {
-    return (
-      <View style={styles.container}>
-        <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
-          <Text style={styles.btnText}>Ativar Câmera</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const traduzir = async (texto) => {
+    try {
+      const res = await fetch(`https://translation.googleapis.com/language/translate/v2?key=${GOOGLE_API_KEY}`, {
+        method: 'POST',
+        body: JSON.stringify({ q: texto, target: 'pt' }),
+      });
+      const data = await res.json();
+      return data.data.translations[0].translatedText;
+    } catch { return texto; }
+  };
 
-  const analisarComGoogle = async () => {
-    if (!cameraRef.current || isProcessing) return;
-    setIsProcessing(true);
-    setStatusMsg('📸 TIRANDO FOTO...');
+  const handleCapture = async () => {
+    if (!cameraRef.current || scanning) return;
+    setScanning(true);
 
     try {
-      const photo = await cameraRef.current.takePictureAsync({ base64: true, quality: 0.5 });
-      const base64Limpo = photo.base64.replace(/^data:image\/(png|jpg|jpeg);base64,/, "");
+      // 1. Tira a foto com alta qualidade para a IA enxergar melhor
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8, base64: true });
+      
+      // 2. Salva a foto permanentemente no armazenamento do celular
+      const nomeArquivo = `foto_${Date.now()}.jpg`;
+      const caminhoPermanente = `${documentDirectory}${nomeArquivo}`;
+      await moveAsync({ from: photo.uri, to: caminhoPermanente });
 
-      setStatusMsg('☁️ ENVIANDO AO GOOGLE...');
+      // 3. Envia para o Google Vision (Objetos + Etiquetas detalhadas)
+      const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requests: [{
+            image: { content: photo.base64 },
+            features: [
+              { type: "OBJECT_LOCALIZATION", maxResults: 50 },
+              { type: "LABEL_DETECTION", maxResults: 20 }
+            ]
+          }]
+        })
+      });
 
-      const response = await fetch(
-        `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_CLOUD_VISION_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            requests: [{
-              image: { content: base64Limpo },
-              features: [{ type: "OBJECT_LOCALIZATION", maxResults: 10 }]
-            }]
-          })
-        }
-      );
+      const result = await response.json();
+      const objetos = result.responses[0]?.localizedObjectAnnotations || [];
+      const labels = result.responses[0]?.labelAnnotations || [];
 
-      const data = await response.json();
-      const objetos = data.responses[0]?.localizedObjectAnnotations || [];
-      const contagem = {};
+      if (objetos.length === 0) {
+        Alert.alert("Atenção", "Nenhum objeto identificado. Tente outro ângulo.");
+        setScanning(false);
+        return;
+      }
 
-      // 🛡️ FILTRO DE UNICIDADE
+      // 4. Lógica de Agrupamento e Precisão de Nomes
+      const contagemAgrupada = {};
       objetos.forEach(obj => {
-        let nomeOriginal = obj.name;
-        
-        // Ignora nomes genéricos longos (Ex: "Bottled and jarred...")
-        if (nomeOriginal.length > 25) return; 
-
-        if (!IGNORAR.includes(nomeOriginal)) {
-          const nomeFinal = TRADUTOR[nomeOriginal] || nomeOriginal;
+        if (obj.score > 0.35) { // Limite de confiança mais baixo para detectar tudo
+          let nomeItem = obj.name;
           
-          // Se não estiver na lista, adiciona. Se já estiver, ignora o duplicado.
-          if (!contagem[nomeFinal]) {
-             contagem[nomeFinal] = 1;
+          // Se o nome for genérico (Utensílio), busca algo mais específico nas Labels
+          if (nomeItem === "Tableware" || nomeItem === "Kitchenware" || nomeItem === "Object") {
+            const detalhe = labels.find(l => 
+              l.description.toLowerCase().includes("cup") || 
+              l.description.toLowerCase().includes("glass") ||
+              l.description.toLowerCase().includes("bottle")
+            );
+            if (detalhe) nomeItem = detalhe.description;
           }
+          
+          contagemAgrupada[nomeItem] = (contagemAgrupada[nomeItem] || 0) + 1;
         }
       });
 
-      const chavesEncontradas = Object.keys(contagem);
+      // 5. Traduz e gera as linhas para o histórico
+      const promessas = Object.entries(contagemAgrupada).map(async ([nomeIngles, qtd]) => {
+        const nomeTraduzido = await traduzir(nomeIngles);
+        return {
+          id: Math.floor(100000 + Math.random() * 900000).toString(),
+          itemName: nomeTraduzido,
+          quantity: qtd,
+          date: new Date().toLocaleDateString('pt-BR'),
+          time: new Date().toLocaleTimeString('pt-BR'),
+          imageUri: caminhoPermanente
+        };
+      });
 
-      if (chavesEncontradas.length > 0) {
-        setStatusMsg('✅ SALVANDO...');
-        
-        // Criando os registros que faltavam no seu código anterior
-        const registros = chavesEncontradas.map(nome => ({
-          id: `ID-${Date.now()}-${nome}`,
-          itemName: nome,
-          quantity: contagem[nome],
-          date: new Date().toLocaleTimeString('pt-BR'),
-          imageUri: null,
-          confidence: "Google Vision"
-        }));
+      const novosItens = await Promise.all(promessas);
+      setScanning(false);
+      navigation.navigate('History', { novosItens });
 
-        const stored = await AsyncStorage.getItem('@contia_historico');
-        const history = stored ? JSON.parse(stored) : [];
-        await AsyncStorage.setItem('@contia_historico', JSON.stringify([...registros, ...history]));
-
-        navigation.navigate('Home');
-      } else {
-        setStatusMsg('⚠️ NADA ENCONTRADO');
-        setIsProcessing(false);
-      }
-    } catch (err) {
-      console.log(err);
-      setStatusMsg('❌ ERRO NO SCANNER');
-      setIsProcessing(false);
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Erro", "Falha na detecção. Verifique sua internet.");
+      setScanning(false);
     }
   };
 
+  if (!permission?.granted) return <View style={styles.container}><TouchableOpacity onPress={requestPermission} style={styles.btn}><Text>Ativar Câmera</Text></TouchableOpacity></View>;
+
   return (
     <View style={styles.container}>
-      <CameraView style={styles.camera} ref={cameraRef} />
-      <View style={styles.uiLayer}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+      <CameraView style={styles.camera} ref={cameraRef}>
+        <View style={styles.overlay}>
+          <TouchableOpacity style={styles.back} onPress={() => navigation.goBack()}><Ionicons name="arrow-back" size={30} color="#fff" /></TouchableOpacity>
+          <View style={styles.target}>
+             <View style={[styles.corner, {top:0, left:0, borderRightWidth:0, borderBottomWidth:0}]} />
+             <View style={[styles.corner, {top:0, right:0, borderLeftWidth:0, borderBottomWidth:0}]} />
+             <View style={[styles.corner, {bottom:0, left:0, borderRightWidth:0, borderTopWidth:0}]} />
+             <View style={[styles.corner, {bottom:0, right:0, borderLeftWidth:0, borderTopWidth:0}]} />
+          </View>
+          <TouchableOpacity style={styles.capture} onPress={handleCapture} disabled={scanning}>
+            {scanning ? <ActivityIndicator color="#000" size="large" /> : <View style={styles.inner} />}
           </TouchableOpacity>
-          <View style={styles.badge}><Text style={styles.badgeText}>{statusMsg}</Text></View>
         </View>
-
-        <TouchableOpacity style={styles.captureBtn} onPress={analisarComGoogle} disabled={isProcessing}>
-          {isProcessing ? <ActivityIndicator color="#000" /> : <Ionicons name="scan-outline" size={32} color="#000" />}
-        </TouchableOpacity>
-      </View>
+      </CameraView>
     </View>
   );
 }
@@ -134,12 +129,11 @@ export default function ScannerScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   camera: { flex: 1 },
-  uiLayer: { ...StyleSheet.absoluteFillObject, justifyContent: 'space-between', padding: 30 },
-  header: { flexDirection: 'row', alignItems: 'center', marginTop: 20 },
-  backBtn: { padding: 10, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 10 },
-  badge: { backgroundColor: '#00FF88', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, marginLeft: 15 },
-  badgeText: { fontWeight: 'bold', fontSize: 12 },
-  captureBtn: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#00FF88', alignSelf: 'center', marginBottom: 30, justifyContent: 'center', alignItems: 'center' },
-  permissionBtn: { backgroundColor: '#00FF88', padding: 20, borderRadius: 10, alignSelf: 'center', marginTop: 100 },
-  btnText: { fontWeight: 'bold' }
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.1)', justifyContent: 'center', alignItems: 'center' },
+  back: { position: 'absolute', top: 50, left: 25 },
+  target: { width: 260, height: 260 },
+  corner: { width: 40, height: 40, borderColor: '#00FF88', borderWidth: 5, position: 'absolute' },
+  capture: { position: 'absolute', bottom: 60, width: 80, height: 80, borderRadius: 40, backgroundColor: '#00FF88', justifyContent: 'center', alignItems: 'center' },
+  inner: { width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: '#000' },
+  btn: { backgroundColor: '#00FF88', padding: 20, borderRadius: 10, alignSelf: 'center', marginTop: '50%' }
 });
