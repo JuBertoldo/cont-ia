@@ -2,28 +2,41 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, FlatList, Image, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-// IMPORTANTE: Imports do Firebase Firestore
-import { db } from '../config/firebaseConfig';
-import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+// IMPORTANTE: Adicionamos 'where' e o 'auth'
+import { db, auth } from '../config/firebaseConfig'; 
+import { collection, query, orderBy, onSnapshot, deleteDoc, doc, where } from 'firebase/firestore';
 
 export default function HistoryScreen({ navigation }) {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
-    // Escuta o banco de dados em tempo real
-    const q = query(collection(db, "inventario"), orderBy("createdAt", "desc"));
+    // 1. Pegamos o ID do usuário que está logado agora
+    const user = auth.currentUser;
+
+    if (!user) {
+      Alert.alert("Erro", "Usuário não identificado.");
+      return;
+    }
+
+    // 2. Ajustamos a Query: adicionamos o filtro 'where' para buscar apenas o que pertence ao userId
+    const q = query(
+      collection(db, "inventario"), 
+      where("userId", "==", user.uid), // <--- FILTRO DE PRIVACIDADE
+      orderBy("createdAt", "desc")
+    );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const listaFirebase = snapshot.docs.map(documento => ({
-        id_firebase: documento.id, // ID único do Google para podermos excluir
+        id_firebase: documento.id,
         ...documento.data()
       }));
       setHistory(listaFirebase);
     }, (error) => {
-      Alert.alert("Erro", "Não foi possível carregar os dados da nuvem.");
+      console.log(error);
+      Alert.alert("Erro", "Não foi possível carregar seus dados específicos.");
     });
 
-    return () => unsubscribe(); // Fecha a conexão ao sair da tela
+    return () => unsubscribe();
   }, []);
 
   const excluirItem = async (id_firebase) => {
@@ -57,7 +70,7 @@ export default function HistoryScreen({ navigation }) {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.navigate('Home')}><Ionicons name="arrow-back" size={24} color="#fff" /></TouchableOpacity>
-        <Text style={styles.title}>INVENTÁRIO NUVEM</Text>
+        <Text style={styles.title}>MEU INVENTÁRIO NUVEM</Text>
         <View style={{ width: 24 }} />
       </View>
       <FlatList 
@@ -71,6 +84,7 @@ export default function HistoryScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  // Manti seus estilos exatamente iguais
   container: { flex: 1, backgroundColor: '#050505', paddingTop: 50 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20 },
   title: { color: '#fff', fontSize: 18, fontWeight: 'bold' },

@@ -2,10 +2,10 @@ import React, { useState, useRef } from 'react';
 import { StyleSheet, View, TouchableOpacity, Alert, ActivityIndicator, Text } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native'; // Adicionado useIsFocused
 
 // Firebase
-import { db } from '../config/firebaseConfig';
+import { db, auth } from '../config/firebaseConfig';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const GOOGLE_API_KEY = 'AIzaSyCtFGbBI61y6hYS3C8Lnp1mA2VqUJ0xbY8';
@@ -13,6 +13,7 @@ const GOOGLE_API_KEY = 'AIzaSyCtFGbBI61y6hYS3C8Lnp1mA2VqUJ0xbY8';
 export default function ScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
+  const isFocused = useIsFocused(); // Detecta se a tela está ativa
   const cameraRef = useRef(null);
   const navigation = useNavigation();
 
@@ -62,11 +63,9 @@ export default function ScannerScreen() {
       const labels = result.responses[0]?.labelAnnotations || [];
       const objetos = result.responses[0]?.localizedObjectAnnotations || [];
 
-      // Filtro para evitar nomes genéricos como "Utensílio"
       const banidos = ['Tableware', 'Utensil', 'Product', 'Object', 'Dishware'];
       let escolha = "";
 
-      // Tenta achar a etiqueta mais específica
       const labelOk = labels.find(l => !banidos.some(p => l.description.includes(p)));
       
       if (labelOk) {
@@ -78,14 +77,17 @@ export default function ScannerScreen() {
       }
 
       const nomeFinal = await traduzir(escolha);
+      const agora = new Date();
 
-      // SALVA APENAS UM REGISTRO (Sem o loop 'for')
+      // SALVAMENTO COM USERID E TIME
       await addDoc(collection(db, "inventario"), {
         itemName: nomeFinal.toUpperCase(),
         quantity: 1, 
-        date: new Date().toLocaleDateString('pt-BR'),
+        date: agora.toLocaleDateString('pt-BR'),
+        time: agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
         createdAt: serverTimestamp(),
-        imageUri: photo.uri
+        imageUri: photo.uri,
+        userId: auth.currentUser.uid // O "Carimbo" do usuário
       });
 
       Alert.alert("Sucesso", `${nomeFinal} registrado!`);
@@ -100,16 +102,19 @@ export default function ScannerScreen() {
 
   return (
     <View style={styles.container}>
-      <CameraView style={styles.camera} ref={cameraRef}>
-        <TouchableOpacity style={styles.back} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={30} color="white" />
-        </TouchableOpacity>
-        <View style={styles.footer}>
-          <TouchableOpacity onPress={handleCapture} disabled={scanning}>
-            {scanning ? <ActivityIndicator size="large" color="#00FF88" /> : <Ionicons name="scan-circle" size={100} color="#00FF88" />}
+      {/* A CÂMERA SÓ LIGA SE A TELA ESTIVER FOCADA */}
+      {isFocused && (
+        <CameraView style={styles.camera} ref={cameraRef}>
+          <TouchableOpacity style={styles.back} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={30} color="white" />
           </TouchableOpacity>
-        </View>
-      </CameraView>
+          <View style={styles.footer}>
+            <TouchableOpacity onPress={handleCapture} disabled={scanning}>
+              {scanning ? <ActivityIndicator size="large" color="#00FF88" /> : <Ionicons name="scan-circle" size={100} color="#00FF88" />}
+            </TouchableOpacity>
+          </View>
+        </CameraView>
+      )}
     </View>
   );
 }
