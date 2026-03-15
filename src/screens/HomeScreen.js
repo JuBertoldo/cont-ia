@@ -1,54 +1,90 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
+// Ferramentas para o Excel
+import * as XLSX from 'xlsx';
+// IMPORTANTE: Mudamos para /legacy para aceitar o método writeAsStringAsync
+import * as FileSystem from 'expo-file-system/legacy'; 
+import * as Sharing from 'expo-sharing';
+
 // Firebase
 import { db } from '../config/firebaseConfig';
-import { collection, query, onSnapshot } from 'firebase/firestore';
+import { collection, query, onSnapshot, getDocs, orderBy } from 'firebase/firestore';
 
 export default function HomeScreen() {
   const navigation = useNavigation();
   const [stats, setStats] = useState({ totalLotes: 0, totalItens: 0, recordeNome: '-' });
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
-    // Escuta o banco de dados em tempo real
     const q = query(collection(db, "inventario"));
-    
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      let lotes = querySnapshot.size;
       let total = 0;
       let contagemNomes = {};
-
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        total += data.quantity || 0;
-        
+        const qtd = Number(data.quantity) || 0;
+        total += qtd;
         const nome = data.itemName || 'SEM NOME';
-        contagemNomes[nome] = (contagemNomes[nome] || 0) + (data.quantity || 0);
+        contagemNomes[nome] = (contagemNomes[nome] || 0) + qtd;
       });
 
-      // Calcula o item recordista
       let recorde = '-';
       let maxQtd = 0;
       for (const [nome, qtd] of Object.entries(contagemNomes)) {
-        if (qtd > maxQtd) {
-          maxQtd = qtd;
-          recorde = nome;
-        }
+        if (qtd > maxQtd) { maxQtd = qtd; recorde = nome; }
       }
-
-      setStats({
-        totalLotes: lotes,
-        totalItens: total,
-        recordeNome: recorde
-      });
-    }, (error) => {
-      console.error("Erro ao sincronizar Home:", error);
+      setStats({ totalLotes: querySnapshot.size, totalItens: total, recordeNome: recorde });
     });
-
     return () => unsubscribe();
   }, []);
+
+  const exportarExcel = async () => {
+    setExporting(true);
+    try {
+      const q = query(collection(db, "inventario"), orderBy("createdAt", "desc"));
+      const snapshot = await getDocs(q);
+      
+      const dadosPlanilha = snapshot.docs.map(doc => ({
+        'ITEM': doc.data().itemName,
+        'QUANTIDADE': doc.data().quantity,
+        'DATA': doc.data().date,
+        'ID_SISTEMA': doc.id
+      }));
+
+      if (dadosPlanilha.length === 0) {
+        Alert.alert("Aviso", "Nada para exportar.");
+        setExporting(false);
+        return;
+      }
+
+      const ws = XLSX.utils.json_to_sheet(dadosPlanilha);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Inventario");
+
+      const wbout = XLSX.write(wb, { type: 'base64', bookType: "xlsx" });
+      const uri = FileSystem.cacheDirectory + 'Relatorio_ContIA.xlsx';
+
+      // Usando o modo legacy agora ele vai reconhecer o comando corretamente
+      await FileSystem.writeAsStringAsync(uri, wbout, {
+        encoding: 'base64'
+      });
+
+      await Sharing.shareAsync(uri, {
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        dialogTitle: 'Exportar Inventário',
+        UTI: 'com.microsoft.excel.xlsx'
+      });
+
+    } catch (error) {
+      console.log("Erro detalhado:", error);
+      Alert.alert("Erro", "Não foi possível gerar o arquivo.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -81,8 +117,16 @@ export default function HomeScreen() {
         <Text style={styles.btnText}> INICIAR SCANNER IA</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.btnExcel} onPress={() => Alert.alert("Em breve", "Função de exportação em desenvolvimento.")}>
-        <Text style={styles.btnTextExcel}>EXPORTAR RELATÓRIO EXCEL</Text>
+      <TouchableOpacity 
+        style={[styles.btnExcel, exporting && { opacity: 0.6 }]} 
+        onPress={exportarExcel}
+        disabled={exporting}
+      >
+        {exporting ? (
+          <ActivityIndicator color="black" />
+        ) : (
+          <Text style={styles.btnTextExcel}>EXPORTAR RELATÓRIO EXCEL</Text>
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate('History')}>
@@ -105,8 +149,8 @@ const styles = StyleSheet.create({
   numPequeno: { color: '#FFF', fontSize: 24, fontWeight: 'bold' },
   labelPequeno: { color: '#888', fontSize: 10, textAlign: 'center' },
   btnScanner: { backgroundColor: '#00FF88', padding: 18, borderRadius: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
-  btnText: { fontWeight: 'bold', fontSize: 16 },
+  btnText: { fontWeight: 'bold', fontSize: 16, color: 'black' },
   btnExcel: { backgroundColor: '#FFB800', padding: 18, borderRadius: 15, alignItems: 'center', marginBottom: 20 },
-  btnTextExcel: { fontWeight: 'bold', fontSize: 16 },
+  btnTextExcel: { fontWeight: 'bold', fontSize: 16, color: 'black' },
   linkHistorico: { color: '#888', textAlign: 'center', fontSize: 14, textDecorationLine: 'underline', marginBottom: 40 }
 });
