@@ -27,24 +27,16 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // --- CONFIGURAÇÃO BLINDADA PARA ELIMINAR O ERRO 400 ---
+  // --- CONFIGURAÇÃO QUE MATOU O ERRO 400 ---
   const [request, response, promptAsync] = Google.useAuthRequest(
     {
       webClientId: "775741375308-61j9cjtugpk0t9qh1rdrpqp15msdrrt1.apps.googleusercontent.com",
       iosClientId: "775741375308-61j9cjtugpk0t9qh1rdrpqp15msdrrt1.apps.googleusercontent.com",
-      
-      // 🚨 FIXO: Este link faz o erro 400 sumir porque é o que o Google Cloud conhece.
+      // Link fixo que o Google autorizou
       redirectUri: "https://auth.expo.io/@jpbertoldo/cont-ia",
     },
     discovery
   );
-
-  useEffect(() => {
-    // RASTREADOR NO TERMINAL
-    if (request) {
-      console.log("🚀 LINK ENVIADO AO GOOGLE:", request.redirectUri);
-    }
-  }, [request]);
 
   useEffect(() => {
     if (response?.type === 'success') {
@@ -53,10 +45,7 @@ export default function LoginScreen() {
       setLoading(true);
       signInWithCredential(auth, credential)
         .then(() => navigation.replace('Home'))
-        .catch((err) => {
-          console.log(err);
-          Alert.alert("Erro", "Falha na autenticação do Google.");
-        })
+        .catch((err) => Alert.alert("Erro", "Falha na autenticação do Google."))
         .finally(() => setLoading(false));
     }
   }, [response]);
@@ -113,7 +102,6 @@ export default function LoginScreen() {
 
       <TouchableOpacity 
         style={[styles.btnGoogle, (!request || loading) && { opacity: 0.6 }]} 
-        // 🚨 O useProxy: true aqui garante que o navegador abra o link seguro
         onPress={() => promptAsync({ useProxy: true })} 
         disabled={!request || loading}
       >
