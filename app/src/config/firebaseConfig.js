@@ -1,8 +1,7 @@
-import { initializeApp } from "firebase/app";
-import { initializeAuth, getReactNativePersistence } from 'firebase/auth'; // Mudou aqui
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
-import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage'; // Mudou aqui
+import { initializeAuth, getReactNativePersistence } from "firebase/auth";
+import ReactNativeAsyncStorage from "@react-native-async-storage/async-storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCtFGbBI61y6hYS3C8Lnp1mA2VqUJ0xbY8",
@@ -15,12 +14,14 @@ const firebaseConfig = {
 };
 
 // Inicializa o App
-const app = initializeApp(firebaseConfig);
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Inicializa o Auth com persistência para React Native (Resolve o erro do terminal)
+// Configura Auth
 export const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(ReactNativeAsyncStorage)
 });
 
+// Configura e Exporta o Banco de Dados
 export const db = getFirestore(app);
-export const storage = getStorage(app);
+
+console.log("🔥 Firebase Inicializado com Sucesso!");
