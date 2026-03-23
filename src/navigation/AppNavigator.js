@@ -1,27 +1,30 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 
-// Importando todas as nossas telas
-import LoginScreen from '../screens/LoginScreen';
-import HomeScreen from '../screens/HomeScreen';
-import ScannerScreen from '../screens/ScannerScreen';
-import HistoryScreen from '../screens/HistoryScreen';
-import RegisterScreen from '../screens/RegisterScreen';
-import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+// IMPORTAÇÕES DOS CAMINHOS
+import AuthHome from '../screens/login/AuthHome';
+import RegisterScreen from '../screens/home/RegisterScreen'
+import ForgotScreen from '../screens/login/ForgotScreen';
+import HomeScreen from '../screens/home/HomeScreen';
+import ScannerScreen from '../screens/inventory/ScannerScreen';
+import HistoryScreen from '../screens/inventory/HistoryScreen';
 
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="Scanner" component={ScannerScreen} />
-      <Stack.Screen name="History" component={HistoryScreen} options={{ headerShown: true, title: 'Meu Histórico' }} />
+      {/* Fluxo de Autenticação */}
+      <Stack.Screen name="AuthHome" component={AuthHome} />
       <Stack.Screen name="Register" component={RegisterScreen} />
+      <Stack.Screen name="Forgot" component={ForgotScreen} />
+
+      {/* Tela Principal (Dinâmico - Admin&User) */}
+      <Stack.Screen name="Home" component={HomeScreen} />
       
-      {/* Aqui está a nossa tela de recuperar senha */}
-      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      {/* Tela de Inventário */}
+      <Stack.Screen name="Scanner" component={ScannerScreen} />
+      <Stack.Screen name="History" component={HistoryScreen} />
     </Stack.Navigator>
   );
 }

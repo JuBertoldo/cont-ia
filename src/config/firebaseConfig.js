@@ -1,8 +1,10 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
 import { initializeAuth, getReactNativePersistence } from "firebase/auth";
-import ReactNativeAsyncStorage from "@react-native-async-storage/async-storage";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// 1. Sua configuração (Mantenha esses dados, são os seus!)
 const firebaseConfig = {
   apiKey: "AIzaSyCtFGbBI61y6hYS3C8Lnp1mA2VqUJ0xbY8",
   authDomain: "contia-8ca4a.firebaseapp.com",
@@ -13,15 +15,16 @@ const firebaseConfig = {
   measurementId: "G-9ETQ20D77K"
 };
 
-// Inicializa o App
+// 2. Inicializa o App (Evita erro de inicialização duplicada no Expo)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Configura Auth
+// 3. Configura o Auth com Persistência (Para o usuário não precisar logar toda hora)
 export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+  persistence: getReactNativePersistence(AsyncStorage)
 });
 
-// Configura e Exporta o Banco de Dados
+// 4. Exporta os outros serviços
 export const db = getFirestore(app);
+export const storage = getStorage(app);
 
-console.log("🔥 Firebase Inicializado com Sucesso!");
+console.log("🔥 Firebase e Storage Inicializados com Sucesso!");

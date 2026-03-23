@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ActivityInd
 import { Ionicons } from '@expo/vector-icons';
 
 // Firebase
-import { auth } from '../config/firebaseConfig';
+import { auth } from '../../config/firebaseConfig';
 import { sendPasswordResetEmail } from 'firebase/auth';
 
 export default function ForgotPasswordScreen({ navigation }) {
