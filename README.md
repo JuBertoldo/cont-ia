@@ -22,7 +22,7 @@ Empresas, escolas, hospitais, setores administrativos e ambientes com controle d
 
 ## Lista de Devs / Colaboradores
 - Juliana Pereira Bertoldo — Desenvolvimento / Produto
-- Welligton Paiva — Desenvolvimento / Suporte
+- Wellington Paiva — Desenvolvimento / Suporte
 
 ---
 
