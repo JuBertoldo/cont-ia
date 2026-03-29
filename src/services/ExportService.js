@@ -1,59 +1,70 @@
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { db } from '../config/firebaseConfig';
 
-/**
- * Função responsável por buscar dados e gerar o CSV com Link da Imagem
- */
-export const handleExportCSV = async (selectedUserId = null) => {
+export const exportInventoryToCSV = async (items) => {
   try {
-    const ativosRef = collection(db, "ativos");
-    let q;
-
-    if (selectedUserId) {
-      q = query(ativosRef, where("userId", "==", selectedUserId), orderBy("createdAt", "desc"));
-    } else {
-      q = query(ativosRef, orderBy("createdAt", "desc"));
+    if (!items || items.length === 0) {
+      throw new Error('Nenhum item para exportar.');
     }
 
-    const snapshot = await getDocs(q);
-    const data = snapshot.docs.map(doc => doc.data());
+    const headers = [
+      'scanId',
+      'item',
+      'classificacao',
+      'quantidade',
+      'repetidos',
+      'descricao',
+      'usuarioNome',
+      'usuarioRole',
+      'local',
+      'createdAt',
+      'fotoUrl',
+    ];
 
-    if (data.length === 0) {
-      alert("Nenhum dado encontrado para exportar.");
-      return;
+    const escapeCSV = (value) => {
+      if (value === null || value === undefined) return '';
+      const str = String(value).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const rows = items.map((item) => [
+      escapeCSV(item.scanId || item.id),
+      escapeCSV(item.item),
+      escapeCSV(item.classificacao),
+      escapeCSV(item.quantidade ?? 0),
+      escapeCSV(item.repetidos ?? 0),
+      escapeCSV(item.descricao || ''),
+      escapeCSV(item.usuarioNome || ''),
+      escapeCSV(item.usuarioRole || 'user'),
+      escapeCSV(item.local || ''),
+      escapeCSV(
+        item.createdAt?.toDate ? item.createdAt.toDate().toISOString() : ''
+      ),
+      escapeCSV(item.fotoUrl || ''),
+    ]);
+
+    const csv = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
+
+    const fileUri = FileSystem.documentDirectory + `inventario_${Date.now()}.csv`;
+
+    await FileSystem.writeAsStringAsync(fileUri, csv, {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
+
+    const isAvailable = await Sharing.isAvailableAsync();
+    if (!isAvailable) {
+      throw new Error('Compartilhamento não disponível neste dispositivo.');
     }
 
-    // 1. CABEÇALHO ATUALIZADO (Adicionado 'Link da Imagem')
-    const header = "Nome do Item,Quantidade,Classificacao,Data,Hora,Registrado por,Link da Imagem\n";
-    
-    // 2. MONTAGEM DAS LINHAS
-    const rows = data.map(item => {
-      const dataF = item.createdAt?.toDate().toLocaleDateString('pt-BR') || '';
-      const horaF = item.createdAt?.toDate().toLocaleTimeString('pt-BR') || '';
-      
-      const nome = item.nome?.replace(/,/g, '.') || 'Sem nome';
-      const cat = item.classificacao?.replace(/,/g, '.') || 'Geral';
-      const qtd = item.quantidade || 1;
-      const user = item.userName || 'Sistema';
-      
-      // Captura a URL da imagem salva no Storage
-      const imgUrl = item.imageUrl || 'Sem foto';
+    await Sharing.shareAsync(fileUri, {
+      mimeType: 'text/csv',
+      dialogTitle: 'Exportar inventário',
+      UTI: 'public.comma-separated-values-text',
+    });
 
-      // Retorna a linha com a nova coluna no final
-      return `${nome},${qtd},${cat},${dataF},${horaF},${user},${imgUrl}`;
-    }).join("\n");
-
-    const csvContent = "\uFEFF" + header + rows; // Adicionado BOM (\uFEFF) para o Excel entender acentos pt-BR
-    const fileName = `contia_inventario_${Date.now()}.csv`;
-    const fileUri = FileSystem.documentDirectory + fileName;
-
-    await FileSystem.writeAsStringAsync(fileUri, csvContent, { encoding: FileSystem.EncodingType.UTF8 });
-    await Sharing.shareAsync(fileUri);
-
+    return fileUri;
   } catch (error) {
-    console.error("Erro na exportação:", error);
-    alert("Erro ao gerar arquivo.");
+    console.error('Erro ao exportar CSV:', error);
+    throw error;
   }
 };

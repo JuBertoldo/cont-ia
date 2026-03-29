@@ -1,0 +1,27 @@
+flowchart TB
+  subgraph Mobile["App Mobile (Expo)"]
+    S1[Screens]
+    S2[Hooks]
+    S3[Services]
+    S4[Utils/Constants]
+  end
+
+  subgraph Firebase["Firebase Backend"]
+    F1[Auth]
+    F2[Firestore]
+    F3[Storage]
+    F4[Functions]
+  end
+
+  subgraph External["Serviços Externos"]
+    E1[Google Vision]
+    E2[Anthropic Claude]
+  end
+
+  S1 --> S2 --> S3
+  S3 --> F1
+  S3 --> F2
+  S3 --> F3
+  S3 --> F4
+  S3 --> E1
+  F4 --> E2

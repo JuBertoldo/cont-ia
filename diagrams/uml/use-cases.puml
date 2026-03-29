@@ -1,0 +1,27 @@
+@startuml
+left to right direction
+actor Usuario
+actor Admin
+
+rectangle "CONT.IA" {
+  usecase "Registrar" as UC1
+  usecase "Login" as UC2
+  usecase "Recuperar senha" as UC3
+  usecase "Escanear item" as UC4
+  usecase "Visualizar histórico" as UC5
+  usecase "Exportar CSV" as UC6
+  usecase "Editar perfil" as UC7
+  usecase "Logout" as UC8
+  usecase "Visualizar histórico global" as UC9
+}
+
+Usuario --> UC1
+Usuario --> UC2
+Usuario --> UC3
+Usuario --> UC4
+Usuario --> UC5
+Usuario --> UC6
+Usuario --> UC7
+Usuario --> UC8
+Admin --> UC9
+@enduml

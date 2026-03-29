@@ -1,0 +1,22 @@
+@startuml
+start
+:Preencher e-mail e senha;
+if (Campos preenchidos?) then (sim)
+  if (E-mail válido?) then (sim)
+    :Chamar AuthService.loginWithEmail;
+    if (Login ok?) then (sim)
+      :Entrar no AppDrawer;
+      stop
+    else (não)
+      :Exibir mensagem de erro;
+      stop
+    endif
+  else (não)
+    :Exibir e-mail inválido;
+    stop
+  endif
+else (não)
+  :Exibir campos obrigatórios;
+  stop
+endif
+@enduml

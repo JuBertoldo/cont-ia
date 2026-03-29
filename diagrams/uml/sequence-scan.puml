@@ -1,0 +1,27 @@
+@startuml
+actor Usuario
+participant ScannerScreen
+participant ScannerService
+participant VisionService
+participant AIService
+participant CloudFunction
+participant StorageService
+participant InventoryService
+database Firestore
+
+Usuario -> ScannerScreen : tira foto
+ScannerScreen -> ScannerService : processarAuditoriaIA(photo)
+ScannerService -> VisionService : analyzeImageWithVision(base64)
+VisionService --> ScannerService : labels/objects
+ScannerService -> AIService : analyzeWithClaudeFunction(labels,objects)
+AIService -> CloudFunction : callable(analyzeInventory)
+CloudFunction --> AIService : JSON classificado
+AIService --> ScannerService : resultado IA
+ScannerService -> StorageService : uploadImage(uri)
+StorageService --> ScannerService : fotoUrl
+ScannerService -> InventoryService : createInventoryItem(payload)
+InventoryService -> Firestore : addDoc(inventario)
+Firestore --> InventoryService : ok
+InventoryService --> ScannerService : id
+ScannerService --> ScannerScreen : sucesso
+@enduml

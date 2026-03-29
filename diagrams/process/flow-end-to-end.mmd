@@ -1,0 +1,18 @@
+flowchart TD
+  A[Usuário abre App] --> B{Autenticado?}
+  B -- Não --> C[Tela de Login/Cadastro]
+  C --> D[Firebase Auth]
+  D --> E[Entrar no App]
+  B -- Sim --> E
+
+  E --> F[Home]
+  F --> G[Novo Escaneamento]
+  G --> H[Capturar Foto]
+  H --> I[Google Vision: labels/objects]
+  I --> J[Cloud Function analyzeInventory]
+  J --> K[Claude retorna JSON]
+  K --> L[Upload da foto no Storage]
+  L --> M[Salvar item no Firestore]
+  M --> N[Histórico atualizado]
+  N --> O[Exportar CSV (opcional)]
+  N --> P[Ver prévia da imagem]

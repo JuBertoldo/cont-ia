@@ -1,112 +1,149 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
-import { auth, db } from '../../config/firebaseConfig';
-import { doc, getDoc } from 'firebase/firestore';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  Image,
+} from 'react-native';
+
 import { Ionicons } from '@expo/vector-icons';
-import { handleExportCSV } from '../../services/ExportService'; // O serviço que você criou!
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
-// --- 1. SUB-COMPONENTE: ADMIN (O que o chefe vê) ---
-const AdminView = ({ navigation, userData }) => (
-  <View style={styles.dashboard}>
-    <Text style={styles.sectionTitle}>Painel de Controle</Text>
-    
-    <View style={styles.statsRow}>
-      <View style={styles.statCard}>
-        <Text style={styles.statNumber}>CSV</Text>
-        <Text style={styles.statLabel}>Relatórios</Text>
-      </View>
-    </View>
+import { auth, db } from '../../config/firebaseConfig';
+import { COLORS } from '../../constants/colors';
+import { ROUTES } from '../../constants/routes';
 
-    <TouchableOpacity style={styles.menuItem} onPress={() => handleExportCSV()}>
-      <Ionicons name="download-outline" size={24} color="#00FF88" />
-      <Text style={styles.menuText}>Exportar Inventário Geral</Text>
-    </TouchableOpacity>
-
-    <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('History')}>
-      <Ionicons name="list-outline" size={24} color="#00FF88" />
-      <Text style={styles.menuText}>Auditoria de Ativos</Text>
-    </TouchableOpacity>
-  </View>
-);
-
-// --- 2. SUB-COMPONENTE: USER (O que o colaborador vê) ---
-const UserView = ({ navigation }) => (
-  <View style={styles.dashboard}>
-    <Text style={styles.sectionTitle}>Sua Operação</Text>
-    
-    <TouchableOpacity style={styles.mainButton} onPress={() => navigation.navigate('Scanner')}>
-      <Ionicons name="camera" size={50} color="#000" />
-      <Text style={styles.mainButtonText}>ESCANEAR NOVO ATIVO</Text>
-    </TouchableOpacity>
-
-    <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('History')}>
-      <Ionicons name="time-outline" size={24} color="#00FF88" />
-      <Text style={styles.menuText}>Meus Lançamentos</Text>
-    </TouchableOpacity>
-  </View>
-);
-
-// --- 3. COMPONENTE PRINCIPAL (A "Mente" do App) ---
 export default function HomeScreen({ navigation }) {
+  const [totalItems, setTotalItems] = useState(0);
+  const [auditedItems, setAuditedItems] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [userData, setUserData] = useState(null);
+  const [userName, setUserName] = useState('Operador');
+  const [role, setRole] = useState('user');
+  const [photoURL, setPhotoURL] = useState('');
 
-  useEffect(() => {
-    async function fetchUserData() {
-      try {
-        const userDoc = await getDoc(doc(db, "usuarios", auth.currentUser.uid));
-        if (userDoc.exists()) {
-          setUserData(userDoc.data());
-        }
-      } catch (error) {
-        Alert.alert("Erro", "Não foi possível carregar seu perfil.");
-      } finally {
+  const loadDashboard = useCallback(async () => {
+    try {
+      if (!auth.currentUser) {
         setLoading(false);
+        return;
       }
+
+      const userRef = doc(db, 'usuarios', auth.currentUser.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        setUserName(data.nome || 'Operador');
+        setRole(data.role || 'user');
+        setPhotoURL(data.photoURL || '');
+      }
+
+      const q = query(
+        collection(db, 'inventario'),
+        where('usuarioId', '==', auth.currentUser.uid)
+      );
+
+      const querySnapshot = await getDocs(q);
+      const items = querySnapshot.docs.map((docSnap) => docSnap.data());
+
+      const total = items.length;
+      const audited = items.filter((item) => item.origem === 'scanner').length;
+
+      setTotalItems(total);
+      setAuditedItems(audited);
+    } catch (error) {
+      console.error('Erro ao carregar dashboard:', error);
+    } finally {
+      setLoading(false);
     }
-    fetchUserData();
   }, []);
 
-  if (loading) {
-    return <View style={styles.center}><ActivityIndicator color="#00FF88" size="large" /></View>;
-  }
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
+  const goToScanner = () => navigation.navigate(ROUTES.SCANNER);
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {/* Header SRP */}
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 30 }}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.welcome}>Olá, {userData?.nome?.split(' ')[0] || 'Usuário'}</Text>
-          <Text style={styles.roleBadge}>{userData?.role?.toUpperCase() || 'USER'}</Text>
-        </View>
-        <TouchableOpacity onPress={() => auth.signOut().then(() => navigation.replace('AuthHome'))}>
-          <Ionicons name="log-out-outline" size={28} color="#FF4444" />
+        <TouchableOpacity onPress={() => navigation.openDrawer()} style={styles.menuBtn}>
+          <Ionicons name="menu-outline" size={30} color={COLORS.WHITE} />
         </TouchableOpacity>
       </View>
 
-      {/* LÓGICA DE DECISÃO (O que mostrar para quem?) */}
-      {userData?.role === 'admin' 
-        ? <AdminView navigation={navigation} userData={userData} /> 
-        : <UserView navigation={navigation} />
-      }
+      <View style={styles.profileBlock}>
+        {photoURL ? (
+          <Image source={{ uri: photoURL }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatarPlaceholder}>
+            <Ionicons name="person-circle-outline" size={110} color="#666" />
+          </View>
+        )}
+
+        <Text style={styles.userName}>{userName}</Text>
+
+        {role === 'admin' ? (
+          <View style={styles.adminBadge}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.BLACK} />
+            <Text style={styles.adminBadgeText}>Admin</Text>
+          </View>
+        ) : (
+          <Text style={styles.userRoleText}>Perfil usuário</Text>
+        )}
+      </View>
+
+      <View style={styles.statsContainer}>
+        <View style={styles.card}>
+          <Ionicons name="cube-outline" size={32} color={COLORS.PRIMARY} />
+          {loading ? (
+            <ActivityIndicator color={COLORS.PRIMARY} style={{ marginVertical: 10 }} />
+          ) : (
+            <Text style={styles.cardValue}>{totalItems}</Text>
+          )}
+          <Text style={styles.cardLabel}>Itens Totais</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Ionicons name="checkmark-done-outline" size={32} color={COLORS.PRIMARY} />
+          {loading ? (
+            <ActivityIndicator color={COLORS.PRIMARY} style={{ marginVertical: 10 }} />
+          ) : (
+            <Text style={styles.cardValue}>{auditedItems}</Text>
+          )}
+          <Text style={styles.cardLabel}>Itens Auditados</Text>
+        </View>
+      </View>
+
+      <Text style={styles.sectionTitle}>Ações Rápidas</Text>
+
+      <TouchableOpacity style={styles.actionBtn} onPress={goToScanner}>
+        <Ionicons name="camera-outline" size={24} color={COLORS.BLACK} />
+        <Text style={styles.actionBtnText}>NOVO ESCANEAMENTO</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, backgroundColor: '#000', padding: 25 },
-  center: { flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 50, marginBottom: 30 },
-  welcome: { color: '#FFF', fontSize: 24, fontWeight: 'bold' },
-  roleBadge: { color: '#00FF88', fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase' },
-  dashboard: { width: '100%' },
-  sectionTitle: { color: '#888', fontSize: 14, marginBottom: 20, textTransform: 'uppercase' },
-  menuItem: { flexDirection: 'row', backgroundColor: '#111', padding: 20, borderRadius: 15, alignItems: 'center', marginBottom: 15 },
-  menuText: { color: '#FFF', marginLeft: 15, fontSize: 16 },
-  mainButton: { backgroundColor: '#00FF88', padding: 40, borderRadius: 25, alignItems: 'center', marginBottom: 25 },
-  mainButtonText: { color: '#000', fontWeight: 'bold', marginTop: 10, fontSize: 16 },
-  statsRow: { flexDirection: 'row', marginBottom: 20 },
-  statCard: { backgroundColor: '#111', padding: 20, borderRadius: 15, alignItems: 'center', width: '100%' },
-  statNumber: { color: '#FFF', fontSize: 24, fontWeight: 'bold' },
-  statLabel: { color: '#888', fontSize: 12 }
+  container: { flex: 1, backgroundColor: COLORS.BLACK, padding: 20 },
+  header: { marginTop: 50, marginBottom: 30, flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' },
+  menuBtn: { padding: 4 },
+  profileBlock: { alignItems: 'center', marginBottom: 30 },
+  avatar: { width: 120, height: 120, borderRadius: 60, borderWidth: 2, borderColor: COLORS.PRIMARY, backgroundColor: COLORS.DARK },
+  avatarPlaceholder: { width: 120, height: 120, borderRadius: 60, backgroundColor: COLORS.DARK, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: COLORS.PRIMARY },
+  userName: { color: COLORS.WHITE, fontSize: 24, fontWeight: 'bold', marginTop: 14 },
+  userRoleText: { color: COLORS.GRAY, marginTop: 6 },
+  adminBadge: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.PRIMARY, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999 },
+  adminBadgeText: { color: COLORS.BLACK, fontWeight: 'bold' },
+  statsContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
+  card: { backgroundColor: COLORS.DARK, width: '48%', padding: 20, borderRadius: 20, alignItems: 'center' },
+  cardValue: { color: COLORS.WHITE, fontSize: 28, fontWeight: 'bold', marginVertical: 10 },
+  cardLabel: { color: COLORS.GRAY, fontSize: 12, fontWeight: 'bold' },
+  sectionTitle: { color: COLORS.WHITE, fontSize: 18, fontWeight: 'bold', marginBottom: 20 },
+  actionBtn: { backgroundColor: COLORS.PRIMARY, padding: 18, borderRadius: 15, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
+  actionBtnText: { color: COLORS.BLACK, fontWeight: 'bold', fontSize: 16, marginLeft: 10 },
 });

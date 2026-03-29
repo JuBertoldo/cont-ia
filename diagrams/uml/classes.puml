@@ -1,0 +1,42 @@
+@startuml
+class AuthService {
+  +registerWithEmail()
+  +loginWithEmail()
+  +resetPassword()
+  +logout()
+  +getUserProfile()
+}
+
+class ScannerService {
+  +analyzeImageWithScannerPipeline()
+}
+
+class VisionService {
+  +analyzeImageWithVision()
+}
+
+class AIService {
+  +analyzeWithClaudeFunction()
+}
+
+class InventoryService {
+  +createInventoryItem()
+  +subscribeToUserInventory()
+  +subscribeToAllInventory()
+}
+
+class ProfileService {
+  +updateProfileName()
+  +updateProfileBirthDate()
+  +updateProfilePhoto()
+}
+
+class StorageService {
+  +uploadImage()
+}
+
+ScannerService --> VisionService
+ScannerService --> AIService
+ScannerService --> InventoryService
+ProfileService --> StorageService
+@enduml

@@ -1,30 +1,44 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { initializeAuth, getReactNativePersistence } from "firebase/auth";
+import {
+  initializeAuth,
+  getReactNativePersistence,
+  getAuth,
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getFunctions } from "firebase/functions";
+import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// 1. Sua configuração (Mantenha esses dados, são os seus!)
 const firebaseConfig = {
-  apiKey: "AIzaSyCtFGbBI61y6hYS3C8Lnp1mA2VqUJ0xbY8",
-  authDomain: "contia-8ca4a.firebaseapp.com",
-  projectId: "contia-8ca4a",
-  storageBucket: "contia-8ca4a.firebasestorage.app",
-  messagingSenderId: "775741375308",
-  appId: "1:775741375308:web:d323a17d20bcca5ee845e9",
-  measurementId: "G-9ETQ20D77K"
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-// 2. Inicializa o App (Evita erro de inicialização duplicada no Expo)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// 3. Configura o Auth com Persistência (Para o usuário não precisar logar toda hora)
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-});
+let authInstance;
 
-// 4. Exporta os outros serviços
+try {
+  authInstance =
+    Platform.OS === "web"
+      ? getAuth(app)
+      : initializeAuth(app, {
+          persistence: getReactNativePersistence(AsyncStorage),
+        });
+} catch (error) {
+  authInstance = getAuth(app);
+}
+
+export const auth = authInstance;
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
-console.log("🔥 Firebase e Storage Inicializados com Sucesso!");
+// NOVO: Cloud Functions (mesma região do deploy)
+export const functions = getFunctions(app, "us-central1");
+
+console.log(`Firebase e Storage Inicializados com Sucesso (${Platform.OS})!`);

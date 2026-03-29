@@ -1,0 +1,46 @@
+flowchart LR
+  subgraph Presentation
+    P1[Screens]
+    P2[Components]
+    P3[Navigation]
+  end
+
+  subgraph Application
+    A1[Hooks]
+  end
+
+  subgraph DomainServices
+    D1[AuthService]
+    D2[ScannerService]
+    D3[InventoryService]
+    D4[ProfileService]
+    D5[AIService]
+  end
+
+  subgraph Infrastructure
+    I1[Firebase Config]
+    I2[Cloud Functions]
+    I3[Google Vision API]
+  end
+
+  subgraph Data
+    DB1[Firestore]
+    DB2[Storage]
+    DB3[Firebase Auth]
+  end
+
+  P1 --> A1
+  A1 --> D1
+  A1 --> D2
+  A1 --> D3
+  A1 --> D4
+
+  D2 --> D5
+  D2 --> I3
+  D5 --> I2
+
+  D1 --> DB3
+  D3 --> DB1
+  D4 --> DB1
+  D4 --> DB2
+  D2 --> DB2

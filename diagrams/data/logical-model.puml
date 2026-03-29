@@ -1,0 +1,33 @@
+@startuml
+class Usuario {
+  +uid: string
+  +nome: string
+  +email: string
+  +birthDate: string
+  +photoURL: string
+  +role: string
+  +createdAt: timestamp
+  +updatedAt: timestamp
+}
+
+class InventarioItem {
+  +id: string
+  +scanId: string
+  +item: string
+  +classificacao: string
+  +quantidade: number
+  +repetidos: number
+  +descricao: string
+  +fotoUrl: string
+  +fotoNome: string
+  +usuarioId: string
+  +usuarioNome: string
+  +usuarioRole: string
+  +local: string
+  +origem: string
+  +createdAt: timestamp
+  +updatedAt: timestamp
+}
+
+Usuario "1" --> "0..*" InventarioItem : possui
+@enduml

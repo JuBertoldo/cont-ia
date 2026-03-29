@@ -1,159 +1,241 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image, Alert } from 'react-native';
-import { db, auth } from '../../config/firebaseConfig';
-import { Ionicons } from '@expo/vector-icons';
-import { collection, query, where, orderBy, onSnapshot, doc, getDoc, deleteDoc } from 'firebase/firestore';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  Alert,
+  useWindowDimensions,
+} from 'react-native';
 
-export default function HistoryScreen({ navigation }) {
-  const [loading, setLoading] = useState(true);
+import { Ionicons } from '@expo/vector-icons';
+import { collection, query, where, orderBy, onSnapshot, doc, getDoc } from 'firebase/firestore';
+
+import { auth, db } from '../../config/firebaseConfig';
+import { COLORS } from '../../constants/colors';
+import { formatDateTime } from '../../utils/formatDate';
+import { exportInventoryToCSV } from '../../services/ExportService';
+import ImagePreviewModal from '../../components/common/ImagePreviewModal';
+
+export default function HistoryScreen({ navigation, route }) {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+
+  const filter = route?.params?.filter || 'all';
+  const customTitle = route?.params?.title || 'Histórico Completo';
+
   const [items, setItems] = useState([]);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState('user');
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
 
   useEffect(() => {
-    let unsubscribe;
+    let unsubscribe = null;
 
-    const setupHistory = async () => {
+    const loadHistory = async () => {
       try {
-        // 1. Verifica o papel (Role) do usuário logado
-        const userDoc = await getDoc(doc(db, "usuarios", auth.currentUser.uid));
-        const role = userDoc.data()?.role || 'user';
-        const adminStatus = role === 'admin';
-        setIsAdmin(adminStatus);
-
-        // 2. Define a Query baseada no perfil (RBAC)
-        const ativosRef = collection(db, "ativos");
-        const q = adminStatus 
-          ? query(ativosRef, orderBy("createdAt", "desc"))
-          : query(ativosRef, where("userId", "==", auth.currentUser.uid), orderBy("createdAt", "desc"));
-
-        // 3. Escuta o banco em tempo real
-        unsubscribe = onSnapshot(q, (snapshot) => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setItems(data);
+        if (!auth.currentUser) {
           setLoading(false);
-        }, (error) => {
-          console.error("Erro no Snapshot:", error);
-          setLoading(false);
-        });
+          return;
+        }
 
+        const userSnap = await getDoc(doc(db, 'usuarios', auth.currentUser.uid));
+        const currentRole = userSnap.exists() ? userSnap.data().role || 'user' : 'user';
+        setRole(currentRole);
+
+        const q =
+          currentRole === 'admin'
+            ? query(collection(db, 'inventario'), orderBy('createdAt', 'desc'))
+            : query(
+                collection(db, 'inventario'),
+                where('usuarioId', '==', auth.currentUser.uid),
+                orderBy('createdAt', 'desc')
+              );
+
+        unsubscribe = onSnapshot(
+          q,
+          (snapshot) => {
+            const list = snapshot.docs.map((docSnap) => ({
+              id: docSnap.id,
+              ...docSnap.data(),
+            }));
+
+            setItems(list);
+            setLoading(false);
+          },
+          (error) => {
+            console.error('Erro ao carregar histórico:', error);
+            Alert.alert('Erro', 'Não foi possível carregar o histórico.');
+            setLoading(false);
+          }
+        );
       } catch (error) {
-        console.error("Erro ao configurar histórico:", error);
+        console.error('Erro ao preparar histórico:', error);
         setLoading(false);
       }
     };
 
-    setupHistory();
+    loadHistory();
 
-    return () => { if (unsubscribe) unsubscribe(); };
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
-  // Função para deletar item (Apenas Admin)
-  const handleDelete = (itemId) => {
-    Alert.alert(
-      "Confirmar Exclusão",
-      "Deseja remover este registro permanentemente?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { 
-          text: "Excluir", 
-          style: "destructive", 
-          onPress: async () => {
-            try {
-              await deleteDoc(doc(db, "ativos", itemId));
-            } catch (error) {
-              Alert.alert("Erro", "Você não tem permissão para excluir.");
-            }
-          } 
-        }
-      ]
-    );
+  const filteredItems = useMemo(() => {
+    if (filter === 'audited') {
+      return items.filter((item) => item.origem === 'scanner');
+    }
+
+    // 'total' e 'all' retornam todos os itens
+    return items;
+  }, [items, filter]);
+
+  const screenTitle = useMemo(() => {
+    if (filter === 'audited') return 'Itens Auditados';
+    if (filter === 'total') return 'Itens Totais';
+    return customTitle;
+  }, [filter, customTitle]);
+
+  const handleExportCSV = async () => {
+    try {
+      await exportInventoryToCSV(filteredItems);
+    } catch (error) {
+      Alert.alert('Erro', error.message || 'Não foi possível exportar CSV.');
+    }
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      {/* Exibição da Imagem (Prova Digital) */}
-      {item.imageUrl && (
-        <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
-      )}
+  const openPreview = (url) => {
+    setPreviewUrl(url);
+    setPreviewVisible(true);
+  };
 
-      <View style={styles.cardHeader}>
-        <Text style={styles.itemName}>{item.nome || 'Item sem nome'}</Text>
-        <Text style={styles.itemQty}>{item.quantidade || 1} un.</Text>
-      </View>
-      
-      <View style={styles.detailsRow}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{item.classificacao || 'Geral'}</Text>
+  const renderItem = ({ item }) => {
+    const dateInfo = formatDateTime(item.createdAt);
+
+    return (
+      <View style={styles.itemCard}>
+        <View style={styles.topRow}>
+          <Text style={styles.itemId}>{item.scanId || item.id}</Text>
+          <Text style={styles.itemRole}>{item.usuarioRole || 'user'}</Text>
         </View>
-        <Text style={styles.dateText}>
-          {item.createdAt ? item.createdAt.toDate().toLocaleDateString('pt-BR') : 'Processando...'}
+
+        <Text style={styles.itemTitle}>{item.item || 'Não identificado'}</Text>
+        <Text style={styles.itemText}>Classificação: {item.classificacao || '-'}</Text>
+        <Text style={styles.itemText}>Quantidade: {item.quantidade ?? 0}</Text>
+        <Text style={styles.itemText}>Repetidos: {item.repetidos ?? 0}</Text>
+        <Text style={styles.itemText}>Usuário: {item.usuarioNome || '-'}</Text>
+        <Text style={styles.itemText}>Local: {item.local || '-'}</Text>
+
+        <Text style={styles.itemDate}>
+          {dateInfo.date} às {dateInfo.time}
         </Text>
-      </View>
 
-      {/* Rodapé do Admin com Nome do Usuário e Botão Deletar */}
-      {isAdmin && (
-        <View style={styles.adminFooter}>
-          <View style={styles.userInfo}>
-            <Ionicons name="person-circle-outline" size={16} color="#888" />
-            <Text style={styles.userName}>{item.userName || 'Colaborador'}</Text>
-          </View>
-          <TouchableOpacity onPress={() => handleDelete(item.id)}>
-            <Ionicons name="trash-outline" size={20} color="#FF4444" />
+        {!!item.descricao && (
+          <Text style={styles.itemText} numberOfLines={2}>
+            {item.descricao}
+          </Text>
+        )}
+
+        {!!item.fotoUrl && (
+          <TouchableOpacity style={styles.photoBtn} onPress={() => openPreview(item.fotoUrl)}>
+            <Ionicons name="image-outline" size={18} color={COLORS.BLACK} />
+            <Text style={styles.photoBtnText}>Ver foto</Text>
           </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
+        )}
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color="#00FF88" />
+          <Ionicons name="arrow-back" size={28} color={COLORS.PRIMARY} />
         </TouchableOpacity>
-        <Text style={styles.title}>{isAdmin ? "Auditoria Global" : "Meus Lançamentos"}</Text>
+
+        <Text style={[styles.title, isTablet && styles.titleTablet]}>
+          {screenTitle}
+        </Text>
+
+        <TouchableOpacity onPress={handleExportCSV}>
+          <Ionicons name="download-outline" size={28} color={COLORS.PRIMARY} />
+        </TouchableOpacity>
       </View>
 
       {loading ? (
-        <View style={styles.center}><ActivityIndicator color="#00FF88" size="large" /></View>
+        <ActivityIndicator size="large" color={COLORS.PRIMARY} style={{ marginTop: 50 }} />
+      ) : filteredItems.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="clipboard-outline" size={80} color="#333" />
+          <Text style={styles.emptyText}>Nenhum item encontrado.</Text>
+        </View>
       ) : (
         <FlatList
-          data={items}
-          keyExtractor={item => item.id}
+          data={filteredItems}
+          keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          contentContainerStyle={styles.list}
-          ListEmptyComponent={<Text style={styles.emptyText}>Nenhum ativo encontrado.</Text>}
+          contentContainerStyle={[styles.listContent, isTablet && styles.listContentTablet]}
+          showsVerticalScrollIndicator={false}
         />
       )}
+
+      <ImagePreviewModal
+        visible={previewVisible}
+        imageUrl={previewUrl}
+        onClose={() => setPreviewVisible(false)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000', padding: 20 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', marginTop: 40, marginBottom: 20 },
-  title: { color: '#FFF', fontSize: 22, fontWeight: 'bold', marginLeft: 15 },
-  list: { paddingBottom: 20 },
-  card: { backgroundColor: '#111', padding: 15, borderRadius: 15, marginBottom: 15, borderWidth: 1, borderColor: '#222' },
-  itemImage: { width: '100%', height: 160, borderRadius: 10, marginBottom: 12, backgroundColor: '#222' },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  itemName: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
-  itemQty: { color: '#00FF88', fontWeight: 'bold' },
-  detailsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  badge: { backgroundColor: '#222', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  badgeText: { color: '#888', fontSize: 11, textTransform: 'uppercase' },
-  dateText: { color: '#555', fontSize: 12 },
-  adminFooter: { 
-    marginTop: 12, 
-    paddingTop: 10, 
-    borderTopWidth: 1, 
-    borderTopColor: '#222', 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center' 
+  container: { flex: 1, backgroundColor: COLORS.BLACK },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    marginBottom: 20,
   },
-  userInfo: { flexDirection: 'row', alignItems: 'center' },
-  userName: { color: '#888', fontSize: 12, marginLeft: 5 },
-  emptyText: { color: '#444', textAlign: 'center', marginTop: 50 }
+  title: { color: COLORS.WHITE, fontSize: 20, fontWeight: 'bold' },
+  titleTablet: { fontSize: 24 },
+  listContent: { paddingHorizontal: 20, paddingBottom: 20 },
+  listContentTablet: { paddingHorizontal: 40 },
+  itemCard: {
+    backgroundColor: COLORS.DARK,
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.PRIMARY,
+  },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, gap: 10 },
+  itemId: { flex: 1, color: COLORS.GRAY, fontSize: 11, fontWeight: 'bold' },
+  itemRole: {
+    color: COLORS.PRIMARY,
+    fontSize: 11,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  itemTitle: { color: COLORS.WHITE, fontSize: 18, fontWeight: 'bold', marginBottom: 5 },
+  itemText: { color: COLORS.GRAY, fontSize: 14, marginBottom: 4 },
+  itemDate: { color: COLORS.PRIMARY, fontSize: 12, marginTop: 8, marginBottom: 8 },
+  photoBtn: {
+    backgroundColor: COLORS.PRIMARY,
+    paddingVertical: 10,
+    borderRadius: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  photoBtnText: { color: COLORS.BLACK, fontWeight: 'bold' },
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 80 },
+  emptyText: { color: COLORS.GRAY, marginTop: 20, fontSize: 16 },
 });

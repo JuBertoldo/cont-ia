@@ -1,0 +1,17 @@
+flowchart LR
+  U[Usuário Operador/Admin]
+  APP[App Mobile CONT.IA\nReact Native + Expo]
+  AUTH[Firebase Auth]
+  DB[Cloud Firestore]
+  ST[Firebase Storage]
+  FN[Cloud Functions\nanalyzeInventory]
+  VIS[Google Vision API]
+  CLAUDE[Anthropic Claude API]
+
+  U --> APP
+  APP --> AUTH
+  APP --> DB
+  APP --> ST
+  APP --> FN
+  APP --> VIS
+  FN --> CLAUDE

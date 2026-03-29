@@ -1,0 +1,32 @@
+erDiagram
+  USUARIOS ||--o{ INVENTARIO : possui
+
+  USUARIOS {
+    string uid PK
+    string nome
+    string email
+    string birthDate
+    string photoURL
+    string role
+    timestamp createdAt
+    timestamp updatedAt
+  }
+
+  INVENTARIO {
+    string id PK
+    string scanId
+    string item
+    string classificacao
+    number quantidade
+    number repetidos
+    string descricao
+    string fotoUrl
+    string fotoNome
+    string usuarioId FK
+    string usuarioNome
+    string usuarioRole
+    string local
+    string origem
+    timestamp createdAt
+    timestamp updatedAt
+  }
