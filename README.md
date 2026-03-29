@@ -1,41 +1,63 @@
-# ContIA - Gestão de Inventário Inteligente
+# Cont.IA
 
-O **ContIA** é um aplicativo mobile focado em logística e inventário que utiliza Inteligência Artificial Híbrida para automatizar a contagem e catalogação de ativos.
+## Introdução / Descrição
+O **Cont.IA** é um aplicativo de inventário patrimonial com suporte de Inteligência Artificial.  
+Ele permite capturar imagens de itens, identificar objetos, classificar e registrar informações técnicas para auditoria e controle de patrimônio.
 
+### O que é?
+Uma solução mobile para inventário inteligente.
 
+### Onde aplica?
+Empresas, escolas, hospitais, setores administrativos e ambientes com controle de ativos.
 
-## Funcionalidades
-- **Scanner com IA:** Detecção múltipla de objetos via Google Cloud Vision API.
-- **Arquitetura Híbrida:** Integração de TensorFlow.js (On-device) e Cloud Vision (Nuvem).
-- **Tradução Automática:** Conversão dinâmica de termos técnicos para PT-BR.
-- **Dashboard de Estatísticas:** Cálculo em tempo real de lotes e peças totais.
-- **Exportação de Dados:** Geração de relatórios em formato Excel (CSV).
+### Para que serve?
+- Identificar itens por imagem
+- Classificar automaticamente objetos
+- Apoiar auditorias patrimoniais
+- Registrar histórico no Firebase (Storage + Firestore)
 
-## Engenharia de Software
+## Lista de Devs / Colaboradores
+- Juliana Pereira Bertoldo — Desenvolvimento / Produto
+- Welligton Paiva — Desenvolvimento / Suporte
 
-### Diagrama de Fluxo (Data Flow)
-O sistema segue um fluxo linear de processamento desde a captura da imagem até a persistência local:
-1. **Captura:** Expo Camera (Base64).
-2. **Processamento:** API Google Vision (Object Localization).
-3. **Filtro:** Algoritmos de desduplicação e tradução.
-4. **Armazenamento:** AsyncStorage (JSON Serialized).
+## Requisitos mínimos multiplataforma
+- Node.js
+- npm
+- Firebase CLI
+- Expo CLI
 
+## Recursos utilizados
+- **Frontend:** React Native + Expo
+- **Backend:** Firebase Cloud Functions (Callable)
+- **Banco de dados:** Firestore
+- **Armazenamento de imagens:** Firebase Storage
+- **Autenticação:** Firebase Auth
+- **IA:** Anthropic Claude API
+- **Versionamento:** Git + GitHub
 
+## Requisitos de software/sistema
+- Node.js 18+
+- npm 9+
+- Firebase CLI
+- Expo CLI (via `npx expo`)
+- Conta Firebase ativa
+- Conta Anthropic com créditos
+- Conta GitHub
 
-[Image of data flow diagram in software engineering]
+## Configuração de hardware detalhada
 
+### Ambiente de desenvolvimento
+- Computador: MacBook (Apple Silicon)
+- Memória RAM: 24 GB
+- Armazenamento: 480 GB (mínimo 20 GB livres)
+- Internet estável
 
-### Abordagem de IA
-O projeto utiliza uma **Dupla Abordagem**:
-- **MobileNet (TensorFlow.js):** Carregamento de modelo local para prontidão de resposta.
-- **Google Cloud Vision:** Motor de alta precisão para identificação detalhada de objetos.
+### Dispositivos de teste
+- iPhone com Expo Go
+- Câmera funcional para captura de imagens
 
-## Stack Tecnológica
-- **Framework:** React Native (Expo)
-- **Linguagem:** JavaScript (ES6+)
-- **IA:** TensorFlow.js + Google Vision API
-- **Navegação:** React Navigation (Stack)
-- **Estilo:** Styled-components / StyleSheet (Dark Mode)
+## Status do projeto
+Em desenvolvimento (MVP funcional em validação).
 
-## MVP (Produto Mínimo Viável)
-Este repositório contém a versão 1.0 funcional, validando a integração entre visão computacional e gestão de banco de dados local.
+## Licença
+Uso acadêmico/projeto interno.
