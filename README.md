@@ -1,4 +1,4 @@
-# cont-ia
+# Cont-ia
 
 # Cont.IA
 
