@@ -1,7 +1,7 @@
 # Cont.IA
 
 ## Introdução / Descrição
-O **Cont.IA** é um aplicativo de inventário patrimonial com suporte de Inteligência Artificial.  
+O **Cont.IA** é um aplicativo de contagem patrimonial com suporte de Inteligência Artificial.  
 Ele permite capturar imagens de itens, identificar objetos, classificar e registrar informações técnicas para auditoria e controle de patrimônio.
 
 ### O que é?
@@ -17,8 +17,8 @@ Empresas, escolas, hospitais, setores administrativos e ambientes com controle d
 - Registrar histórico no Firebase (Storage + Firestore)
 
 ## Lista de Devs / Colaboradores
-- Juliana Pereira Bertoldo — Desenvolvimento / Produto
-- Welligton Paiva — Desenvolvimento / Suporte
+- Juliana Bertoldo — Desenvolvimento / Produto
+- Wellington Paiva — Desenvolvimento / Suporte
 
 ## Requisitos mínimos multiplataforma
 - Node.js
@@ -51,6 +51,9 @@ Empresas, escolas, hospitais, setores administrativos e ambientes com controle d
 - Memória RAM: 24 GB
 - Armazenamento: 480 GB (mínimo 20 GB livres)
 - Internet estável
+- Computador: Samsung Galaxy Book4
+- Memória RAM: 8 GB
+- Armazenamento: 512 GB (mínimo 20 GB livres)
 
 ### Dispositivos de teste
 - iPhone com Expo Go
