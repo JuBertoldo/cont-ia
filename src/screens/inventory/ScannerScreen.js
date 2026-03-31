@@ -21,6 +21,7 @@ import { auth } from '../../config/firebaseConfig';
 import { analyzeImageWithScannerPipeline } from '../../services/scannerService';
 import { uploadImage } from '../../services/storageService';
 import { createInventoryItem } from '../../services/inventoryService';
+import { mapAiErrorMessage } from '../../utils/mapAiErrorMessage';
 
 export default function ScannerScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -87,7 +88,8 @@ export default function ScannerScreen({ navigation }) {
       navigation.navigate(ROUTES.HISTORY);
     } catch (error) {
       console.error('Erro ao processar auditoria:', error);
-      Alert.alert('Erro', error.message || MESSAGES.GENERIC_ERROR);
+      const friendlyMessage = mapAiErrorMessage(error);
+      Alert.alert('Erro', friendlyMessage || MESSAGES.GENERIC_ERROR);
     } finally {
       setLoading(false);
     }
