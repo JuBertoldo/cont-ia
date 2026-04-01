@@ -5,7 +5,7 @@ O **Cont.IA** é um aplicativo de contagem patrimonial com suporte de Inteligên
 Ele permite capturar imagens de itens, identificar objetos, classificar e registrar informações técnicas para auditoria e controle de patrimônio.
 
 ### O que é?
-Uma solução mobile para inventário inteligente.
+Uma solução mobile para contagem inteligente.
 
 ### Onde aplica?
 Empresas, escolas, hospitais, setores administrativos e ambientes com controle de ativos.
