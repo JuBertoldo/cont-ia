@@ -1,0 +1,21 @@
+#!/bin/sh
+# QA — Hook pre-commit
+# 1) Lint/format dos arquivos JS/TS staged (lint-staged)
+# 2) Lint do backend Python com ruff (se ruff disponível)
+# Bloqueia o commit em caso de erro.
+
+set -e
+
+# ── Frontend: lint-staged ────────────────────────────────────────────────────
+cd "$(git rev-parse --show-toplevel)/frontend"
+npx lint-staged
+
+# ── Backend: ruff (se instalado) ─────────────────────────────────────────────
+cd "$(git rev-parse --show-toplevel)/backend"
+if command -v ruff >/dev/null 2>&1; then
+  echo "[pre-commit] Rodando ruff no backend..."
+  ruff check app/ tests/
+  ruff format --check app/ tests/
+else
+  echo "[pre-commit] ruff não encontrado — pulando lint do backend (instale: pip install ruff)"
+fi

@@ -1,0 +1,31 @@
+const { View, TouchableOpacity, ScrollView, FlatList } = require('react-native');
+
+module.exports = {
+  GestureHandlerRootView: View,
+  GestureDetector: View,
+  Swipeable: View,
+  DrawerLayout: View,
+  State: {},
+  Directions: {},
+  gestureHandlerRootHOC: (Component) => Component,
+  PanGestureHandler: View,
+  TapGestureHandler: View,
+  FlingGestureHandler: View,
+  ForceTouchGestureHandler: View,
+  LongPressGestureHandler: View,
+  NativeViewGestureHandler: View,
+  PinchGestureHandler: View,
+  RotationGestureHandler: View,
+  RawButton: TouchableOpacity,
+  BaseButton: TouchableOpacity,
+  RectButton: TouchableOpacity,
+  BorderlessButton: TouchableOpacity,
+  ScrollView,
+  FlatList,
+  Gesture: {
+    Tap: () => ({ onEnd: jest.fn().mockReturnThis() }),
+    Pan: () => ({ onUpdate: jest.fn().mockReturnThis(), onEnd: jest.fn().mockReturnThis() }),
+    Simultaneous: jest.fn(),
+    Race: jest.fn(),
+  },
+};

@@ -1,0 +1,18 @@
+export const ROUTES = {
+  AUTH_HOME: 'AuthHome',
+  REGISTER: 'Register',
+  FORGOT: 'Forgot',
+  APP_DRAWER: 'AppDrawer',
+  HOME: 'Home',
+  SCANNER: 'Scanner',
+  HISTORY: 'History',
+  PROFILE: 'Profile',
+  ADMIN_USERS: 'AdminUsers',
+  PENDING_APPROVAL: 'PendingApproval',
+  PRIVACY_POLICY: 'PrivacyPolicy',
+  SUPER_ADMIN_PANEL: 'SuperAdminPanel',
+  SUPER_ADMIN_COMPANY: 'SuperAdminCompany',
+  SUPER_ADMIN_TICKET: 'SuperAdminTicket',
+  SUPPORT: 'Support',
+  QUICK_GUIDE: 'QuickGuide',
+};

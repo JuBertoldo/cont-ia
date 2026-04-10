@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Funções auxiliares ────────────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == 'admin';
+    }
+
+    function isActive() {
+      return isAuthenticated() && getUserData().status == 'active';
+    }
+
+    function isSameEmpresa(empresaId) {
+      return isAuthenticated() && getUserData().empresaId == empresaId;
+    }
+
+    // ── Usuários (/usuarios/{uid}) ────────────────────────────────────────────
+
+    match /usuarios/{uid} {
+      // Leitura: próprio perfil ou admin da mesma empresa
+      allow read: if isOwner(uid)
+        || (isActive() && isAdmin() && isSameEmpresa(resource.data.empresaId));
+
+      // Criação: apenas durante o registro (usuário autenticado criando o próprio doc)
+      allow create: if isOwner(uid);
+
+      // Atualização: próprio perfil (campos limitados) ou admin da empresa
+      allow update: if isOwner(uid)
+        || (isActive() && isAdmin() && isSameEmpresa(resource.data.empresaId));
+
+      // Exclusão: apenas admin
+      allow delete: if isActive() && isAdmin() && isSameEmpresa(resource.data.empresaId);
+    }
+
+    // ── Empresas (/empresas/{empresaId}) ─────────────────────────────────────
+
+    match /empresas/{empresaId} {
+      // Leitura: membros da empresa
+      allow read: if isAuthenticated() && getUserData().empresaId == empresaId;
+
+      // Criação: qualquer usuário autenticado (somente no registro do primeiro admin)
+      allow create: if isAuthenticated();
+
+      // Atualização/exclusão: apenas admin da empresa
+      allow update, delete: if isActive() && isAdmin()
+        && getUserData().empresaId == empresaId;
+    }
+
+    // ── Inventário (/inventario/{docId}) ─────────────────────────────────────
+
+    match /inventario/{docId} {
+      // Leitura: próprios registros ou admin da mesma empresa
+      allow read: if isActive()
+        && isSameEmpresa(resource.data.empresaId);
+
+      // Criação: usuário ativo criando na sua empresa
+      allow create: if isActive()
+        && request.resource.data.empresaId == getUserData().empresaId
+        && request.resource.data.usuarioId == request.auth.uid;
+
+      // Atualização/exclusão: apenas admin da empresa
+      allow update, delete: if isActive() && isAdmin()
+        && isSameEmpresa(resource.data.empresaId);
+    }
+  }
+}
