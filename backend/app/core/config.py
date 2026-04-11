@@ -14,5 +14,15 @@ class Settings:
     def is_production(self) -> bool:
         return self.API_ENV == "production"
 
+    @property
+    def effective_cors_origins(self) -> list[str]:
+        """Em produção, CORS_ORIGINS='*' é inseguro — levanta erro para forçar configuração explícita."""
+        if self.is_production and self.CORS_ORIGINS == ["*"]:
+            raise ValueError(
+                "CORS_ORIGINS não pode ser '*' em produção. "
+                "Defina origens explícitas, ex: CORS_ORIGINS=https://app.example.com"
+            )
+        return self.CORS_ORIGINS
+
 
 settings = Settings()
