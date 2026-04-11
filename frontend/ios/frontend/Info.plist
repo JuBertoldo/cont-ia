@@ -35,20 +35,20 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>O Cont.IA precisa da câmera para fotografar os itens a serem contados.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>O Cont.IA acessa sua galeria para selecionar fotos dos itens a serem contados.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>O Cont.IA pode salvar fotos na sua galeria após a contagem.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>O Cont.IA pode precisar do microfone ao gravar vídeos para contagem.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>O Cont.IA usa sua localização para registrar onde a contagem foi realizada.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>O Cont.IA pode precisar do microfone ao gravar vídeos para contagem.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>O Cont.IA pode salvar fotos na sua galeria após a contagem.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>O Cont.IA acessa sua galeria para selecionar fotos dos itens a serem contados.</string>
+	<key>RCTNewArchEnabled</key>
+	<true/>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Ionicons.ttf</string>
 	</array>
-	<key>RCTNewArchEnabled</key>
-	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
