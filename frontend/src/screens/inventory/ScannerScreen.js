@@ -27,10 +27,22 @@ import { imageUriToBase64 } from '../../services/scannerService';
 import { auth } from '../../config/firebaseConfig';
 import { getUserProfile } from '../../services/authService';
 
+const PICKER_ERROR_MESSAGES = {
+  camera_unavailable: 'Câmera não disponível neste dispositivo.',
+  permission:
+    'Permissão negada. Acesse Configurações e libere o acesso à câmera/galeria.',
+  others: 'Erro ao abrir o seletor de imagem.',
+};
+
 function extractUriFromPickerResult(result) {
   if (!result || result.didCancel) return null;
-  if (result.errorCode)
-    throw new Error(result.errorMessage || 'Erro no seletor de imagem.');
+  if (result.errorCode) {
+    const msg =
+      PICKER_ERROR_MESSAGES[result.errorCode] ||
+      result.errorMessage ||
+      'Erro no seletor de imagem.';
+    throw new Error(msg);
+  }
   return result.assets?.[0]?.uri || null;
 }
 
