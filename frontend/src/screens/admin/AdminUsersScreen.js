@@ -12,6 +12,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { COLORS } from '../../constants/colors';
+import { ROLES } from '../../constants/roles';
 import {
   getAllUsers,
   approveUser,
@@ -125,9 +126,9 @@ export default function AdminUsersScreen({ navigation }) {
       Alert.alert('Atenção', 'Você não pode alterar seu próprio perfil.');
       return;
     }
-    const newRole = user.role === 'admin' ? 'user' : 'admin';
+    const newRole = user.role === ROLES.ADMIN ? ROLES.USER : ROLES.ADMIN;
     const label =
-      newRole === 'admin' ? 'promover a Admin' : 'rebaixar para Usuário';
+      newRole === ROLES.ADMIN ? 'promover a Admin' : 'rebaixar para Usuário';
 
     Alert.alert(
       'Alterar perfil',
@@ -157,7 +158,7 @@ export default function AdminUsersScreen({ navigation }) {
   const renderUser = ({ item }) => {
     const isCurrentUser = item.id === auth.currentUser?.uid;
     const isUpdating = updatingId === item.id;
-    const isAdmin = item.role === 'admin';
+    const isAdmin = item.role === ROLES.ADMIN;
 
     return (
       <View style={styles.userCard}>

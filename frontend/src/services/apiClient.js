@@ -4,14 +4,10 @@ import { getIdToken } from './authService';
 const API_BASE_URL = Config.YOLO_API_URL || '';
 const REQUEST_TIMEOUT_MS = 30000;
 
-async function request(path, options = {}, timeout = REQUEST_TIMEOUT_MS) {
-  if (!API_BASE_URL) {
-    throw new Error('YOLO_API_URL não configurada no .env.');
-  }
-
+async function executeRequest(path, options, timeout, forceRefresh) {
   let token = null;
   try {
-    token = await getIdToken();
+    token = await getIdToken(forceRefresh);
   } catch (_) {
     // sem usuário logado — o backend rejeitará com 401
   }
@@ -29,6 +25,11 @@ async function request(path, options = {}, timeout = REQUEST_TIMEOUT_MS) {
       },
       ...options,
     });
+
+    // Token expirado: tenta uma vez com forceRefresh antes de lançar erro
+    if (response.status === 401 && !forceRefresh) {
+      return executeRequest(path, options, timeout, true);
+    }
 
     let payload = null;
     try {
@@ -52,6 +53,13 @@ async function request(path, options = {}, timeout = REQUEST_TIMEOUT_MS) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function request(path, options = {}, timeout = REQUEST_TIMEOUT_MS) {
+  if (!API_BASE_URL) {
+    throw new Error('YOLO_API_URL não configurada no .env.');
+  }
+  return executeRequest(path, options, timeout, false);
 }
 
 export const apiClient = {

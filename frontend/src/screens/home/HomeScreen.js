@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -11,110 +11,29 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { BarChart } from 'react-native-chart-kit';
-import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
 
-import { auth, db } from '../../config/firebaseConfig';
-import { getUserProfile } from '../../services/authService';
 import { COLORS } from '../../constants/colors';
 import { ROUTES } from '../../constants/routes';
+import { ROLES, ROLE_LABELS } from '../../constants/roles';
+import { useDashboard } from '../../hooks/useDashboard';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-function buildLast7DaysLabels() {
-  const labels = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    labels.push(`${d.getDate()}/${d.getMonth() + 1}`);
-  }
-  return labels;
-}
-
-function groupByDay(items) {
-  const today = new Date();
-  const counts = Array(7).fill(0);
-
-  items.forEach(item => {
-    const ts = item.createdAt?.toDate?.() || item.createdAt;
-    if (!ts) return;
-    const diff = Math.floor((today - ts) / (1000 * 60 * 60 * 24));
-    if (diff >= 0 && diff < 7) counts[6 - diff]++;
-  });
-
-  return counts;
-}
-
 export default function HomeScreen({ navigation }) {
-  const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState('Operador');
-  const [role, setRole] = useState('user');
-  const [photoURL, setPhotoURL] = useState('');
-  const [totalItems, setTotalItems] = useState(0);
-  const [auditedItems, setAuditedItems] = useState(0);
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [pendingUsers, setPendingUsers] = useState(0);
-  const [chartData, setChartData] = useState(Array(7).fill(0));
+  const {
+    loading,
+    profile,
+    totalItems,
+    auditedItems,
+    totalUsers,
+    pendingUsers,
+    chartData,
+    chartLabels,
+    reload,
+  } = useDashboard();
 
-  const loadDashboard = useCallback(async () => {
-    try {
-      if (!auth.currentUser) {
-        setLoading(false);
-        return;
-      }
-
-      const profile = await getUserProfile(auth.currentUser.uid);
-      const userRole = profile?.role || 'user';
-      const empresaId = profile?.empresaId || null;
-      setUserName(profile?.nome || 'Operador');
-      setRole(userRole);
-      setPhotoURL(profile?.photoURL || '');
-
-      // Admin vê todos os itens da empresa; usuário vê apenas os seus
-      const inventarioQuery =
-        userRole === 'admin' && empresaId
-          ? query(
-              collection(db, 'inventario'),
-              where('empresaId', '==', empresaId),
-              orderBy('createdAt', 'desc'),
-            )
-          : query(
-              collection(db, 'inventario'),
-              where('usuarioId', '==', auth.currentUser.uid),
-              orderBy('createdAt', 'desc'),
-            );
-
-      const snapshot = await getDocs(inventarioQuery);
-      const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
-      setTotalItems(items.length);
-      setAuditedItems(items.filter(item => item.origem === 'scanner').length);
-      setChartData(groupByDay(items));
-
-      if (userRole === 'admin' && empresaId) {
-        const usersSnap = await getDocs(
-          query(
-            collection(db, 'usuarios'),
-            where('empresaId', '==', empresaId),
-          ),
-        );
-        const allUsers = usersSnap.docs.map(d => d.data());
-        setTotalUsers(allUsers.length);
-        setPendingUsers(
-          allUsers.filter(u => (u.status || 'pending') === 'pending').length,
-        );
-      }
-    } catch (error) {
-      console.error('Erro ao carregar dashboard:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadDashboard();
-  }, [loadDashboard]);
-
-  const labels = buildLast7DaysLabels();
+  const isAdmin =
+    profile.role === ROLES.ADMIN || profile.role === ROLES.SUPER_ADMIN;
 
   return (
     <ScrollView
@@ -128,32 +47,34 @@ export default function HomeScreen({ navigation }) {
         >
           <Ionicons name="menu-outline" size={30} color={COLORS.WHITE} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={loadDashboard}>
+        <TouchableOpacity onPress={reload}>
           <Ionicons name="refresh-outline" size={24} color={COLORS.GRAY} />
         </TouchableOpacity>
       </View>
 
       {/* Perfil */}
       <View style={styles.profileBlock}>
-        {photoURL ? (
-          <Image source={{ uri: photoURL }} style={styles.avatar} />
+        {profile.photoURL ? (
+          <Image source={{ uri: profile.photoURL }} style={styles.avatar} />
         ) : (
           <View style={styles.avatarPlaceholder}>
             <Ionicons name="person-circle-outline" size={110} color="#666" />
           </View>
         )}
-        <Text style={styles.userName}>{userName}</Text>
-        {role === 'admin' ? (
+        <Text style={styles.userName}>{profile.nome}</Text>
+        {isAdmin ? (
           <View style={styles.adminBadge}>
             <Ionicons
               name="shield-checkmark-outline"
               size={16}
               color={COLORS.BLACK}
             />
-            <Text style={styles.adminBadgeText}>Admin</Text>
+            <Text style={styles.adminBadgeText}>
+              {ROLE_LABELS[profile.role]}
+            </Text>
           </View>
         ) : (
-          <Text style={styles.userRoleText}>Perfil usuário</Text>
+          <Text style={styles.userRoleText}>{ROLE_LABELS[profile.role]}</Text>
         )}
       </View>
 
@@ -189,7 +110,7 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.cardLabel}>Contados</Text>
         </View>
 
-        {role === 'admin' && (
+        {isAdmin && (
           <View style={styles.card}>
             <Ionicons name="people-outline" size={28} color={COLORS.PRIMARY} />
             {loading ? (
@@ -205,8 +126,8 @@ export default function HomeScreen({ navigation }) {
         )}
       </View>
 
-      {/* Alerta de usuários pendentes (admin) */}
-      {role === 'admin' && pendingUsers > 0 && (
+      {/* Alerta de usuários pendentes */}
+      {isAdmin && pendingUsers > 0 && (
         <TouchableOpacity
           style={styles.pendingAlert}
           onPress={() => navigation.navigate(ROUTES.ADMIN_USERS)}
@@ -226,7 +147,7 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.sectionTitle}>Contagens nos últimos 7 dias</Text>
           <BarChart
             data={{
-              labels,
+              labels: chartLabels,
               datasets: [{ data: chartData.map(v => Math.max(v, 0)) }],
             }}
             width={SCREEN_WIDTH - 40}
@@ -338,22 +259,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 14,
   },
-  actionBtn: {
-    backgroundColor: COLORS.PRIMARY,
-    padding: 16,
-    borderRadius: 14,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 10,
-  },
-  actionBtnSecondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: COLORS.PRIMARY,
-  },
-  actionBtnText: { color: COLORS.BLACK, fontWeight: 'bold', fontSize: 15 },
   fabBtn: {
     backgroundColor: COLORS.PRIMARY,
     padding: 16,
@@ -366,18 +271,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   fabBtnText: { color: COLORS.BLACK, fontWeight: 'bold', fontSize: 15 },
-  drawerTrigger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-    marginBottom: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    backgroundColor: COLORS.DARK,
-    borderRadius: 20,
-  },
-  drawerTriggerText: { color: COLORS.GRAY, fontSize: 13 },
   pendingAlert: {
     backgroundColor: COLORS.PRIMARY,
     borderRadius: 12,

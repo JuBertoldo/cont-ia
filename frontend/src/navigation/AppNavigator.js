@@ -1,5 +1,9 @@
 import React from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
+import { Easing } from 'react-native';
+import {
+  createStackNavigator,
+  CardStyleInterpolators,
+} from '@react-navigation/stack';
 
 import AuthHome from '../screens/auth/AuthHome';
 import ForgotScreen from '../screens/auth/ForgotScreen';
@@ -16,11 +20,28 @@ import { ROUTES } from '../constants/routes';
 
 const Stack = createStackNavigator();
 
+const transitionSpec = {
+  open: {
+    animation: 'timing',
+    config: { duration: 280, easing: Easing.out(Easing.poly(4)) },
+  },
+  close: {
+    animation: 'timing',
+    config: { duration: 220, easing: Easing.in(Easing.poly(4)) },
+  },
+};
+
 export default function AppNavigator() {
   return (
     <Stack.Navigator
       initialRouteName={ROUTES.AUTH_HOME}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+        transitionSpec,
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+      }}
     >
       <Stack.Screen name={ROUTES.AUTH_HOME} component={AuthHome} />
       <Stack.Screen name={ROUTES.REGISTER} component={RegisterScreen} />

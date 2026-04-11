@@ -3,26 +3,22 @@ import {
   collection,
   addDoc,
   doc,
-  getDoc,
   updateDoc,
   serverTimestamp,
   query,
   where,
   orderBy,
   onSnapshot,
+  limit,
 } from 'firebase/firestore';
-
-async function getCurrentEmpresaId() {
-  const uid = auth?.currentUser?.uid;
-  if (!uid) return null;
-  const snap = await getDoc(doc(db, 'usuarios', uid));
-  return snap.exists() ? snap.data()?.empresaId || null : null;
-}
+import { COLLECTIONS } from '../constants/collections';
+import { PAGE_SIZE } from '../constants/config';
+import { getCurrentEmpresaId } from '../utils/userUtils';
 
 export const createInventoryItem = async data => {
   const empresaId = await getCurrentEmpresaId();
 
-  const docRef = await addDoc(collection(db, 'inventario'), {
+  const docRef = await addDoc(collection(db, COLLECTIONS.INVENTORY), {
     ...data,
     empresaId: empresaId || data.empresaId || null,
     createdAt: serverTimestamp(),
@@ -34,9 +30,10 @@ export const createInventoryItem = async data => {
 
 export const subscribeToUserInventory = (uid, callback, onError) => {
   const q = query(
-    collection(db, 'inventario'),
+    collection(db, COLLECTIONS.INVENTORY),
     where('usuarioId', '==', uid),
     orderBy('createdAt', 'desc'),
+    limit(PAGE_SIZE),
   );
 
   return onSnapshot(
@@ -56,9 +53,10 @@ export const subscribeToUserInventory = (uid, callback, onError) => {
 export const contestScan = async (docId, contestReason, ownerUid) => {
   const uid = auth?.currentUser?.uid;
   if (!uid) throw new Error('Não autenticado.');
-  if (uid === ownerUid)
+  if (uid === ownerUid) {
     throw new Error('Você não pode contestar sua própria contagem.');
-  await updateDoc(doc(db, 'inventario', docId), {
+  }
+  await updateDoc(doc(db, COLLECTIONS.INVENTORY, docId), {
     status: 'contested',
     contestReason,
     contestedBy: uid,
@@ -69,11 +67,16 @@ export const contestScan = async (docId, contestReason, ownerUid) => {
 export const subscribeToAllInventory = (empresaId, callback, onError) => {
   const q = empresaId
     ? query(
-        collection(db, 'inventario'),
+        collection(db, COLLECTIONS.INVENTORY),
         where('empresaId', '==', empresaId),
         orderBy('createdAt', 'desc'),
+        limit(PAGE_SIZE),
       )
-    : query(collection(db, 'inventario'), orderBy('createdAt', 'desc'));
+    : query(
+        collection(db, COLLECTIONS.INVENTORY),
+        orderBy('createdAt', 'desc'),
+        limit(PAGE_SIZE),
+      );
 
   return onSnapshot(
     q,

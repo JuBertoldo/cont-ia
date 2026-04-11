@@ -17,13 +17,15 @@ import {
   where,
   serverTimestamp,
 } from 'firebase/firestore';
+import { COLLECTIONS } from '../constants/collections';
+import { ROLES } from '../constants/roles';
 import { createEmpresa, getEmpresaByCodigo } from './empresaService';
 
 // ── Matrícula ─────────────────────────────────────────────────────────────────
 
 export const checkMatriculaExists = async (matricula, empresaId) => {
   const q = query(
-    collection(db, 'usuarios'),
+    collection(db, COLLECTIONS.USERS),
     where('matricula', '==', matricula.trim()),
     where('empresaId', '==', empresaId),
   );
@@ -43,12 +45,11 @@ export const registerWithEmail = async ({
 }) => {
   const cleanMatricula = matricula?.trim() || '';
   const cleanCodigo = codigoEmpresa?.trim().toUpperCase() || '';
-  const criarEmpresa = !!nomeEmpresa?.trim(); // true = quer criar empresa nova
+  const criarEmpresa = !!nomeEmpresa?.trim();
 
   let empresaId = null;
 
   if (criarEmpresa) {
-    // Criar empresa nova — vira admin ativo
     const userCredential = await createUserWithEmailAndPassword(
       auth,
       email,
@@ -60,12 +61,12 @@ export const registerWithEmail = async ({
     const empresa = await createEmpresa(nomeEmpresa.trim(), user.uid);
     empresaId = empresa.id;
 
-    await setDoc(doc(db, 'usuarios', user.uid), {
+    await setDoc(doc(db, COLLECTIONS.USERS, user.uid), {
       nome: name,
       email,
       matricula: cleanMatricula,
       photoURL: '',
-      role: 'admin',
+      role: ROLES.ADMIN,
       status: 'active',
       empresaId,
       createdAt: serverTimestamp(),
@@ -75,7 +76,6 @@ export const registerWithEmail = async ({
     return user;
   }
 
-  // Entrar em empresa existente: precisa do código
   if (!cleanCodigo) {
     const error = new Error('Código da empresa obrigatório.');
     error.code = 'auth/codigo-required';
@@ -90,7 +90,6 @@ export const registerWithEmail = async ({
   }
   empresaId = empresa.id;
 
-  // Verifica duplicata de matrícula na empresa
   if (cleanMatricula) {
     const exists = await checkMatriculaExists(cleanMatricula, empresaId);
     if (exists) {
@@ -108,12 +107,12 @@ export const registerWithEmail = async ({
   const user = userCredential.user;
   await updateProfile(user, { displayName: name });
 
-  await setDoc(doc(db, 'usuarios', user.uid), {
+  await setDoc(doc(db, COLLECTIONS.USERS, user.uid), {
     nome: name,
     email,
     matricula: cleanMatricula,
     photoURL: '',
-    role: 'user',
+    role: ROLES.USER,
     status: 'pending',
     empresaId,
     createdAt: serverTimestamp(),
@@ -137,7 +136,7 @@ export const loginWithEmail = async ({ email, password }) => {
 // ── Status do usuário ─────────────────────────────────────────────────────────
 
 export const getUserStatus = async uid => {
-  const snap = await getDoc(doc(db, 'usuarios', uid));
+  const snap = await getDoc(doc(db, COLLECTIONS.USERS, uid));
   if (!snap.exists()) return 'pending';
   return snap.data()?.status || 'pending';
 };
@@ -153,20 +152,20 @@ export const logout = async () => {
 };
 
 export const getUserProfile = async uid => {
-  const snap = await getDoc(doc(db, 'usuarios', uid));
+  const snap = await getDoc(doc(db, COLLECTIONS.USERS, uid));
   return snap.exists() ? snap.data() : null;
 };
 
 export const updateUserProfile = async (uid, data) => {
   await setDoc(
-    doc(db, 'usuarios', uid),
+    doc(db, COLLECTIONS.USERS, uid),
     { ...data, updatedAt: serverTimestamp() },
     { merge: true },
   );
 };
 
-export const getIdToken = async () => {
+export const getIdToken = async (forceRefresh = false) => {
   const user = auth.currentUser;
   if (!user) throw new Error('Usuário não autenticado.');
-  return firebaseGetIdToken(user);
+  return firebaseGetIdToken(user, forceRefresh);
 };

@@ -20,60 +20,46 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { COLORS } from '../../constants/colors';
+import { ROLES } from '../../constants/roles';
+import { DATE_FILTERS } from '../../constants/config';
 import { formatDateTime } from '../../utils/formatDate';
+import { showErrorAlert } from '../../utils/errorHandler';
 import { exportInventoryToCSV } from '../../services/ExportService';
-import { subscribeInventoryHistory } from '../../services/historyService';
+import {
+  subscribeInventoryHistory,
+  fetchNextInventoryPage,
+} from '../../services/historyService';
 import { contestScan } from '../../services/inventoryService';
+import { getUserProfile } from '../../services/authService';
 import { auth } from '../../config/firebaseConfig';
+import { useHistoryFilters } from '../../hooks/useHistoryFilters';
 import ImagePreviewModal from '../../components/common/ImagePreviewModal';
-
-const DATE_FILTERS = [
-  { key: 'all', label: 'Todos' },
-  { key: 'today', label: 'Hoje' },
-  { key: 'week', label: '7 dias' },
-  { key: 'month', label: '30 dias' },
-  { key: '60days', label: '60 dias' },
-  { key: '90days', label: '90 dias' },
-];
-
-function isWithinDays(item, days) {
-  const ts = item.createdAt?.toDate?.() || item.createdAt;
-  if (!ts) return false;
-  const limit = new Date();
-  limit.setDate(limit.getDate() - days);
-  return ts >= limit;
-}
-
-function isToday(item) {
-  const ts = item.createdAt?.toDate?.() || item.createdAt;
-  if (!ts) return false;
-  const now = new Date();
-  return (
-    ts.getDate() === now.getDate() &&
-    ts.getMonth() === now.getMonth() &&
-    ts.getFullYear() === now.getFullYear()
-  );
-}
 
 export default function HistoryScreen({ navigation, route }) {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
 
-  const filter = route?.params?.filter || 'all';
+  const originFilter = route?.params?.filter || 'all';
   const customTitle = route?.params?.title || 'Histórico Completo';
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState('user');
+  const [role, setRole] = useState(ROLES.USER);
+  const [uid, setUid] = useState(null);
+  const [empresaId, setEmpresaId] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
 
-  // Filtros
-  const [search, setSearch] = useState('');
-  const [dateFilter, setDateFilter] = useState('all');
+  // Paginação
+  const [lastDoc, setLastDoc] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const unsubscribeRef = useRef(null);
+
+  const { filteredItems, search, setSearch, dateFilter, setDateFilter } =
+    useHistoryFilters(items, originFilter);
 
   const stopListener = () => {
     if (unsubscribeRef.current) {
@@ -85,12 +71,16 @@ export default function HistoryScreen({ navigation, route }) {
   const loadHistory = useCallback(async () => {
     setLoading(true);
     setErrorMessage('');
+    setLastDoc(null);
+    setHasMore(false);
     try {
       stopListener();
       const unsubscribe = await subscribeInventoryHistory({
-        onData: (list, userRole) => {
+        onData: (list, userRole, newLastDoc, newHasMore) => {
           setItems(Array.isArray(list) ? list : []);
-          setRole(userRole || 'user');
+          setRole(userRole || ROLES.USER);
+          setLastDoc(newLastDoc);
+          setHasMore(newHasMore);
           setLoading(false);
         },
         onError: error => {
@@ -101,6 +91,13 @@ export default function HistoryScreen({ navigation, route }) {
         },
       });
       unsubscribeRef.current = unsubscribe;
+
+      const currentUid = auth.currentUser?.uid || null;
+      setUid(currentUid);
+      if (currentUid) {
+        const profile = await getUserProfile(currentUid);
+        setEmpresaId(profile?.empresaId || null);
+      }
     } catch (error) {
       console.error('Erro ao preparar histórico:', error);
       setItems([]);
@@ -109,52 +106,51 @@ export default function HistoryScreen({ navigation, route }) {
     }
   }, []);
 
+  const handleLoadMore = useCallback(async () => {
+    if (!hasMore || loadingMore || !lastDoc) return;
+    setLoadingMore(true);
+    try {
+      const {
+        items: nextItems,
+        lastDoc: newLastDoc,
+        hasMore: newHasMore,
+      } = await fetchNextInventoryPage({
+        cursor: lastDoc,
+        role,
+        uid,
+        empresaId,
+      });
+      setItems(prev => [...prev, ...nextItems]);
+      setLastDoc(newLastDoc);
+      setHasMore(newHasMore);
+    } catch (error) {
+      console.error('Erro ao carregar mais itens:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [hasMore, loadingMore, lastDoc, role, uid, empresaId]);
+
   useEffect(() => {
     loadHistory();
     return () => stopListener();
   }, [loadHistory]);
 
-  const filteredItems = useMemo(() => {
-    let result = items;
-
-    // Filtro de origem
-    if (filter === 'audited')
-      result = result.filter(i => i.origem === 'scanner');
-
-    // Filtro de data
-    if (dateFilter === 'today') result = result.filter(isToday);
-    else if (dateFilter === 'week')
-      result = result.filter(i => isWithinDays(i, 7));
-    else if (dateFilter === 'month')
-      result = result.filter(i => isWithinDays(i, 30));
-    else if (dateFilter === '60days')
-      result = result.filter(i => isWithinDays(i, 60));
-    else if (dateFilter === '90days')
-      result = result.filter(i => isWithinDays(i, 90));
-
-    // Busca textual (item, usuário, local)
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      result = result.filter(
-        i =>
-          i.item?.toLowerCase().includes(q) ||
-          i.usuarioNome?.toLowerCase().includes(q) ||
-          i.local?.toLowerCase().includes(q),
-      );
-    }
-
-    return result;
-  }, [items, filter, dateFilter, search]);
-
   const screenTitle = useMemo(() => {
-    if (filter === 'audited') return 'Itens Auditados';
-    if (filter === 'total') return 'Itens Totais';
+    if (originFilter === 'audited') return 'Itens Auditados';
+    if (originFilter === 'total') return 'Itens Totais';
     return customTitle;
-  }, [filter, customTitle]);
+  }, [originFilter, customTitle]);
 
   const handleContest = item => {
     if (item.usuarioId === auth.currentUser?.uid) {
       Alert.alert('Atenção', 'Você não pode contestar sua própria contagem.');
+      return;
+    }
+    if (item.usuarioRole !== ROLES.USER) {
+      Alert.alert(
+        'Ação não permitida',
+        'Contestações entre administradores devem ser feitas via abertura de chamado.',
+      );
       return;
     }
     if (item.status === 'contested') {
@@ -170,7 +166,7 @@ export default function HistoryScreen({ navigation, route }) {
           await contestScan(item.id, reason.trim(), item.usuarioId);
           Alert.alert('Contestada', 'Contagem marcada como contestada.');
         } catch (e) {
-          Alert.alert('Erro', e.message);
+          showErrorAlert(e);
         }
       },
       'plain-text',
@@ -181,7 +177,7 @@ export default function HistoryScreen({ navigation, route }) {
     try {
       await exportInventoryToCSV(filteredItems);
     } catch (error) {
-      Alert.alert('Erro', error.message || 'Não foi possível exportar CSV.');
+      showErrorAlert(error, 'Não foi possível exportar CSV.');
     }
   };
 
@@ -198,7 +194,7 @@ export default function HistoryScreen({ navigation, route }) {
             {item.scanId || item.id}
           </Text>
           <Text style={styles.itemRole}>
-            {item.usuarioRole || role || 'user'}
+            {item.usuarioRole || role || ROLES.USER}
           </Text>
         </View>
 
@@ -222,7 +218,6 @@ export default function HistoryScreen({ navigation, route }) {
           Classificação: {item.classificacao || '-'}
         </Text>
 
-        {/* Breakdown por tipo de item */}
         {Array.isArray(item.itens) && item.itens.length > 0 ? (
           <View style={styles.itensBox}>
             <Text style={styles.itensBoxTitle}>Itens detectados:</Text>
@@ -279,9 +274,11 @@ export default function HistoryScreen({ navigation, route }) {
           </TouchableOpacity>
         )}
 
-        {/* Botão Contestar — admin sobre contagens de outros usuários */}
-        {role === 'admin' &&
+        {/* Botão Contestar — admin só pode contestar contagens de usuários comuns.
+            Conflitos entre admins devem ser tratados via abertura de chamado. */}
+        {role === ROLES.ADMIN &&
           item.usuarioId !== auth.currentUser?.uid &&
+          item.usuarioRole === ROLES.USER &&
           item.status !== 'contested' && (
             <TouchableOpacity
               style={styles.contestBtn}
@@ -297,7 +294,6 @@ export default function HistoryScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={28} color={COLORS.PRIMARY} />
@@ -393,6 +389,21 @@ export default function HistoryScreen({ navigation, route }) {
             isTablet && styles.listContentTablet,
           ]}
           showsVerticalScrollIndicator={false}
+          ListFooterComponent={
+            hasMore ? (
+              <TouchableOpacity
+                style={styles.loadMoreBtn}
+                onPress={handleLoadMore}
+                disabled={loadingMore}
+              >
+                {loadingMore ? (
+                  <ActivityIndicator size="small" color={COLORS.BLACK} />
+                ) : (
+                  <Text style={styles.loadMoreText}>Carregar mais</Text>
+                )}
+              </TouchableOpacity>
+            ) : null
+          }
         />
       )}
 
@@ -597,4 +608,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   retryBtnText: { color: COLORS.BLACK, fontWeight: 'bold' },
+  loadMoreBtn: {
+    backgroundColor: COLORS.PRIMARY,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginTop: 4,
+    marginBottom: 20,
+  },
+  loadMoreText: { color: COLORS.BLACK, fontWeight: 'bold', fontSize: 14 },
 });

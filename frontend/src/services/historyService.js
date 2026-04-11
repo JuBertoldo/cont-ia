@@ -3,11 +3,17 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
   where,
+  limit,
+  startAfter,
 } from 'firebase/firestore';
+import { COLLECTIONS } from '../constants/collections';
+import { ROLES } from '../constants/roles';
+import { PAGE_SIZE } from '../constants/config';
 
 function getCurrentUserId() {
   return auth?.currentUser?.uid || null;
@@ -15,13 +21,13 @@ function getCurrentUserId() {
 
 async function getCurrentUserProfile() {
   const uid = getCurrentUserId();
-  if (!uid) return { role: 'user', empresaId: null };
+  if (!uid) return { role: ROLES.USER, empresaId: null };
 
-  const snap = await getDoc(doc(db, 'usuarios', uid));
-  if (!snap.exists()) return { role: 'user', empresaId: null };
+  const snap = await getDoc(doc(db, COLLECTIONS.USERS, uid));
+  if (!snap.exists()) return { role: ROLES.USER, empresaId: null };
 
   const data = snap.data();
-  return { role: data?.role || 'user', empresaId: data?.empresaId || null };
+  return { role: data?.role || ROLES.USER, empresaId: data?.empresaId || null };
 }
 
 export async function getCurrentUserRole() {
@@ -29,29 +35,51 @@ export async function getCurrentUserRole() {
   return role;
 }
 
-export function buildInventoryHistoryQuery({ role, uid, empresaId }) {
+export function buildInventoryHistoryQuery({
+  role,
+  uid,
+  empresaId,
+  cursor = null,
+  pageSize = PAGE_SIZE,
+}) {
   if (!uid) throw new Error('Usuário não autenticado.');
 
-  if (role === 'admin' && empresaId) {
-    return query(
-      collection(db, 'inventario'),
-      where('empresaId', '==', empresaId),
-      orderBy('createdAt', 'desc'),
-    );
+  const buildQuery = constraints =>
+    cursor
+      ? query(
+          collection(db, COLLECTIONS.INVENTORY),
+          ...constraints,
+          startAfter(cursor),
+          limit(pageSize),
+        )
+      : query(
+          collection(db, COLLECTIONS.INVENTORY),
+          ...constraints,
+          limit(pageSize),
+        );
+
+  if (role === ROLES.SUPER_ADMIN) {
+    return buildQuery([orderBy('createdAt', 'desc')]);
   }
 
-  return query(
-    collection(db, 'inventario'),
+  if (role === ROLES.ADMIN && empresaId) {
+    return buildQuery([
+      where('empresaId', '==', empresaId),
+      orderBy('createdAt', 'desc'),
+    ]);
+  }
+
+  return buildQuery([
     where('usuarioId', '==', uid),
     orderBy('createdAt', 'desc'),
-  );
+  ]);
 }
 
 export async function subscribeInventoryHistory({ onData, onError }) {
   const uid = getCurrentUserId();
 
   if (!uid) {
-    onData?.([], 'user');
+    onData?.([], ROLES.USER, null, false);
     return () => {};
   }
 
@@ -65,10 +93,29 @@ export async function subscribeInventoryHistory({ onData, onError }) {
         id: docSnap.id,
         ...docSnap.data(),
       }));
-      onData?.(list, role);
+      const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+      const hasMore = snapshot.docs.length === PAGE_SIZE;
+      onData?.(list, role, lastDoc, hasMore);
     },
     error => onError?.(error),
   );
 
   return unsubscribe;
+}
+
+/** Busca a próxima página (one-shot, sem real-time) */
+export async function fetchNextInventoryPage({ cursor, role, uid, empresaId }) {
+  if (!cursor) return { items: [], lastDoc: null, hasMore: false };
+
+  const q = buildInventoryHistoryQuery({ role, uid, empresaId, cursor });
+  const snapshot = await getDocs(q);
+
+  const items = snapshot.docs.map(docSnap => ({
+    id: docSnap.id,
+    ...docSnap.data(),
+  }));
+  const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+  const hasMore = snapshot.docs.length === PAGE_SIZE;
+
+  return { items, lastDoc, hasMore };
 }

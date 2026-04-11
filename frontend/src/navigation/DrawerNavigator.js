@@ -14,6 +14,7 @@ import { auth } from '../config/firebaseConfig';
 import { logout, getUserProfile } from '../services/authService';
 import { ROUTES } from '../constants/routes';
 import { COLORS } from '../constants/colors';
+import { ROLES, ROLE_LABELS } from '../constants/roles';
 
 import HomeScreen from '../screens/home/HomeScreen';
 import ScannerScreen from '../screens/inventory/ScannerScreen';
@@ -92,7 +93,7 @@ function CustomDrawerContent(props) {
         )}
         <Text style={styles.userName}>{userName}</Text>
         <Text style={styles.roleText}>
-          {role === 'admin' ? 'Perfil admin' : 'Perfil usuário'}
+          {ROLE_LABELS[role] || ROLE_LABELS[ROLES.USER]}
         </Text>
       </View>
 
@@ -138,7 +139,7 @@ function CustomDrawerContent(props) {
           onPress={() => props.navigation.navigate(ROUTES.QUICK_GUIDE)}
         />
 
-        {(role === 'admin' || role === 'super_admin') && (
+        {(role === ROLES.ADMIN || role === ROLES.SUPER_ADMIN) && (
           <>
             <View style={styles.divider} />
             <Text style={styles.sectionLabel}>Administração</Text>
@@ -148,7 +149,7 @@ function CustomDrawerContent(props) {
               highlight
               onPress={() => props.navigation.navigate(ROUTES.ADMIN_USERS)}
             />
-            {role === 'admin' && (
+            {role === ROLES.ADMIN && (
               <DrawerItem
                 icon="headset-outline"
                 label="Suporte / Chamados"
@@ -158,7 +159,7 @@ function CustomDrawerContent(props) {
           </>
         )}
 
-        {role === 'super_admin' && (
+        {role === ROLES.SUPER_ADMIN && (
           <>
             <View style={styles.divider} />
             <Text style={styles.sectionLabel}>Sistema</Text>
