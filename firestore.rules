@@ -71,8 +71,12 @@ service cloud.firestore {
     // ── Inventário (/inventario/{docId}) ─────────────────────────────────────
 
     match /inventario/{docId} {
-      // Leitura: usuário ativo da mesma empresa ou super_admin (global)
-      allow read: if (isActive() && isSameEmpresa(resource.data.empresaId))
+      // Leitura:
+      //   - usuário ativo lendo seus próprios registros (query por usuarioId)
+      //   - admin ativo da mesma empresa (query por empresaId)
+      //   - super_admin (sem filtro)
+      allow read: if (isActive() && resource.data.usuarioId == request.auth.uid)
+        || (isActive() && isSameEmpresa(resource.data.empresaId))
         || (isActive() && isSuperAdmin());
 
       // Criação: usuário ativo criando na sua empresa
