@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import logger from '../utils/logger';
 
 const KEYS = {
   REMEMBER_EMAIL: '@contia_remember_email',
@@ -15,7 +16,7 @@ export async function getRememberEmailData() {
       email: emailRaw || '',
     };
   } catch (error) {
-    console.error('rememberEmailService:getRememberEmailData', error);
+    logger.error('rememberEmailService:getRememberEmailData', error);
     return {
       rememberEmail: false,
       email: '',
@@ -34,7 +35,7 @@ export async function saveRememberEmailData({ rememberEmail, email }) {
     await AsyncStorage.setItem(KEYS.REMEMBER_EMAIL, 'false');
     await AsyncStorage.removeItem(KEYS.SAVED_EMAIL);
   } catch (error) {
-    console.error('rememberEmailService:saveRememberEmailData', error);
+    logger.error('rememberEmailService:saveRememberEmailData', error);
   }
 }
 
@@ -42,6 +43,6 @@ export async function updateSavedEmail(email) {
   try {
     await AsyncStorage.setItem(KEYS.SAVED_EMAIL, (email || '').trim());
   } catch (error) {
-    console.error('rememberEmailService:updateSavedEmail', error);
+    logger.error('rememberEmailService:updateSavedEmail', error);
   }
 }

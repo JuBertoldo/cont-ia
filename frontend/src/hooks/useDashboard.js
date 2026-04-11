@@ -4,6 +4,7 @@ import { auth, db } from '../config/firebaseConfig';
 import { getUserProfile } from '../services/authService';
 import { COLLECTIONS } from '../constants/collections';
 import { ROLES } from '../constants/roles';
+import logger from '../utils/logger';
 import { CHART_DAYS } from '../constants/config';
 
 function buildLast7DaysLabels() {
@@ -106,7 +107,7 @@ export function useDashboard() {
         setPendingUsers(stats.pendingUsers);
       }
     } catch (error) {
-      console.error('useDashboard: erro ao carregar dashboard', error);
+      logger.error('useDashboard: erro ao carregar dashboard', error);
     } finally {
       setLoading(false);
     }

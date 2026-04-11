@@ -1,16 +1,29 @@
 from contextlib import asynccontextmanager
 
 import firebase_admin
+import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from firebase_admin import credentials
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.routes.detect import router as detect_router
 from app.core.config import settings
+from app.core.limiter import limiter
 from app.core.logging import get_logger, setup_logging
 
 setup_logging()
 logger = get_logger(__name__)
+
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        traces_sample_rate=0.2,
+        environment=settings.API_ENV,
+    )
+    logger.info("Sentry inicializado (env=%s)", settings.API_ENV)
 
 
 @asynccontextmanager
@@ -29,6 +42,10 @@ app = FastAPI(
     redoc_url=None,
     lifespan=lifespan,
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

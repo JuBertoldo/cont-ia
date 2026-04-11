@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { auth } from '../config/firebaseConfig';
 import { getUserProfile } from '../services/authService';
 import { ROLES } from '../constants/roles';
+import logger from '../utils/logger';
 
 const DEFAULT_PROFILE = {
   nome: 'Operador',
@@ -32,7 +33,7 @@ export function useUserProfile() {
         });
       }
     } catch (error) {
-      console.error('useUserProfile: erro ao carregar perfil', error);
+      logger.error('useUserProfile: erro ao carregar perfil', error);
     } finally {
       setLoading(false);
     }

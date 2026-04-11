@@ -15,6 +15,7 @@ import { logout, getUserProfile } from '../services/authService';
 import { ROUTES } from '../constants/routes';
 import { COLORS } from '../constants/colors';
 import { ROLES, ROLE_LABELS } from '../constants/roles';
+import logger from '../utils/logger';
 
 import HomeScreen from '../screens/home/HomeScreen';
 import ScannerScreen from '../screens/inventory/ScannerScreen';
@@ -61,7 +62,7 @@ function CustomDrawerContent(props) {
           setRole(profile.role || 'user');
         }
       } catch (error) {
-        console.error('Erro ao carregar usuário no drawer:', error);
+        logger.error('Erro ao carregar usuário no drawer:', error);
       }
     };
     loadUser();

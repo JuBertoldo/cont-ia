@@ -33,6 +33,7 @@ import { contestScan } from '../../services/inventoryService';
 import { getUserProfile } from '../../services/authService';
 import { auth } from '../../config/firebaseConfig';
 import { useHistoryFilters } from '../../hooks/useHistoryFilters';
+import logger from '../../utils/logger';
 import ImagePreviewModal from '../../components/common/ImagePreviewModal';
 
 export default function HistoryScreen({ navigation, route }) {
@@ -84,7 +85,7 @@ export default function HistoryScreen({ navigation, route }) {
           setLoading(false);
         },
         onError: error => {
-          console.error('Erro ao carregar histórico:', error);
+          logger.error('Erro ao carregar histórico:', error);
           setItems([]);
           setErrorMessage('Não foi possível carregar o histórico.');
           setLoading(false);
@@ -99,7 +100,7 @@ export default function HistoryScreen({ navigation, route }) {
         setEmpresaId(profile?.empresaId || null);
       }
     } catch (error) {
-      console.error('Erro ao preparar histórico:', error);
+      logger.error('Erro ao preparar histórico:', error);
       setItems([]);
       setErrorMessage('Não foi possível carregar o histórico.');
       setLoading(false);
@@ -124,7 +125,7 @@ export default function HistoryScreen({ navigation, route }) {
       setLastDoc(newLastDoc);
       setHasMore(newHasMore);
     } catch (error) {
-      console.error('Erro ao carregar mais itens:', error);
+      logger.error('Erro ao carregar mais itens:', error);
     } finally {
       setLoadingMore(false);
     }

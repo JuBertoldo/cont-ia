@@ -5,10 +5,13 @@ class Settings:
     API_ENV: str = os.getenv("API_ENV", "development")
     YOLO_MODEL: str = os.getenv("YOLO_MODEL", "yolo11m.pt")
     YOLO_CONF: float = float(os.getenv("YOLO_CONF", "0.25"))
+    YOLO_TIMEOUT_S: float = float(os.getenv("YOLO_TIMEOUT_S", "60"))
     CORS_ORIGINS: list[str] = os.getenv("CORS_ORIGINS", "*").split(",")
     FIREBASE_SERVICE_ACCOUNT_PATH: str = os.getenv(
         "FIREBASE_SERVICE_ACCOUNT_PATH", "firebase-service-account.json"
     )
+    SENTRY_DSN: str = os.getenv("SENTRY_DSN", "")
+    RATE_LIMIT: str = os.getenv("RATE_LIMIT", "30/minute")
 
     @property
     def is_production(self) -> bool:

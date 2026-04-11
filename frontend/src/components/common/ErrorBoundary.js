@@ -1,4 +1,5 @@
 import React from 'react';
+import logger from '../../utils/logger';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 /**
@@ -23,12 +24,9 @@ export default class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    // Em produção: enviar para serviço de monitoramento (ex: Sentry)
-    console.error(
-      '[ErrorBoundary] Erro capturado:',
-      error,
-      info.componentStack,
-    );
+    logger.error('[ErrorBoundary] Erro capturado:', error, {
+      componentStack: info.componentStack,
+    });
   }
 
   handleRetry = () => {

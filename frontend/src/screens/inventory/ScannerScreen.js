@@ -23,6 +23,7 @@ import {
   summarizeDetections,
 } from '../../services/yoloService';
 import { createInventoryItem } from '../../services/inventoryService';
+import { imageUriToBase64 } from '../../services/scannerService';
 import { auth } from '../../config/firebaseConfig';
 import { getUserProfile } from '../../services/authService';
 
@@ -40,24 +41,6 @@ function getLocation() {
       () => resolve(null),
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
     );
-  });
-}
-
-async function imageUriToBase64(imageUri) {
-  const response = await fetch(imageUri);
-  const blob = await response.blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = String(reader.result || '').split(',')[1];
-      if (!base64) {
-        reject(new Error('Falha ao converter imagem.'));
-        return;
-      }
-      resolve(base64);
-    };
-    reader.onerror = () => reject(new Error('Erro ao ler imagem.'));
-    reader.readAsDataURL(blob);
   });
 }
 

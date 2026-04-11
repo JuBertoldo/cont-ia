@@ -1,5 +1,6 @@
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../config/firebaseConfig';
+import logger from '../utils/logger';
 
 export const uploadImage = async ({
   uri,
@@ -15,7 +16,7 @@ export const uploadImage = async ({
 
     return await getDownloadURL(storageRef);
   } catch (error) {
-    console.error('Erro ao fazer upload da imagem:', error);
+    logger.error('Erro ao fazer upload da imagem:', error);
     throw error;
   }
 };

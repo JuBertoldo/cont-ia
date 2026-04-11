@@ -6,6 +6,7 @@ import {
   updateProfileBirthDate,
   updateProfilePhoto,
 } from '../services/profileService';
+import logger from '../utils/logger';
 
 export const useProfile = () => {
   const [loading, setLoading] = useState(false);
@@ -38,7 +39,7 @@ export const useProfile = () => {
         birthDate: '',
       };
     } catch (error) {
-      console.error('useProfile loadProfile error:', error);
+      logger.error('useProfile loadProfile error:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -51,7 +52,7 @@ export const useProfile = () => {
       if (!auth.currentUser) throw new Error('Usuário não autenticado.');
       await updateProfileName(auth.currentUser.uid, name);
     } catch (error) {
-      console.error('useProfile saveName error:', error);
+      logger.error('useProfile saveName error:', error);
       throw error;
     } finally {
       setSaving(false);
@@ -64,7 +65,7 @@ export const useProfile = () => {
       if (!auth.currentUser) throw new Error('Usuário não autenticado.');
       await updateProfileBirthDate(auth.currentUser.uid, birthDate);
     } catch (error) {
-      console.error('useProfile saveBirthDate error:', error);
+      logger.error('useProfile saveBirthDate error:', error);
       throw error;
     } finally {
       setSaving(false);
@@ -78,7 +79,7 @@ export const useProfile = () => {
       const downloadURL = await updateProfilePhoto(auth.currentUser.uid, uri);
       return downloadURL;
     } catch (error) {
-      console.error('useProfile savePhoto error:', error);
+      logger.error('useProfile savePhoto error:', error);
       throw error;
     } finally {
       setSaving(false);

@@ -21,6 +21,7 @@ import { ROUTES } from '../../constants/routes';
 import { COLORS } from '../../constants/colors';
 import { MESSAGES } from '../../constants/messages';
 import { isValidEmail } from '../../utils/validators';
+import logger from '../../utils/logger';
 import { useAuth } from '../../hooks/useAuth';
 import { getUserStatus, logout } from '../../services/authService';
 import {
@@ -117,7 +118,7 @@ export default function AuthHome() {
 
       navigation.replace(ROUTES.APP_DRAWER);
     } catch (error) {
-      console.error('Erro no login:', error);
+      logger.error('Erro no login:', error);
 
       const code = error?.code;
 

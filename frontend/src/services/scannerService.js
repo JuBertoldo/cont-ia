@@ -1,11 +1,12 @@
 import { detectWithYolo, summarizeDetections } from './yoloService';
 import { createInventoryItem } from './inventoryService';
+import logger from '../utils/logger';
 
 /**
  * Converte URI de imagem para base64.
- * Mantido isolado para facilitar testes e reuso.
+ * Exportado para reuso em componentes (ex: ScannerScreen).
  */
-async function imageUriToBase64(imageUri) {
+export async function imageUriToBase64(imageUri) {
   if (!imageUri) throw new Error('imageUri inválido.');
 
   const response = await fetch(imageUri);
@@ -121,7 +122,7 @@ export async function processScan({
       payload,
     };
   } catch (error) {
-    console.error('Erro no scanner pipeline:', error);
+    logger.error('Erro no scanner pipeline:', error);
 
     return {
       success: false,

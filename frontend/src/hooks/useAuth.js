@@ -5,6 +5,7 @@ import {
   resetPassword,
   logout as logoutService,
 } from '../services/authService';
+import logger from '../utils/logger';
 
 export const useAuth = () => {
   const [loading, setLoading] = useState(false);
@@ -15,7 +16,7 @@ export const useAuth = () => {
       const user = await loginWithEmail({ email, password });
       return user;
     } catch (error) {
-      console.error('useAuth login error:', error);
+      logger.error('useAuth login error:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -42,7 +43,7 @@ export const useAuth = () => {
       });
       return user;
     } catch (error) {
-      console.error('useAuth register error:', error);
+      logger.error('useAuth register error:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -54,7 +55,7 @@ export const useAuth = () => {
     try {
       await resetPassword(email);
     } catch (error) {
-      console.error('useAuth forgotPassword error:', error);
+      logger.error('useAuth forgotPassword error:', error);
       throw error;
     } finally {
       setLoading(false);
@@ -66,7 +67,7 @@ export const useAuth = () => {
     try {
       await logoutService();
     } catch (error) {
-      console.error('useAuth logout error:', error);
+      logger.error('useAuth logout error:', error);
       throw error;
     } finally {
       setLoading(false);

@@ -1,5 +1,6 @@
 import base64
 import io
+import threading
 import time
 
 from PIL import Image
@@ -11,14 +12,18 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 _model: YOLO | None = None
+_model_lock = threading.Lock()
 
 
 def get_model() -> YOLO:
     global _model
     if _model is None:
-        logger.info("Carregando modelo YOLO: %s", settings.YOLO_MODEL)
-        _model = YOLO(settings.YOLO_MODEL)
-        logger.info("Modelo YOLO carregado com sucesso.")
+        with _model_lock:
+            # Double-checked locking: evita inicialização simultânea em múltiplas threads.
+            if _model is None:
+                logger.info("Carregando modelo YOLO: %s", settings.YOLO_MODEL)
+                _model = YOLO(settings.YOLO_MODEL)
+                logger.info("Modelo YOLO carregado com sucesso.")
     return _model
 
 
