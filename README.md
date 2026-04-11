@@ -219,3 +219,8 @@ docker compose up --build
 - Todos os endpoints de detecção exigem token Firebase válido (`Authorization: Bearer`)
 - Admin SDK valida o token no servidor a cada requisição
 - Usuários novos precisam de aprovação manual do administrador
+
+## Desenvolvedores
+
+- Juliana Bertoldo
+- Wellington Paiva
