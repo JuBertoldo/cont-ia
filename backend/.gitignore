@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Testes e cobertura
+.pytest_cache/
+htmlcov/
+coverage.xml
+.coverage
+
+# Credenciais (nunca commitar)
+.env
+firebase-service-account.json
+*-adminsdk-*.json
+
+# YOLO model weights
+*.pt
+*.onnx

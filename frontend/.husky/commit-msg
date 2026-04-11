@@ -1,0 +1,8 @@
+#!/bin/sh
+# QA — Hook commit-msg
+# Valida a mensagem de commit segundo Conventional Commits.
+# Exemplo válido:   feat(scanner): adicionar timeout configurável
+# Exemplo inválido: atualiza coisas
+
+cd frontend
+npx --no -- commitlint --edit "$1"

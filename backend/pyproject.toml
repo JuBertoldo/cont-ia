@@ -1,0 +1,61 @@
+[tool.ruff]
+# QA — Configuração do linter ruff para o backend Python
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes (imports não usados, variáveis indefinidas)
+    "I",    # isort (ordem de imports)
+    "B",    # flake8-bugbear (anti-padrões comuns)
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade (modernizar syntax)
+    "N",    # pep8-naming
+    "SIM",  # flake8-simplify
+    "RUF",  # regras específicas do ruff
+]
+ignore = [
+    "E501",  # line too long — controlado por line-length acima
+    "B008",  # function calls in default args (FastAPI usa isso)
+    "N999",  # invalid module name (app/)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]  # assert permitido em testes
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+# ── QC — Configuração do pytest ──────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--tb=short",
+    "--strict-markers",
+    "-v",
+]
+markers = [
+    "unit: testes unitários (sem I/O externo)",
+    "integration: testes de integração (com servidor de teste)",
+    "slow: testes que demoram mais de 1s",
+]
+
+# ── QC — Configuração de cobertura ───────────────────────────────────────────
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/core/logging.py", "tests/*"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 70
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]

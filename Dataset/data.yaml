@@ -1,0 +1,16 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Cont.IA — Configuração do dataset de parafusos
+# Usado pelo YOLO11 durante o treinamento
+# ─────────────────────────────────────────────────────────────────────────────
+
+path: /content/drive/MyDrive/contia_dataset  # raiz do dataset no Google Drive
+
+train: images/train
+val:   images/val
+test:  images/test
+
+# Classes
+nc: 2
+names:
+  0: parafuso_philips
+  1: parafuso_fenda

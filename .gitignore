@@ -15,3 +15,9 @@ web-build/
 
 # Variáveis de Ambiente (NUNCA suba senhas pro GitHub)
 .env
+
+# Firebase service account (NUNCA suba credenciais pro GitHub)
+firebase-service-account.json
+*-adminsdk-*.json
+google-services.json
+GoogleService-Info.plist

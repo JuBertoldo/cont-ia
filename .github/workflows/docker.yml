@@ -1,0 +1,116 @@
+name: Build & Push Docker (Backend)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/docker.yml"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/contia-backend
+
+jobs:
+  build-and-push:
+    name: Build e Push para GHCR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login no Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extrair metadados da imagem
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build e Push
+        uses: docker/build-push-action@v5
+        with:
+          context: backend/
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Smoke Test ────────────────────────────────────────────────────────────────
+  smoke-test:
+    name: Smoke Test — Valida container em execução
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Criar firebase-service-account.json fake para smoke test
+        run: |
+          echo '{"type":"service_account","project_id":"smoke-test","private_key_id":"test","private_key":"-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA0Z3VS5JJcds3xHn/ygWep4PAtEsHAQdBzOmMbkPn1IXFJ7UX\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n-----END RSA PRIVATE KEY-----\n","client_email":"test@smoke-test.iam.gserviceaccount.com","client_id":"123","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token"}' \
+          > backend/firebase-service-account.json
+
+      - name: Criar .env de smoke test
+        run: |
+          cat > backend/.env <<'EOF'
+          API_ENV=development
+          YOLO_MODEL=yolo11m.pt
+          YOLO_CONF=0.25
+          CORS_ORIGINS=*
+          FIREBASE_SERVICE_ACCOUNT_PATH=firebase-service-account.json
+          EOF
+
+      - name: Subir container com docker compose
+        run: docker compose up -d --build
+        working-directory: .
+
+      - name: Aguardar container ficar saudável
+        run: |
+          for i in $(seq 1 15); do
+            STATUS=$(docker compose ps --format json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('Health','') if isinstance(d,dict) else '')" 2>/dev/null || echo "")
+            if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+              echo "✅ Container respondendo."
+              exit 0
+            fi
+            echo "Tentativa $i/15 — aguardando..."
+            sleep 4
+          done
+          echo "❌ Container não respondeu a tempo."
+          docker compose logs
+          exit 1
+        working-directory: .
+
+      - name: Verificar /health retorna status ok
+        run: |
+          RESPONSE=$(curl -sf http://localhost:8000/health)
+          echo "Resposta: $RESPONSE"
+          echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); assert d.get('status')=='ok', f'Esperado ok, recebido: {d}'"
+
+      - name: Verificar /v1/version retorna campos esperados
+        run: |
+          RESPONSE=$(curl -sf http://localhost:8000/v1/version)
+          echo "Resposta: $RESPONSE"
+          python3 -c "
+          import json, sys
+          d = json.loads('$RESPONSE')
+          assert 'api' in d, 'Campo api ausente'
+          assert 'model' in d, 'Campo model ausente'
+          print('✅ /v1/version OK')
+          "
+
+      - name: Derrubar container
+        if: always()
+        run: docker compose down
+        working-directory: .
