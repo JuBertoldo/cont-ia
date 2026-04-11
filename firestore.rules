@@ -20,6 +20,10 @@ service cloud.firestore {
       return isAuthenticated() && getUserData().role == 'admin';
     }
 
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserData().role == 'super_admin';
+    }
+
     function isActive() {
       return isAuthenticated() && getUserData().status == 'active';
     }
@@ -31,50 +35,54 @@ service cloud.firestore {
     // ── Usuários (/usuarios/{uid}) ────────────────────────────────────────────
 
     match /usuarios/{uid} {
-      // Leitura: próprio perfil ou admin da mesma empresa
+      // Leitura: próprio perfil, admin da mesma empresa ou super_admin (global)
       allow read: if isOwner(uid)
-        || (isActive() && isAdmin() && isSameEmpresa(resource.data.empresaId));
+        || (isActive() && isAdmin() && isSameEmpresa(resource.data.empresaId))
+        || (isActive() && isSuperAdmin());
 
       // Criação: apenas durante o registro (usuário autenticado criando o próprio doc)
       allow create: if isOwner(uid);
 
-      // Atualização: próprio perfil (campos limitados) ou admin da empresa
+      // Atualização: próprio perfil, admin da empresa ou super_admin
       allow update: if isOwner(uid)
-        || (isActive() && isAdmin() && isSameEmpresa(resource.data.empresaId));
+        || (isActive() && isAdmin() && isSameEmpresa(resource.data.empresaId))
+        || (isActive() && isSuperAdmin());
 
-      // Exclusão: apenas admin
-      allow delete: if isActive() && isAdmin() && isSameEmpresa(resource.data.empresaId);
+      // Exclusão: admin da empresa ou super_admin
+      allow delete: if (isActive() && isAdmin() && isSameEmpresa(resource.data.empresaId))
+        || (isActive() && isSuperAdmin());
     }
 
     // ── Empresas (/empresas/{empresaId}) ─────────────────────────────────────
 
     match /empresas/{empresaId} {
-      // Leitura: membros da empresa
-      allow read: if isAuthenticated() && getUserData().empresaId == empresaId;
+      // Leitura: membros da empresa ou super_admin (global)
+      allow read: if (isAuthenticated() && getUserData().empresaId == empresaId)
+        || (isActive() && isSuperAdmin());
 
       // Criação: qualquer usuário autenticado (somente no registro do primeiro admin)
       allow create: if isAuthenticated();
 
-      // Atualização/exclusão: apenas admin da empresa
-      allow update, delete: if isActive() && isAdmin()
-        && getUserData().empresaId == empresaId;
+      // Atualização/exclusão: admin da empresa ou super_admin
+      allow update, delete: if (isActive() && isAdmin() && getUserData().empresaId == empresaId)
+        || (isActive() && isSuperAdmin());
     }
 
     // ── Inventário (/inventario/{docId}) ─────────────────────────────────────
 
     match /inventario/{docId} {
-      // Leitura: próprios registros ou admin da mesma empresa
-      allow read: if isActive()
-        && isSameEmpresa(resource.data.empresaId);
+      // Leitura: usuário ativo da mesma empresa ou super_admin (global)
+      allow read: if (isActive() && isSameEmpresa(resource.data.empresaId))
+        || (isActive() && isSuperAdmin());
 
       // Criação: usuário ativo criando na sua empresa
       allow create: if isActive()
         && request.resource.data.empresaId == getUserData().empresaId
         && request.resource.data.usuarioId == request.auth.uid;
 
-      // Atualização/exclusão: apenas admin da empresa
-      allow update, delete: if isActive() && isAdmin()
-        && isSameEmpresa(resource.data.empresaId);
+      // Atualização/exclusão: admin da empresa ou super_admin
+      allow update, delete: if (isActive() && isAdmin() && isSameEmpresa(resource.data.empresaId))
+        || (isActive() && isSuperAdmin());
     }
   }
 }
