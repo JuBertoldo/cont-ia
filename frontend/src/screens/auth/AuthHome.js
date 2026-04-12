@@ -142,16 +142,17 @@ export default function AuthHome() {
   return (
     <KeyboardAvoidingView
       style={styles.keyboardAvoid}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 24 : 0}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={0}
     >
       <ScrollView
         contentContainerStyle={[
           styles.container,
-          { minHeight: height, paddingBottom: 28 },
+          { minHeight: height, paddingBottom: 40 },
         ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
       >
         <View style={[styles.content, isTablet && styles.contentTablet]}>
           <View style={styles.header}>
