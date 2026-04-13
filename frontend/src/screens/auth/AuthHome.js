@@ -10,9 +10,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  useWindowDimensions,
   Keyboard,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -32,8 +33,6 @@ import {
 
 export default function AuthHome() {
   const navigation = useNavigation();
-  const { width, height } = useWindowDimensions();
-  const isTablet = width >= 768;
 
   const { loading, login } = useAuth();
 
@@ -140,33 +139,28 @@ export default function AuthHome() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.keyboardAvoid}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={0}
-    >
-      <ScrollView
-        contentContainerStyle={[
-          styles.container,
-          { minHeight: height, paddingBottom: 40 },
-        ]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.BLACK} />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={[styles.content, isTablet && styles.contentTablet]}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {/* ── Logo ── */}
           <View style={styles.header}>
-            <Text style={[styles.logo, isTablet && styles.logoTablet]}>
-              CONT.IA
-            </Text>
-            <Text style={[styles.subtitle, isTablet && styles.subtitleTablet]}>
-              Inteligência que conta.
-            </Text>
+            <Text style={styles.logo}>CONT.IA</Text>
+            <Text style={styles.subtitle}>Inteligência que conta.</Text>
           </View>
 
-          <View style={[styles.formCard, isTablet && styles.formCardTablet]}>
+          {/* ── Formulário ── */}
+          <View style={styles.formCard}>
             <TextInput
-              style={[styles.input, isTablet && styles.inputTablet]}
+              style={styles.input}
               placeholder="E-mail"
               placeholderTextColor={COLORS.GRAY}
               value={email}
@@ -177,24 +171,22 @@ export default function AuthHome() {
               returnKeyType="next"
             />
 
-            <View style={styles.checkboxRow}>
-              <TouchableOpacity
-                style={styles.checkbox}
-                onPress={handleToggleRemember}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={rememberEmail ? 'checkbox' : 'square-outline'}
-                  size={20}
-                  color={COLORS.PRIMARY}
-                />
-                <Text style={styles.checkboxText}>Lembrar e-mail</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.checkboxRow}
+              onPress={handleToggleRemember}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={rememberEmail ? 'checkbox' : 'square-outline'}
+                size={20}
+                color={COLORS.PRIMARY}
+              />
+              <Text style={styles.checkboxText}>Lembrar e-mail</Text>
+            </TouchableOpacity>
 
             <View style={styles.passwordWrapper}>
               <TextInput
-                style={[styles.passwordInput, isTablet && styles.inputTablet]}
+                style={styles.passwordInput}
                 placeholder="Senha"
                 placeholderTextColor={COLORS.GRAY}
                 secureTextEntry={!showPassword}
@@ -204,7 +196,6 @@ export default function AuthHome() {
                 returnKeyType="done"
                 onSubmitEditing={handleLogin}
               />
-
               <TouchableOpacity
                 style={styles.eyeBtn}
                 onPress={() => setShowPassword(prev => !prev)}
@@ -219,7 +210,7 @@ export default function AuthHome() {
             </View>
 
             <TouchableOpacity
-              style={[styles.loginBtn, isTablet && styles.loginBtnTablet]}
+              style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
               onPress={handleLogin}
               disabled={loading}
               activeOpacity={0.85}
@@ -232,12 +223,14 @@ export default function AuthHome() {
             </TouchableOpacity>
 
             <TouchableOpacity
+              style={styles.forgotBtn}
               onPress={() => navigation.navigate(ROUTES.FORGOT)}
             >
               <Text style={styles.forgotText}>Esqueceu a senha?</Text>
             </TouchableOpacity>
           </View>
 
+          {/* ── Footer ── */}
           <View style={styles.footer}>
             <TouchableOpacity
               onPress={() => navigation.navigate(ROUTES.REGISTER)}
@@ -257,85 +250,70 @@ export default function AuthHome() {
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  keyboardAvoid: {
+  safe: {
     flex: 1,
     backgroundColor: COLORS.BLACK,
   },
-  container: {
+  keyboardAvoid: {
+    flex: 1,
+  },
+  scroll: {
     flexGrow: 1,
-    backgroundColor: COLORS.BLACK,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 30,
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingTop: 48,
+    paddingBottom: 32,
   },
-  content: {
-    width: '100%',
-    maxWidth: 420,
-    alignSelf: 'center',
-  },
-  contentTablet: {
-    maxWidth: 520,
-  },
+
+  // ── Logo ──
   header: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 40,
   },
   logo: {
     color: COLORS.WHITE,
-    fontSize: 42,
+    fontSize: 44,
     fontWeight: 'bold',
-    letterSpacing: 1,
-  },
-  logoTablet: {
-    fontSize: 48,
+    letterSpacing: 2,
   },
   subtitle: {
     marginTop: 8,
     color: COLORS.PRIMARY,
-    fontSize: 14,
-    textAlign: 'center',
+    fontSize: 15,
+    letterSpacing: 0.5,
   },
-  subtitleTablet: {
-    fontSize: 16,
-  },
+
+  // ── Form ──
   formCard: {
-    backgroundColor: '#0B0B0B',
+    backgroundColor: '#0D0D0D',
     borderRadius: 20,
-    padding: 18,
+    padding: 20,
     borderWidth: 1,
-    borderColor: '#1A1A1A',
-  },
-  formCardTablet: {
-    padding: 24,
-    borderRadius: 24,
+    borderColor: '#1E1E1E',
+    gap: 12,
   },
   input: {
-    backgroundColor: COLORS.DARK,
+    backgroundColor: '#1A1A1A',
     color: COLORS.WHITE,
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderRadius: 12,
-    marginBottom: 14,
     fontSize: 16,
-  },
-  inputTablet: {
-    paddingVertical: 18,
-    fontSize: 17,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
   },
   checkboxRow: {
-    marginBottom: 12,
-  },
-  checkbox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    paddingVertical: 2,
   },
   checkboxText: {
     color: COLORS.GRAY,
@@ -344,9 +322,10 @@ const styles = StyleSheet.create({
   passwordWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.DARK,
+    backgroundColor: '#1A1A1A',
     borderRadius: 12,
-    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
   },
   passwordInput: {
     flex: 1,
@@ -354,39 +333,49 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     fontSize: 16,
-    marginBottom: 0,
   },
   eyeBtn: {
-    paddingHorizontal: 15,
+    paddingHorizontal: 14,
     paddingVertical: 14,
   },
   loginBtn: {
     backgroundColor: COLORS.PRIMARY,
     borderRadius: 12,
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 17,
     marginTop: 4,
+    shadowColor: COLORS.PRIMARY,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  loginBtnTablet: {
-    paddingVertical: 18,
+  loginBtnDisabled: {
+    opacity: 0.7,
   },
   loginBtnText: {
     color: COLORS.BLACK,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  forgotBtn: {
+    alignItems: 'flex-end',
+    paddingTop: 4,
   },
   forgotText: {
     color: COLORS.GRAY,
-    textAlign: 'right',
-    marginTop: 14,
-    fontSize: 14,
+    fontSize: 13,
   },
+
+  // ── Footer ──
   footer: {
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 36,
+    gap: 12,
   },
   footerText: {
-    color: COLORS.WHITE,
+    color: COLORS.GRAY,
     fontSize: 14,
   },
   footerLink: {
@@ -394,42 +383,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   privacyBtn: {
-    marginTop: 16,
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   privacyText: {
-    color: '#444',
-    fontSize: 12,
+    color: '#3A3A3A',
+    fontSize: 11,
     textAlign: 'center',
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 16,
-    gap: 10,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#222',
-  },
-  dividerText: {
-    color: COLORS.GRAY,
-    fontSize: 13,
-  },
-  googleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    paddingVertical: 16,
-    backgroundColor: '#1a1a1a',
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  googleBtnText: {
-    color: COLORS.WHITE,
-    fontSize: 15,
-    fontWeight: '600',
   },
 });
