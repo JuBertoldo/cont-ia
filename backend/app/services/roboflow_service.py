@@ -1,16 +1,75 @@
-import httpx
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
+from inference_sdk import InferenceHTTPClient
 
 from app.core.config import settings
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-_ROBOFLOW_URL = "https://detect.roboflow.com/rfdetr-medium"
+# Pool para rodar o SDK síncrono do Roboflow sem bloquear o event loop
+_rf_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="roboflow")
+
+_client: InferenceHTTPClient | None = None
+
+
+def _get_client() -> InferenceHTTPClient:
+    """Singleton do InferenceHTTPClient."""
+    global _client
+    if _client is None:
+        _client = InferenceHTTPClient(
+            api_url="https://detect.roboflow.com",
+            api_key=settings.ROBOFLOW_API_KEY,
+        )
+    return _client
+
+
+def _run_workflow(image_base64: str) -> list[dict]:
+    """
+    Chama o workflow Roboflow de forma síncrona.
+    Executado no ThreadPoolExecutor para não bloquear o event loop.
+    """
+    client = _get_client()
+    result = client.run_workflow(
+        workspace_name=settings.ROBOFLOW_WORKSPACE,
+        workflow_id=settings.ROBOFLOW_WORKFLOW_ID,
+        images={"image": image_base64},
+    )
+
+    raw_predictions = result[0].get("raw_predictions", {})
+    predictions = raw_predictions.get("predictions", [])
+
+    detections = []
+    for pred in predictions:
+        cx = pred.get("x", 0)
+        cy = pred.get("y", 0)
+        w = pred.get("width", 0)
+        h = pred.get("height", 0)
+
+        detections.append({
+            "label": pred.get("class", "object"),
+            "confidence": round(pred.get("confidence", 0.0), 4),
+            "bbox": [
+                round(cx - w / 2, 2),
+                round(cy - h / 2, 2),
+                round(cx + w / 2, 2),
+                round(cy + h / 2, 2),
+            ],
+            "source": "rfdetr",
+        })
+
+    logger.info(
+        "RF-DETR workflow detectou %d objetos (total_bottle_count=%s).",
+        len(detections),
+        result[0].get("total_bottle_count", "?"),
+    )
+    return detections
 
 
 async def detect_with_roboflow(image_base64: str) -> list[dict]:
     """
-    Chama a API do Roboflow RF-DETR Medium e retorna detecções no formato interno.
+    Wrapper async: executa o workflow Roboflow no executor.
     Retorna lista vazia se ROBOFLOW_API_KEY não estiver configurada.
     """
     if not settings.ROBOFLOW_API_KEY:
@@ -18,45 +77,10 @@ async def detect_with_roboflow(image_base64: str) -> list[dict]:
         return []
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                _ROBOFLOW_URL,
-                params={
-                    "api_key": settings.ROBOFLOW_API_KEY,
-                    "confidence": settings.YOLO_CONF,
-                },
-                content=image_base64,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-            )
-            response.raise_for_status()
-            data = response.json()
-
-        detections = []
-        for pred in data.get("predictions", []):
-            # RF-DETR retorna bbox em formato centro (cx, cy, w, h) — converter para xyxy
-            cx = pred.get("x", 0)
-            cy = pred.get("y", 0)
-            w = pred.get("width", 0)
-            h = pred.get("height", 0)
-
-            detections.append({
-                "label": pred.get("class", "object"),
-                "confidence": round(pred.get("confidence", 0.0), 4),
-                "bbox": [
-                    round(cx - w / 2, 2),
-                    round(cy - h / 2, 2),
-                    round(cx + w / 2, 2),
-                    round(cy + h / 2, 2),
-                ],
-                "source": "rfdetr",
-            })
-
-        logger.info("RF-DETR detectou %d objetos.", len(detections))
-        return detections
-
-    except httpx.HTTPStatusError as exc:
-        logger.warning("Roboflow API erro HTTP %s: %s", exc.response.status_code, exc)
-        return []
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            _rf_executor, _run_workflow, image_base64
+        )
     except Exception as exc:
-        logger.warning("Roboflow API indisponível — usando só YOLO: %s", exc)
+        logger.warning("Roboflow workflow falhou — usando só YOLO: %s", exc)
         return []
