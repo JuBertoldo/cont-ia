@@ -12,6 +12,8 @@ class Settings:
     )
     SENTRY_DSN: str = os.getenv("SENTRY_DSN", "")
     RATE_LIMIT: str = os.getenv("RATE_LIMIT", "30/minute")
+    ROBOFLOW_API_KEY: str = os.getenv("ROBOFLOW_API_KEY", "")
+    ENSEMBLE_IOU_THRESHOLD: float = float(os.getenv("ENSEMBLE_IOU_THRESHOLD", "0.5"))
 
     @property
     def is_production(self) -> bool:

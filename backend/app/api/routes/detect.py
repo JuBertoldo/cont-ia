@@ -1,4 +1,5 @@
 import asyncio
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -8,6 +9,8 @@ from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import get_logger
 from app.schemas.detect import DetectRequest, DetectResponse
+from app.services.ensemble import merge_detections
+from app.services.roboflow_service import detect_with_roboflow
 from app.services.yolo_service import detect_from_base64
 
 router = APIRouter(prefix="/v1", tags=["detect"])
@@ -21,7 +24,7 @@ _executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="yolo")
     "/detect",
     response_model=DetectResponse,
     status_code=status.HTTP_200_OK,
-    summary="Detecta objetos em imagem base64 com YOLO",
+    summary="Detecta objetos com ensemble YOLO + RF-DETR",
 )
 @limiter.limit(settings.RATE_LIMIT)
 async def detect(
@@ -30,24 +33,74 @@ async def detect(
     user: dict = Depends(get_current_user),
 ):
     logger.info(
-        "Requisição de detecção recebida | uid=%s source=%s platform=%s",
+        "Requisição de detecção | uid=%s source=%s platform=%s",
         user.get("uid"),
         payload.source,
         payload.platform,
     )
 
+    started = time.time()
+
     try:
         loop = asyncio.get_running_loop()
-        result = await asyncio.wait_for(
+
+        # ── Executa YOLO e RF-DETR em paralelo ──────────────────────────────
+        yolo_future = asyncio.wait_for(
             loop.run_in_executor(_executor, detect_from_base64, payload.image_base64),
             timeout=settings.YOLO_TIMEOUT_S,
         )
-        logger.info(
-            "Detecção concluída | itens=%d ms=%s",
-            len(result["detections"]),
-            result["meta"].get("processing_ms"),
+        rfdetr_future = detect_with_roboflow(payload.image_base64)
+
+        yolo_result, rfdetr_detections = await asyncio.gather(
+            yolo_future,
+            rfdetr_future,
+            return_exceptions=True,
         )
-        return result
+
+        # ── Trata falhas individuais sem derrubar a requisição ───────────────
+        if isinstance(yolo_result, Exception):
+            logger.error("YOLO falhou: %s", yolo_result)
+            yolo_detections = []
+            yolo_meta = {}
+        else:
+            yolo_detections = yolo_result.get("detections", [])
+            yolo_meta = yolo_result.get("meta", {})
+
+        if isinstance(rfdetr_detections, Exception):
+            logger.warning("RF-DETR falhou: %s", rfdetr_detections)
+            rfdetr_detections = []
+
+        # ── Merge com NMS ────────────────────────────────────────────────────
+        merged = merge_detections(
+            yolo=yolo_detections,
+            rfdetr=rfdetr_detections,
+            iou_threshold=settings.ENSEMBLE_IOU_THRESHOLD,
+        )
+
+        elapsed_ms = int((time.time() - started) * 1000)
+
+        logger.info(
+            "Ensemble concluído | yolo=%d rfdetr=%d merged=%d ms=%d",
+            len(yolo_detections),
+            len(rfdetr_detections),
+            len(merged),
+            elapsed_ms,
+        )
+
+        return {
+            "detections": merged,
+            "meta": {
+                **yolo_meta,
+                "processing_ms": elapsed_ms,
+                "ensemble": {
+                    "yolo_count": len(yolo_detections),
+                    "rfdetr_count": len(rfdetr_detections),
+                    "merged_count": len(merged),
+                    "iou_threshold": settings.ENSEMBLE_IOU_THRESHOLD,
+                },
+            },
+        }
+
     except asyncio.TimeoutError:
         logger.error("Timeout na inferência YOLO (uid=%s)", user.get("uid"))
         raise HTTPException(
