@@ -35,8 +35,10 @@ service cloud.firestore {
     // ── Usuários (/usuarios/{uid}) ────────────────────────────────────────────
 
     match /usuarios/{uid} {
-      // Leitura: próprio perfil, admin da mesma empresa ou super_admin (global)
+      // Leitura: próprio perfil, qualquer autenticado (para checar matrícula no cadastro),
+      //          admin da mesma empresa ou super_admin (global)
       allow read: if isOwner(uid)
+        || isAuthenticated()
         || (isActive() && isAdmin() && isSameEmpresa(resource.data.empresaId))
         || (isActive() && isSuperAdmin());
 
@@ -56,9 +58,8 @@ service cloud.firestore {
     // ── Empresas (/empresas/{empresaId}) ─────────────────────────────────────
 
     match /empresas/{empresaId} {
-      // Leitura: membros da empresa ou super_admin (global)
-      allow read: if (isAuthenticated() && getUserData().empresaId == empresaId)
-        || (isActive() && isSuperAdmin());
+      // Leitura: público (necessário para busca por código no cadastro)
+      allow read: if true;
 
       // Criação: qualquer usuário autenticado (somente no registro do primeiro admin)
       allow create: if isAuthenticated();

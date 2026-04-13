@@ -82,44 +82,52 @@ export const registerWithEmail = async ({
     throw error;
   }
 
-  const empresa = await getEmpresaByCodigo(cleanCodigo);
-  if (!empresa) {
-    const error = new Error('Código de empresa inválido.');
-    error.code = 'auth/codigo-invalido';
-    throw error;
-  }
-  empresaId = empresa.id;
-
-  if (cleanMatricula) {
-    const exists = await checkMatriculaExists(cleanMatricula, empresaId);
-    if (exists) {
-      const error = new Error('Matrícula já cadastrada nesta empresa.');
-      error.code = 'auth/matricula-already-in-use';
-      throw error;
-    }
-  }
-
+  // Cria o usuário no Firebase Auth primeiro para ter autenticação nas leituras seguintes
   const userCredential = await createUserWithEmailAndPassword(
     auth,
     email,
     password,
   );
   const user = userCredential.user;
-  await updateProfile(user, { displayName: name });
 
-  await setDoc(doc(db, COLLECTIONS.USERS, user.uid), {
-    nome: name,
-    email,
-    matricula: cleanMatricula,
-    photoURL: '',
-    role: ROLES.USER,
-    status: 'pending',
-    empresaId,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  try {
+    await updateProfile(user, { displayName: name });
 
-  return user;
+    const empresa = await getEmpresaByCodigo(cleanCodigo);
+    if (!empresa) {
+      const error = new Error('Código de empresa inválido.');
+      error.code = 'auth/codigo-invalido';
+      throw error;
+    }
+    empresaId = empresa.id;
+
+    if (cleanMatricula) {
+      const exists = await checkMatriculaExists(cleanMatricula, empresaId);
+      if (exists) {
+        const error = new Error('Matrícula já cadastrada nesta empresa.');
+        error.code = 'auth/matricula-already-in-use';
+        throw error;
+      }
+    }
+
+    await setDoc(doc(db, COLLECTIONS.USERS, user.uid), {
+      nome: name,
+      email,
+      matricula: cleanMatricula,
+      photoURL: '',
+      role: ROLES.USER,
+      status: 'pending',
+      empresaId,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    return user;
+  } catch (err) {
+    // Reverte o usuário criado no Auth se qualquer etapa posterior falhar
+    await user.delete().catch(() => {});
+    throw err;
+  }
 };
 
 // ── Login ─────────────────────────────────────────────────────────────────────
