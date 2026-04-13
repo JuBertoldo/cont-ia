@@ -2,7 +2,7 @@ import Config from 'react-native-config';
 import { getIdToken } from './authService';
 
 const API_BASE_URL = Config.YOLO_API_URL || '';
-const REQUEST_TIMEOUT_MS = 30000;
+const REQUEST_TIMEOUT_MS = 120000; // 120s — YOLO pode demorar na 1ª inferência
 
 async function executeRequest(path, options, timeout, forceRefresh) {
   let token = null;

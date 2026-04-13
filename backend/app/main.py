@@ -13,6 +13,7 @@ from app.api.routes.detect import router as detect_router
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import get_logger, setup_logging
+from app.services.yolo_service import get_model
 
 setup_logging()
 logger = get_logger(__name__)
@@ -32,6 +33,10 @@ async def lifespan(app: FastAPI):
         cred = credentials.Certificate(settings.FIREBASE_SERVICE_ACCOUNT_PATH)
         firebase_admin.initialize_app(cred)
         logger.info("Firebase Admin SDK inicializado.")
+    # Pré-carrega o modelo YOLO na inicialização para evitar timeout na 1ª requisição
+    logger.info("Pré-carregando modelo YOLO...")
+    get_model()
+    logger.info("Modelo YOLO pronto.")
     yield
 
 
