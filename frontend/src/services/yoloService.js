@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { apiClient } from './apiClient';
 
 const YOLO_ENDPOINT = '/v1/detect';
@@ -26,7 +27,7 @@ export async function detectWithYolo(imageBase64) {
   const data = await apiClient.post(YOLO_ENDPOINT, {
     image_base64: imageBase64,
     source: 'mobile',
-    platform: 'android',
+    platform: Platform.OS,
   });
 
   const detections = Array.isArray(data?.detections)

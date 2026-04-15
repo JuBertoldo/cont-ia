@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { COLORS } from '../../constants/colors';
 import { MESSAGES } from '../../constants/messages';
 import { isValidEmail, isStrongPassword } from '../../utils/validators';
 import { useAuth } from '../../hooks/useAuth';
+import { getEmpresaByCodigo } from '../../services/empresaService';
 
 export default function RegisterScreen({ navigation }) {
   const { loading, register } = useAuth();
@@ -33,6 +34,45 @@ export default function RegisterScreen({ navigation }) {
   const [matricula, setMatricula] = useState('');
   const [codigoEmpresa, setCodigoEmpresa] = useState('');
   const [nomeEmpresa, setNomeEmpresa] = useState('');
+
+  // Validação do código da empresa
+  const [validandoCodigo, setValidandoCodigo] = useState(false);
+  const [empresaConfirmada, setEmpresaConfirmada] = useState(null); // { id, nome } | null
+  const [codigoErro, setCodigoErro] = useState('');
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    if (!temEmpresa) return;
+
+    setEmpresaConfirmada(null);
+    setCodigoErro('');
+
+    const codigo = codigoEmpresa.trim();
+    if (codigo.length < 4) return;
+
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setValidandoCodigo(true);
+      try {
+        const empresa = await getEmpresaByCodigo(codigo);
+        if (empresa) {
+          setEmpresaConfirmada(empresa);
+          setCodigoErro('');
+        } else {
+          setEmpresaConfirmada(null);
+          setCodigoErro(
+            'Código não encontrado. Verifique com o administrador.',
+          );
+        }
+      } catch {
+        setCodigoErro('Erro ao verificar o código. Tente novamente.');
+      } finally {
+        setValidandoCodigo(false);
+      }
+    }, 600);
+
+    return () => clearTimeout(debounceRef.current);
+  }, [codigoEmpresa, temEmpresa]);
 
   const handleRegister = async () => {
     const cleanName = nome.trim();
@@ -237,15 +277,64 @@ export default function RegisterScreen({ navigation }) {
               {temEmpresa && (
                 <>
                   <Text style={styles.sectionLabel}>Código da empresa</Text>
-                  <TextInput
-                    style={[styles.input, isTablet && styles.inputTablet]}
-                    placeholder="Ex: X7K2PQ"
-                    placeholderTextColor={COLORS.GRAY}
-                    value={codigoEmpresa}
-                    onChangeText={setCodigoEmpresa}
-                    autoCapitalize="characters"
-                    autoCorrect={false}
-                  />
+                  <View style={styles.codeRow}>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        styles.codeInput,
+                        isTablet && styles.inputTablet,
+                      ]}
+                      placeholder="Ex: X7K2PQ"
+                      placeholderTextColor={COLORS.GRAY}
+                      value={codigoEmpresa}
+                      onChangeText={v => {
+                        setCodigoEmpresa(v.toUpperCase());
+                        setEmpresaConfirmada(null);
+                        setCodigoErro('');
+                      }}
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      maxLength={10}
+                    />
+                    <View style={styles.codeStatus}>
+                      {validandoCodigo && (
+                        <ActivityIndicator
+                          size="small"
+                          color={COLORS.PRIMARY}
+                        />
+                      )}
+                      {!validandoCodigo && empresaConfirmada && (
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={22}
+                          color="#2ECC71"
+                        />
+                      )}
+                      {!validandoCodigo && codigoErro !== '' && (
+                        <Ionicons
+                          name="close-circle"
+                          size={22}
+                          color="#E74C3C"
+                        />
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Nome da empresa confirmada */}
+                  {empresaConfirmada && (
+                    <View style={styles.empresaConfirmadaBox}>
+                      <Ionicons name="business" size={16} color="#2ECC71" />
+                      <Text style={styles.empresaConfirmadaNome}>
+                        {empresaConfirmada.nome}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Erro de código */}
+                  {codigoErro !== '' && (
+                    <Text style={styles.codigoErroText}>{codigoErro}</Text>
+                  )}
+
                   <View style={styles.divider} />
                 </>
               )}
@@ -293,9 +382,14 @@ export default function RegisterScreen({ navigation }) {
               />
 
               <TouchableOpacity
-                style={[styles.button, isTablet && styles.buttonTablet]}
+                style={[
+                  styles.button,
+                  isTablet && styles.buttonTablet,
+                  (loading || (temEmpresa && !empresaConfirmada)) &&
+                    styles.buttonDisabled,
+                ]}
                 onPress={handleRegister}
-                disabled={loading}
+                disabled={loading || (temEmpresa && !empresaConfirmada)}
                 activeOpacity={0.85}
               >
                 {loading ? (
@@ -442,6 +536,38 @@ const styles = StyleSheet.create({
   },
   buttonTablet: { paddingVertical: 18 },
   buttonText: { color: COLORS.BLACK, fontSize: 16, fontWeight: 'bold' },
+  buttonDisabled: { opacity: 0.4 },
+  codeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    gap: 10,
+  },
+  codeInput: { flex: 1, marginBottom: 0 },
+  codeStatus: { width: 28, alignItems: 'center' },
+  empresaConfirmadaBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(46,204,113,0.1)',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(46,204,113,0.3)',
+  },
+  empresaConfirmadaNome: {
+    color: '#2ECC71',
+    fontWeight: 'bold',
+    fontSize: 14,
+    flex: 1,
+  },
+  codigoErroText: {
+    color: '#E74C3C',
+    fontSize: 12,
+    marginBottom: 12,
+    marginTop: -4,
+  },
   footer: { alignItems: 'center', marginTop: 24 },
   footerText: { color: COLORS.WHITE, fontSize: 14 },
   footerLink: { color: COLORS.PRIMARY, fontWeight: 'bold' },

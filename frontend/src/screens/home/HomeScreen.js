@@ -52,15 +52,24 @@ export default function HomeScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Perfil */}
-      <View style={styles.profileBlock}>
-        {profile.photoURL ? (
-          <Image source={{ uri: profile.photoURL }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Ionicons name="person-circle-outline" size={110} color="#666" />
+      {/* Perfil — toque no avatar para abrir perfil */}
+      <TouchableOpacity
+        style={styles.profileBlock}
+        onPress={() => navigation.navigate(ROUTES.PROFILE)}
+        activeOpacity={0.8}
+      >
+        <View style={styles.avatarWrapper}>
+          {profile.photoURL ? (
+            <Image source={{ uri: profile.photoURL }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Ionicons name="person-circle-outline" size={110} color="#666" />
+            </View>
+          )}
+          <View style={styles.editAvatarBadge}>
+            <Ionicons name="pencil" size={12} color={COLORS.BLACK} />
           </View>
-        )}
+        </View>
         <Text style={styles.userName}>{profile.nome}</Text>
         {isAdmin ? (
           <View style={styles.adminBadge}>
@@ -76,7 +85,7 @@ export default function HomeScreen({ navigation }) {
         ) : (
           <Text style={styles.userRoleText}>{ROLE_LABELS[profile.role]}</Text>
         )}
-      </View>
+      </TouchableOpacity>
 
       {/* Cards de estatísticas */}
       <View style={styles.statsRow}>
@@ -190,6 +199,20 @@ const styles = StyleSheet.create({
   },
   menuBtn: { padding: 4 },
   profileBlock: { alignItems: 'center', marginBottom: 28 },
+  avatarWrapper: { position: 'relative' },
+  editAvatarBadge: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    backgroundColor: COLORS.PRIMARY,
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.BLACK,
+  },
   avatar: {
     width: 110,
     height: 110,

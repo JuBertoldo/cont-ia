@@ -20,6 +20,7 @@ async function executeRequest(path, options, timeout, forceRefresh) {
       signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(options.headers || {}),
       },

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  TextInput,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
@@ -27,11 +28,22 @@ const TABS = [
   { key: 'rejected', label: 'Recusados', icon: 'close-circle-outline' },
 ];
 
+function formatDate(timestamp) {
+  if (!timestamp) return '';
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
 export default function AdminUsersScreen({ navigation }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
-  const [activeTab, setActiveTab] = useState('pending');
+  const [activeTab, setActiveTab] = useState('active');
+  const [search, setSearch] = useState('');
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -49,10 +61,17 @@ export default function AdminUsersScreen({ navigation }) {
     loadUsers();
   }, [loadUsers]);
 
-  const filteredUsers = useMemo(
-    () => users.filter(u => (u.status || 'pending') === activeTab),
-    [users, activeTab],
-  );
+  const filteredUsers = useMemo(() => {
+    const byTab = users.filter(u => (u.status || 'pending') === activeTab);
+    if (!search.trim()) return byTab;
+    const q = search.toLowerCase();
+    return byTab.filter(
+      u =>
+        u.nome?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.matricula?.toLowerCase().includes(q),
+    );
+  }, [users, activeTab, search]);
 
   const pendingCount = useMemo(
     () => users.filter(u => (u.status || 'pending') === 'pending').length,
@@ -180,6 +199,11 @@ export default function AdminUsersScreen({ navigation }) {
             {!!item.matricula && (
               <Text style={styles.userMatricula}>Mat.: {item.matricula}</Text>
             )}
+            {!!item.createdAt && (
+              <Text style={styles.userDate}>
+                Cadastro: {formatDate(item.createdAt)}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -268,6 +292,24 @@ export default function AdminUsersScreen({ navigation }) {
         <TouchableOpacity onPress={loadUsers}>
           <Ionicons name="refresh-outline" size={26} color={COLORS.PRIMARY} />
         </TouchableOpacity>
+      </View>
+
+      {/* Busca */}
+      <View style={styles.searchRow}>
+        <Ionicons name="search-outline" size={18} color={COLORS.GRAY} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar por nome, email ou matrícula..."
+          placeholderTextColor={COLORS.GRAY}
+          value={search}
+          onChangeText={setSearch}
+          autoCapitalize="none"
+        />
+        {!!search && (
+          <TouchableOpacity onPress={() => setSearch('')}>
+            <Ionicons name="close-circle" size={18} color={COLORS.GRAY} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Tabs */}
@@ -401,6 +443,26 @@ const styles = StyleSheet.create({
   userName: { color: COLORS.WHITE, fontWeight: 'bold', fontSize: 14 },
   userEmail: { color: COLORS.GRAY, fontSize: 12, marginTop: 2 },
   userMatricula: { color: COLORS.PRIMARY, fontSize: 11, marginTop: 2 },
+  userDate: { color: '#555', fontSize: 11, marginTop: 2 },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.DARK,
+    borderRadius: 10,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  searchInput: {
+    flex: 1,
+    color: COLORS.WHITE,
+    fontSize: 14,
+    padding: 0,
+  },
   actions: { flexDirection: 'row', gap: 8 },
   spinner: { marginHorizontal: 10 },
   btnApprove: {

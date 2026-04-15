@@ -35,6 +35,27 @@ import { auth } from '../../config/firebaseConfig';
 import { useHistoryFilters } from '../../hooks/useHistoryFilters';
 import logger from '../../utils/logger';
 import ImagePreviewModal from '../../components/common/ImagePreviewModal';
+import { reverseGeocode } from '../../utils/geocoding';
+
+function GeoLabel({ latitude, longitude }) {
+  const [label, setLabel] = useState(null);
+
+  useEffect(() => {
+    reverseGeocode(latitude, longitude).then(name => {
+      setLabel(name || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+    });
+  }, [latitude, longitude]);
+
+  if (!label) return null;
+  return (
+    <Text
+      style={{ color: '#888', fontSize: 11, marginTop: 2 }}
+      numberOfLines={2}
+    >
+      <Ionicons name="location-outline" size={11} color="#888" /> {label}
+    </Text>
+  );
+}
 
 export default function HistoryScreen({ navigation, route }) {
   const { width } = useWindowDimensions();
@@ -247,9 +268,7 @@ export default function HistoryScreen({ navigation, route }) {
         <Text style={styles.itemText}>Local: {item.local || '-'}</Text>
 
         {hasCoords && (
-          <Text style={styles.itemText}>
-            GPS: {item.latitude.toFixed(5)}, {item.longitude.toFixed(5)}
-          </Text>
+          <GeoLabel latitude={item.latitude} longitude={item.longitude} />
         )}
 
         <Text style={styles.itemDate}>

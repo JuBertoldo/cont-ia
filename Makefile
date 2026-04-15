@@ -1,41 +1,27 @@
-.PHONY: up down build logs restart backend-shell
+.PHONY: up up-d down logs restart
 
-## Inicia o Colima (se parado) e sobe o backend
+VENV=backend/.venv/bin/python3
+UVICORN=backend/.venv/bin/uvicorn
+
+## Inicia o backend diretamente no Mac (sem Docker)
 up:
-	@if ! colima status 2>/dev/null | grep -q "running"; then \
-		echo "▶ Iniciando Colima..."; \
-		colima start; \
-	else \
-		echo "✓ Colima já está rodando"; \
-	fi
-	docker-compose up --build
+	@echo "▶ Iniciando backend..."
+	@cd backend && ../.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 2>/dev/null || \
+	PYTHONPATH=backend $(UVICORN) app.main:app --host 0.0.0.0 --port 8000
 
-## Sobe em background (detached)
+## Inicia o backend em background
 up-d:
-	@if ! colima status 2>/dev/null | grep -q "running"; then \
-		echo "▶ Iniciando Colima..."; \
-		colima start; \
-	else \
-		echo "✓ Colima já está rodando"; \
-	fi
-	docker-compose up --build -d
+	@echo "▶ Iniciando backend em background..."
+	@cd backend && $(CURDIR)/backend/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+	@echo "✓ Backend iniciado em background (porta 8000)"
 
-## Para os containers (mantém Colima rodando)
+## Para o backend em background
 down:
-	docker-compose down
+	@pkill -f "uvicorn app.main:app" 2>/dev/null && echo "✓ Backend parado" || echo "Backend não estava rodando"
 
-## Rebuild sem cache
-build:
-	docker-compose build --no-cache
-
-## Logs do backend
+## Logs em tempo real (backend em background)
 logs:
-	docker-compose logs -f backend
+	@echo "Use: tail -f /tmp/contia-backend.log"
 
-## Reinicia o backend
-restart:
-	docker-compose restart backend
-
-## Abre shell dentro do container
-backend-shell:
-	docker-compose exec backend bash
+## Reinicia o backend em background
+restart: down up-d

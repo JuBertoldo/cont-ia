@@ -26,6 +26,7 @@ import { createInventoryItem } from '../../services/inventoryService';
 import { imageUriToBase64 } from '../../services/scannerService';
 import { auth } from '../../config/firebaseConfig';
 import { getUserProfile } from '../../services/authService';
+import { reverseGeocode } from '../../utils/geocoding';
 
 const PICKER_ERROR_MESSAGES = {
   camera_unavailable: 'Câmera não disponível neste dispositivo.',
@@ -64,6 +65,7 @@ export default function ScannerScreen() {
   const [detecting, setDetecting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [location, setLocation] = useState(null);
+  const [locationName, setLocationName] = useState('');
   const [localText, setLocalText] = useState('');
   const [gpsLoading, setGpsLoading] = useState(false);
   const [empresaId, setEmpresaId] = useState(null);
@@ -86,8 +88,13 @@ export default function ScannerScreen() {
 
   const fetchLocation = async () => {
     setGpsLoading(true);
+    setLocationName('');
     const coords = await getLocation();
     setLocation(coords);
+    if (coords) {
+      const name = await reverseGeocode(coords.latitude, coords.longitude);
+      setLocationName(name || '');
+    }
     setGpsLoading(false);
   };
 
@@ -224,10 +231,14 @@ export default function ScannerScreen() {
       {/* Preview da imagem */}
       <View style={styles.previewBox}>
         {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.previewImage} />
+          <Image
+            source={{ uri: imageUri }}
+            style={styles.previewImage}
+            resizeMode="contain"
+          />
         ) : (
           <View style={styles.emptyPreview}>
-            <Ionicons name="image-outline" size={42} color={COLORS.GRAY} />
+            <Ionicons name="image-outline" size={56} color={COLORS.GRAY} />
             <Text style={styles.emptyText}>Nenhuma imagem selecionada</Text>
           </View>
         )}
@@ -239,8 +250,11 @@ export default function ScannerScreen() {
         {gpsLoading ? (
           <Text style={styles.gpsText}>Obtendo localização...</Text>
         ) : location ? (
-          <Text style={styles.gpsText}>
-            GPS: {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
+          <Text style={styles.gpsText} numberOfLines={2}>
+            {locationName ||
+              `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(
+                5,
+              )}`}
           </Text>
         ) : (
           <TouchableOpacity onPress={fetchLocation}>
@@ -296,21 +310,37 @@ export default function ScannerScreen() {
         )}
       </TouchableOpacity>
 
-      {/* ── Modal de resultado ── */}
+      {/* ── Modal de resultado — tela cheia ── */}
       <Modal
         visible={modalVisible}
         animationType="slide"
-        transparent
+        transparent={false}
         onRequestClose={handleCancelModal}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Resultado da Contagem</Text>
-              <TouchableOpacity onPress={handleCancelModal}>
-                <Ionicons name="close" size={24} color={COLORS.GRAY} />
-              </TouchableOpacity>
-            </View>
+        <View style={styles.modalFull}>
+          {/* Imagem em destaque */}
+          {imageUri ? (
+            <Image
+              source={{ uri: imageUri }}
+              style={styles.modalImage}
+              resizeMode="contain"
+            />
+          ) : (
+            <View style={styles.modalImagePlaceholder} />
+          )}
+
+          {/* Overlay com fechar */}
+          <TouchableOpacity
+            style={styles.modalCloseBtn}
+            onPress={handleCancelModal}
+          >
+            <Ionicons name="close" size={22} color={COLORS.WHITE} />
+          </TouchableOpacity>
+
+          {/* Painel inferior com resultados */}
+          <View style={styles.modalPanel}>
+            <View style={styles.modalPanelHandle} />
+            <Text style={styles.modalTitle}>Resultado da Contagem</Text>
 
             {detectionResult?.summary?.itens?.length > 0 ? (
               <ScrollView
@@ -331,8 +361,10 @@ export default function ScannerScreen() {
                 <View style={styles.totalRow}>
                   <Text style={styles.totalLabel}>Total detectado</Text>
                   <Text style={styles.totalValue}>
-                    {detectionResult.summary.totalGeral} iten
-                    {detectionResult.summary.totalGeral !== 1 ? 's' : ''}
+                    {detectionResult.summary.totalGeral}{' '}
+                    {detectionResult.summary.totalGeral !== 1
+                      ? 'itens'
+                      : 'item'}
                   </Text>
                 </View>
               </ScrollView>
@@ -349,10 +381,6 @@ export default function ScannerScreen() {
                 </Text>
               </View>
             )}
-
-            <Text style={styles.modalHint}>
-              Confirme para salvar ou cancele para refazer a foto.
-            </Text>
 
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -413,7 +441,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   previewBox: {
-    height: 220,
+    flex: 1,
+    minHeight: 280,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#222',
@@ -470,27 +499,54 @@ const styles = StyleSheet.create({
   },
   btnPrimaryText: { color: COLORS.BLACK, fontWeight: 'bold', fontSize: 16 },
 
-  // Modal
-  modalOverlay: {
+  // Modal tela cheia
+  modalFull: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    justifyContent: 'flex-end',
+    backgroundColor: COLORS.BLACK,
   },
-  modalCard: {
+  modalImage: {
+    width: '100%',
+    flex: 1,
+    backgroundColor: '#0a0a0a',
+  },
+  modalImagePlaceholder: {
+    flex: 1,
+    backgroundColor: '#0a0a0a',
+  },
+  modalCloseBtn: {
+    position: 'absolute',
+    top: 56,
+    right: 20,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalPanel: {
     backgroundColor: '#111',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 24,
-    maxHeight: '80%',
+    padding: 20,
+    paddingBottom: 36,
+    maxHeight: '50%',
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  modalPanelHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#333',
+    borderRadius: 2,
+    alignSelf: 'center',
     marginBottom: 16,
   },
-  modalTitle: { color: COLORS.WHITE, fontSize: 18, fontWeight: 'bold' },
-  modalBody: { maxHeight: 220 },
+  modalTitle: {
+    color: COLORS.WHITE,
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  modalBody: { maxHeight: 160 },
   resultRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -519,13 +575,7 @@ const styles = StyleSheet.create({
   totalValue: { color: COLORS.PRIMARY, fontWeight: 'bold', fontSize: 16 },
   noResultBox: { alignItems: 'center', paddingVertical: 24, gap: 12 },
   noResultText: { color: COLORS.GRAY, textAlign: 'center', lineHeight: 22 },
-  modalHint: {
-    color: '#444',
-    fontSize: 12,
-    textAlign: 'center',
-    marginVertical: 14,
-  },
-  modalActions: { flexDirection: 'row', gap: 12 },
+  modalActions: { flexDirection: 'row', gap: 12, marginTop: 14 },
   btnCancel: {
     flex: 1,
     borderWidth: 1,

@@ -80,23 +80,36 @@ function CustomDrawerContent(props) {
 
   return (
     <View style={styles.drawerContainer}>
-      <View style={styles.header}>
-        {photoURL ? (
-          <Image source={{ uri: photoURL }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Ionicons
-              name="person-circle-outline"
-              size={70}
-              color={COLORS.GRAY}
-            />
+      <TouchableOpacity
+        style={styles.header}
+        onPress={() => {
+          props.navigation.closeDrawer();
+          props.navigation.navigate(ROUTES.PROFILE);
+        }}
+        activeOpacity={0.8}
+      >
+        <View style={styles.avatarWrapper}>
+          {photoURL ? (
+            <Image source={{ uri: photoURL }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Ionicons
+                name="person-circle-outline"
+                size={70}
+                color={COLORS.GRAY}
+              />
+            </View>
+          )}
+          <View style={styles.editBadge}>
+            <Ionicons name="pencil" size={10} color={COLORS.BLACK} />
           </View>
-        )}
+        </View>
         <Text style={styles.userName}>{userName}</Text>
         <Text style={styles.roleText}>
           {ROLE_LABELS[role] || ROLE_LABELS[ROLES.USER]}
         </Text>
-      </View>
+        <Text style={styles.tapHint}>toque para ver perfil</Text>
+      </TouchableOpacity>
 
       <View style={styles.menu}>
         <DrawerItem
@@ -128,11 +141,6 @@ function CustomDrawerContent(props) {
               title: 'Itens Contados',
             })
           }
-        />
-        <DrawerItem
-          icon="person-outline"
-          label="Meu perfil"
-          onPress={() => props.navigation.navigate(ROUTES.PROFILE)}
         />
         <DrawerItem
           icon="help-circle-outline"
@@ -224,13 +232,13 @@ const styles = StyleSheet.create({
     borderBottomColor: '#222',
     paddingBottom: 20,
   },
+  avatarWrapper: { position: 'relative', marginBottom: 12 },
   avatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
     borderWidth: 2,
     borderColor: COLORS.PRIMARY,
-    marginBottom: 12,
   },
   avatarPlaceholder: {
     width: 80,
@@ -239,7 +247,24 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.DARK,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+  },
+  editBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    backgroundColor: COLORS.PRIMARY,
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.BLACK,
+  },
+  tapHint: {
+    color: '#444',
+    fontSize: 11,
+    marginTop: 4,
   },
   userName: {
     color: COLORS.WHITE,
