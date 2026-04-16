@@ -13,6 +13,16 @@ web-build/
 # macOS
 .DS_Store
 
+# Python virtual environments
+backend/.venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Modelos YOLO (binários grandes — baixe via script ou Drive)
+*.pt
+*.onnx
+
 # Variáveis de Ambiente (NUNCA suba senhas pro GitHub)
 .env
 

@@ -1,0 +1,98 @@
+/**
+ * Tradução dos labels do YOLO (COCO dataset, 80 classes) para o português.
+ * Usado na exibição — os dados originais em inglês são preservados no Firestore.
+ */
+const COCO_PT = {
+  person: 'Pessoa',
+  bicycle: 'Bicicleta',
+  car: 'Carro',
+  motorcycle: 'Moto',
+  airplane: 'Avião',
+  bus: 'Ônibus',
+  train: 'Trem',
+  truck: 'Caminhão',
+  boat: 'Barco',
+  'traffic light': 'Semáforo',
+  'fire hydrant': 'Hidrante',
+  'stop sign': 'Placa de Pare',
+  'parking meter': 'Parquímetro',
+  bench: 'Banco',
+  bird: 'Pássaro',
+  cat: 'Gato',
+  dog: 'Cachorro',
+  horse: 'Cavalo',
+  sheep: 'Ovelha',
+  cow: 'Vaca',
+  elephant: 'Elefante',
+  bear: 'Urso',
+  zebra: 'Zebra',
+  giraffe: 'Girafa',
+  backpack: 'Mochila',
+  umbrella: 'Guarda-chuva',
+  handbag: 'Bolsa',
+  tie: 'Gravata',
+  suitcase: 'Mala',
+  frisbee: 'Frisbee',
+  skis: 'Esquis',
+  snowboard: 'Snowboard',
+  'sports ball': 'Bola Esportiva',
+  kite: 'Pipa',
+  'baseball bat': 'Taco de Beisebol',
+  'baseball glove': 'Luva de Beisebol',
+  skateboard: 'Skate',
+  surfboard: 'Prancha de Surfe',
+  'tennis racket': 'Raquete de Tênis',
+  bottle: 'Garrafa',
+  'wine glass': 'Taça de Vinho',
+  cup: 'Copo',
+  fork: 'Garfo',
+  knife: 'Faca',
+  spoon: 'Colher',
+  bowl: 'Tigela',
+  banana: 'Banana',
+  apple: 'Maçã',
+  sandwich: 'Sanduíche',
+  orange: 'Laranja',
+  broccoli: 'Brócolis',
+  carrot: 'Cenoura',
+  'hot dog': 'Cachorro-quente',
+  pizza: 'Pizza',
+  donut: 'Rosquinha',
+  cake: 'Bolo',
+  chair: 'Cadeira',
+  couch: 'Sofá',
+  'potted plant': 'Vaso de Planta',
+  bed: 'Cama',
+  'dining table': 'Mesa de Jantar',
+  toilet: 'Vaso Sanitário',
+  tv: 'Televisão',
+  laptop: 'Notebook',
+  mouse: 'Mouse',
+  remote: 'Controle Remoto',
+  keyboard: 'Teclado',
+  'cell phone': 'Celular',
+  microwave: 'Micro-ondas',
+  oven: 'Forno',
+  toaster: 'Torradeira',
+  sink: 'Pia',
+  refrigerator: 'Geladeira',
+  book: 'Livro',
+  clock: 'Relógio',
+  vase: 'Vaso',
+  scissors: 'Tesoura',
+  'teddy bear': 'Ursinho de Pelúcia',
+  'hair drier': 'Secador de Cabelo',
+  toothbrush: 'Escova de Dente',
+};
+
+/**
+ * Retorna o label em português. Se não houver tradução, retorna o original capitalizado.
+ */
+export function translateLabel(label) {
+  if (!label) return 'Desconhecido';
+  return COCO_PT[label.toLowerCase()] ?? capitalize(label);
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}

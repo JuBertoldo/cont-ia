@@ -16,6 +16,7 @@ from app.services.yolo_service import detect_from_base64, get_model
 
 # ── fixtures ─────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture(autouse=True)
 def reset_singleton():
     """Garante que o singleton _model seja limpo entre os testes."""
@@ -57,6 +58,7 @@ def build_mock_model(labels: list[str] | None = None, confidences: list[float] |
 
 # ── get_model ────────────────────────────────────────────────────────────────
 
+
 @patch("app.services.yolo_service.YOLO")
 def test_get_model_instancia_na_primeira_chamada(mock_yolo_cls):
     mock_yolo_cls.return_value = MagicMock()
@@ -69,6 +71,7 @@ def test_get_model_instancia_na_primeira_chamada(mock_yolo_cls):
 
 
 # ── detect_from_base64 ───────────────────────────────────────────────────────
+
 
 @patch("app.services.yolo_service.YOLO")
 def test_detect_retorna_lista_vazia_sem_boxes(mock_yolo_cls):

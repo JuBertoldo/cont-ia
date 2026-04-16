@@ -37,8 +37,21 @@ def _run_workflow(image_base64: str) -> list[dict]:
         images={"image": image_base64},
     )
 
+    logger.debug("Roboflow workflow result keys: %s", list(result[0].keys()) if result else "empty")
+
+    # Tenta a chave primária do bloco de saída do workflow; cai em alternativas comuns.
     raw_predictions = result[0].get("raw_predictions", {})
     predictions = raw_predictions.get("predictions", [])
+
+    # Fallback: algumas versões do workflow expõem "predictions" diretamente
+    if not predictions:
+        predictions = result[0].get("predictions", [])
+
+    if not predictions:
+        logger.warning(
+            "Roboflow retornou resultado sem detecções reconhecíveis. " "Chaves disponíveis: %s",
+            list(result[0].keys()) if result else "[]",
+        )
 
     detections = []
     for pred in predictions:
@@ -47,17 +60,19 @@ def _run_workflow(image_base64: str) -> list[dict]:
         w = pred.get("width", 0)
         h = pred.get("height", 0)
 
-        detections.append({
-            "label": pred.get("class", "object"),
-            "confidence": round(pred.get("confidence", 0.0), 4),
-            "bbox": [
-                round(cx - w / 2, 2),
-                round(cy - h / 2, 2),
-                round(cx + w / 2, 2),
-                round(cy + h / 2, 2),
-            ],
-            "source": "rfdetr",
-        })
+        detections.append(
+            {
+                "label": pred.get("class", "object"),
+                "confidence": round(pred.get("confidence", 0.0), 4),
+                "bbox": [
+                    round(cx - w / 2, 2),
+                    round(cy - h / 2, 2),
+                    round(cx + w / 2, 2),
+                    round(cy + h / 2, 2),
+                ],
+                "source": "rfdetr",
+            }
+        )
 
     logger.info(
         "RF-DETR workflow detectou %d objetos (total_bottle_count=%s).",
@@ -78,9 +93,7 @@ async def detect_with_roboflow(image_base64: str) -> list[dict]:
 
     try:
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(
-            _rf_executor, _run_workflow, image_base64
-        )
+        return await loop.run_in_executor(_rf_executor, _run_workflow, image_base64)
     except Exception as exc:
         logger.warning("Roboflow workflow falhou — usando só YOLO: %s", exc)
         return []

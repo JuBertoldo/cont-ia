@@ -21,6 +21,7 @@ client = TestClient(app)
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
+
 def make_base64_image(width: int = 32, height: int = 32) -> str:
     """Gera uma imagem PNG mínima codificada em base64."""
     img = Image.new("RGB", (width, height), color=(100, 150, 200))
@@ -50,6 +51,7 @@ def mock_yolo_result(labels: list[str], confidences: list[float]):
 
 # ── testes de entrada inválida ───────────────────────────────────────────────
 
+
 def test_detect_rejeita_payload_vazio():
     res = client.post("/v1/detect", json={})
     assert res.status_code == 422
@@ -60,14 +62,22 @@ def test_detect_rejeita_image_base64_muito_curta():
     assert res.status_code == 422
 
 
-def test_detect_rejeita_base64_invalido():
+def test_detect_base64_valido_mas_imagem_corrompida_retorna_deteccoes_vazias():
+    """
+    Base64 sintaticamente válido mas que não forma imagem reconhecível:
+    o ensemble trata a falha do YOLO com 'return_exceptions=True' e retorna
+    HTTP 200 com detecções vazias (degradação graciosa).
+    """
     with patch("app.services.yolo_service.get_model") as mock_model:
         mock_model.return_value = MagicMock()
         res = client.post("/v1/detect", json={"image_base64": "nao_e_base64_valido!!!"})
-        assert res.status_code in (422, 500)
+        assert res.status_code == 200
+        body = res.json()
+        assert body["detections"] == []
 
 
 # ── testes de contrato de saída ──────────────────────────────────────────────
+
 
 @patch("app.services.yolo_service.YOLO")
 def test_detect_retorna_schema_correto_sem_deteccoes(mock_yolo_cls):
@@ -80,6 +90,7 @@ def test_detect_retorna_schema_correto_sem_deteccoes(mock_yolo_cls):
 
     # Reset singleton para usar o mock
     import app.services.yolo_service as svc
+
     svc._model = None
 
     image_b64 = make_base64_image()
@@ -109,6 +120,7 @@ def test_detect_retorna_deteccoes_com_schema_correto(mock_yolo_cls):
     mock_yolo_cls.return_value = model_instance
 
     import app.services.yolo_service as svc
+
     svc._model = None
 
     image_b64 = make_base64_image()
@@ -140,6 +152,7 @@ def test_detect_aceita_campos_opcionais(mock_yolo_cls):
     mock_yolo_cls.return_value = model_instance
 
     import app.services.yolo_service as svc
+
     svc._model = None
 
     image_b64 = make_base64_image()
@@ -157,6 +170,7 @@ def test_detect_aceita_campos_opcionais(mock_yolo_cls):
 
 
 # ── teste de health ──────────────────────────────────────────────────────────
+
 
 def test_health_endpoint():
     res = client.get("/health")

@@ -20,9 +20,9 @@ def get_current_user(
     try:
         decoded = firebase_auth.verify_id_token(credentials.credentials)
         return decoded
-    except Exception:
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido ou expirado.",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from exc

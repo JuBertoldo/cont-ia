@@ -46,7 +46,8 @@ def merge_detections(
     kept: list[dict] = []
     for candidate in all_detections:
         duplicate = any(
-            _iou(candidate["bbox"], kept_det["bbox"]) > iou_threshold
+            candidate["label"] == kept_det["label"]
+            and _iou(candidate["bbox"], kept_det["bbox"]) > iou_threshold
             for kept_det in kept
         )
         if not duplicate:

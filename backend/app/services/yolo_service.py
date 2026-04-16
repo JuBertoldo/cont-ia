@@ -3,7 +3,8 @@ import io
 import threading
 import time
 
-from PIL import Image
+import numpy as np
+from PIL import Image, ImageEnhance
 from ultralytics import YOLO
 
 from app.core.config import settings
@@ -36,6 +37,16 @@ def detect_from_base64(image_base64: str) -> dict:
         raise ValueError("Imagem base64 inválida ou corrompida.") from exc
 
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+    # Melhora detecção em imagens escuras: aplica brightness + contrast automaticamente
+    mean_brightness = float(np.array(image).mean())
+    if mean_brightness < 100:
+        logger.debug(
+            "Imagem escura detectada (brilho médio=%.1f) — aplicando realce.", mean_brightness
+        )
+        image = ImageEnhance.Brightness(image).enhance(1.5)
+        image = ImageEnhance.Contrast(image).enhance(1.3)
+
     model = get_model()
 
     results = model.predict(source=image, conf=settings.YOLO_CONF, verbose=False)
@@ -48,11 +59,13 @@ def detect_from_base64(image_base64: str) -> dict:
             conf = float(box.conf.item())
             xyxy = box.xyxy[0].tolist()
             label = r.names.get(cls_id, str(cls_id))
-            detections.append({
-                "label": label,
-                "confidence": conf,
-                "bbox": [round(v, 2) for v in xyxy],
-            })
+            detections.append(
+                {
+                    "label": label,
+                    "confidence": conf,
+                    "bbox": [round(v, 2) for v in xyxy],
+                }
+            )
 
     elapsed_ms = int((time.time() - started) * 1000)
 

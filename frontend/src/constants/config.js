@@ -22,12 +22,12 @@ export const DATE_FILTER_DAYS = {
 };
 
 export const DATE_FILTERS = [
-  { key: DATE_FILTER_KEYS.ALL, label: 'Todos' },
-  { key: DATE_FILTER_KEYS.TODAY, label: 'Hoje' },
-  { key: DATE_FILTER_KEYS.WEEK, label: '7 dias' },
-  { key: DATE_FILTER_KEYS.MONTH, label: '30 dias' },
-  { key: DATE_FILTER_KEYS.DAYS_60, label: '60 dias' },
-  { key: DATE_FILTER_KEYS.DAYS_90, label: '90 dias' },
+  { key: DATE_FILTER_KEYS.ALL, label: 'Todos', icon: 'list-outline' },
+  { key: DATE_FILTER_KEYS.TODAY, label: 'Hoje', icon: 'today-outline' },
+  { key: DATE_FILTER_KEYS.WEEK, label: '7 dias', icon: 'calendar-outline' },
+  { key: DATE_FILTER_KEYS.MONTH, label: '30 dias', icon: 'calendar-outline' },
+  { key: DATE_FILTER_KEYS.DAYS_60, label: '60 dias', icon: 'calendar-outline' },
+  { key: DATE_FILTER_KEYS.DAYS_90, label: '90 dias', icon: 'calendar-outline' },
 ];
 
 /** Status possíveis de um usuário */

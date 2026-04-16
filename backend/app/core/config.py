@@ -14,7 +14,9 @@ class Settings:
     RATE_LIMIT: str = os.getenv("RATE_LIMIT", "30/minute")
     ROBOFLOW_API_KEY: str = os.getenv("ROBOFLOW_API_KEY", "")
     ROBOFLOW_WORKSPACE: str = os.getenv("ROBOFLOW_WORKSPACE", "julianas-workspace-fcaqd")
-    ROBOFLOW_WORKFLOW_ID: str = os.getenv("ROBOFLOW_WORKFLOW_ID", "smart-bottle-counting-pipeline-1776046255903")
+    ROBOFLOW_WORKFLOW_ID: str = os.getenv(
+        "ROBOFLOW_WORKFLOW_ID", "smart-bottle-counting-pipeline-1776046255903"
+    )
     ENSEMBLE_IOU_THRESHOLD: float = float(os.getenv("ENSEMBLE_IOU_THRESHOLD", "0.5"))
 
     @property

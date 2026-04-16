@@ -12,44 +12,68 @@ export const exportInventoryToCSV = async items => {
     return `"${str}"`;
   };
 
-  // Formata o breakdown de itens detectados para uma célula legível
   const formatItens = itens => {
     if (!Array.isArray(itens) || itens.length === 0) return '';
     return itens.map(i => `${i.label}: ${i.quantidade}`).join(' | ');
   };
 
+  const formatDiaHora = createdAt => {
+    if (!createdAt) return '';
+    const d = createdAt?.toDate ? createdAt.toDate() : new Date(createdAt);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const formatLocalExato = item => {
+    if (item.local && String(item.local).trim())
+      return String(item.local).trim();
+    if (item.latitude && item.longitude) {
+      return `${Number(item.latitude).toFixed(5)}, ${Number(
+        item.longitude,
+      ).toFixed(5)}`;
+    }
+    return '';
+  };
+
+  const formatTipoUsuario = role => {
+    const tipos = {
+      admin: 'Administrador',
+      user: 'Usuário',
+      super_admin: 'Super Admin',
+    };
+    return tipos[role] || role || 'Usuário';
+  };
+
   const headers = [
-    'scanId',
-    'item_principal',
-    'itens_detectados',
-    'total_geral',
-    'classificacao',
-    'descricao',
-    'usuarioNome',
-    'usuarioRole',
-    'local',
-    'latitude',
-    'longitude',
-    'createdAt',
-    'fotoUrl',
+    'Classificação',
+    'Item_principal',
+    'Itens_detectados',
+    'Total_geral',
+    'Descrição',
+    'Email',
+    'Local_exato',
+    'Dia e Hora',
+    'Tipo_de_usuario',
+    'ScanId',
   ];
 
   const rows = items.map(item => [
-    escapeCSV(item.scanId || item.id),
+    escapeCSV(item.classificacao),
     escapeCSV(item.item),
     escapeCSV(formatItens(item.itens)),
     escapeCSV(item.totalGeral ?? item.quantidade ?? 0),
-    escapeCSV(item.classificacao),
     escapeCSV(item.descricao || ''),
-    escapeCSV(item.usuarioNome || ''),
-    escapeCSV(item.usuarioRole || 'user'),
-    escapeCSV(item.local || ''),
-    escapeCSV(item.latitude ?? ''),
-    escapeCSV(item.longitude ?? ''),
-    escapeCSV(
-      item.createdAt?.toDate ? item.createdAt.toDate().toISOString() : '',
-    ),
-    escapeCSV(item.fotoUrl || ''),
+    escapeCSV(item.usuarioEmail || item.usuarioNome || ''),
+    escapeCSV(formatLocalExato(item)),
+    escapeCSV(formatDiaHora(item.createdAt)),
+    escapeCSV(formatTipoUsuario(item.usuarioRole)),
+    escapeCSV(item.scanId || item.id),
   ]);
 
   const csv = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');

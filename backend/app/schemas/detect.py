@@ -1,4 +1,3 @@
-
 from pydantic import BaseModel, Field
 
 
@@ -9,13 +8,17 @@ class DetectRequest(BaseModel):
         description="Imagem codificada em base64 (sem prefixo data:image/).",
     )
     source: str | None = Field(default="mobile", description="Origem da requisição.")
-    platform: str | None = Field(default="unknown", description="Plataforma do cliente (android/ios/web).")
+    platform: str | None = Field(
+        default="unknown", description="Plataforma do cliente (android/ios/web)."
+    )
 
 
 class DetectionItem(BaseModel):
     label: str = Field(..., description="Nome da classe detectada.")
     confidence: float = Field(..., ge=0.0, le=1.0, description="Confiança da detecção (0-1).")
-    bbox: list[float] = Field(..., min_length=4, max_length=4, description="Bounding box [x1, y1, x2, y2].")
+    bbox: list[float] = Field(
+        ..., min_length=4, max_length=4, description="Bounding box [x1, y1, x2, y2]."
+    )
     source: str = Field(default="yolo", description="Modelo que gerou a detecção (yolo | rfdetr).")
 
 

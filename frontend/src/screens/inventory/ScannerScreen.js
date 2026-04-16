@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -22,11 +22,61 @@ import {
   detectWithYolo,
   summarizeDetections,
 } from '../../services/yoloService';
+import { translateLabel } from '../../utils/labelTranslation';
 import { createInventoryItem } from '../../services/inventoryService';
 import { imageUriToBase64 } from '../../services/scannerService';
-import { auth } from '../../config/firebaseConfig';
+import { auth, storage } from '../../config/firebaseConfig';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { getUserProfile } from '../../services/authService';
 import { reverseGeocode } from '../../utils/geocoding';
+
+const CROP_SIZE = 58;
+
+function BBoxCrop({ base64, bbox, imgWidth, imgHeight }) {
+  if (!base64 || !bbox || bbox.length < 4 || !imgWidth || !imgHeight) {
+    return <View style={cropStyles.placeholder} />;
+  }
+  const [x1, y1, x2, y2] = bbox;
+  const bboxW = Math.max(x2 - x1, 1);
+  const bboxH = Math.max(y2 - y1, 1);
+  const scale = CROP_SIZE / Math.max(bboxW, bboxH);
+  const displayW = imgWidth * scale;
+  const displayH = imgHeight * scale;
+
+  return (
+    <View style={cropStyles.container}>
+      <Image
+        source={{ uri: `data:image/jpeg;base64,${base64}` }}
+        style={{
+          width: displayW,
+          height: displayH,
+          position: 'absolute',
+          left: -(x1 * scale),
+          top: -(y1 * scale),
+        }}
+        resizeMode="cover"
+      />
+    </View>
+  );
+}
+
+const cropStyles = StyleSheet.create({
+  container: {
+    width: CROP_SIZE,
+    height: CROP_SIZE,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  placeholder: {
+    width: CROP_SIZE,
+    height: CROP_SIZE,
+    borderRadius: 8,
+    backgroundColor: '#1a1a1a',
+  },
+});
 
 const PICKER_ERROR_MESSAGES = {
   camera_unavailable: 'Câmera não disponível neste dispositivo.',
@@ -59,7 +109,7 @@ function getLocation() {
 
 export default function ScannerScreen() {
   const navigation = useNavigation?.();
-  const currentUser = useMemo(() => auth.currentUser, []);
+  const [currentUser, setCurrentUser] = useState(auth.currentUser);
 
   const [imageUri, setImageUri] = useState('');
   const [detecting, setDetecting] = useState(false);
@@ -73,7 +123,19 @@ export default function ScannerScreen() {
 
   // Estado do modal de resultado
   const [modalVisible, setModalVisible] = useState(false);
-  const [detectionResult, setDetectionResult] = useState(null); // { summary, detections, yoloMeta }
+  const [detectionResult, setDetectionResult] = useState(null);
+  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  // Correções de label: { [labelOriginal]: 'nome corrigido' }
+  const [labelOverrides, setLabelOverrides] = useState({});
+  const [editingLabel, setEditingLabel] = useState(null); // label original sendo editado
+  const [editText, setEditText] = useState('');
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      setCurrentUser(user);
+    });
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     fetchLocation();
@@ -106,7 +168,13 @@ export default function ScannerScreen() {
         selectionLimit: 1,
       });
       const uri = extractUriFromPickerResult(result);
-      if (uri) setImageUri(uri);
+      if (uri) {
+        setImageUri(uri);
+        setImageSize({
+          width: result.assets[0].width ?? 0,
+          height: result.assets[0].height ?? 0,
+        });
+      }
     } catch (error) {
       Alert.alert('Erro', error?.message || 'Falha ao abrir galeria.');
     }
@@ -120,7 +188,13 @@ export default function ScannerScreen() {
         saveToPhotos: false,
       });
       const uri = extractUriFromPickerResult(result);
-      if (uri) setImageUri(uri);
+      if (uri) {
+        setImageUri(uri);
+        setImageSize({
+          width: result.assets[0].width ?? 0,
+          height: result.assets[0].height ?? 0,
+        });
+      }
     } catch (error) {
       Alert.alert('Erro', error?.message || 'Falha ao abrir câmera.');
     }
@@ -151,6 +225,8 @@ export default function ScannerScreen() {
         detections,
         yoloMeta: yoloResult?.meta,
         base64,
+        imageWidth: imageSize.width,
+        imageHeight: imageSize.height,
       });
       setModalVisible(true);
     } catch (error) {
@@ -163,12 +239,27 @@ export default function ScannerScreen() {
     }
   };
 
-  // Passo 2: usuário confirma → salva no Firestore
+  const uploadPhoto = async (base64, uid) => {
+    try {
+      const path = `scans/${uid}/${Date.now()}.jpg`;
+      const storageRef = ref(storage, path);
+      await uploadString(storageRef, base64, 'base64', {
+        contentType: 'image/jpeg',
+      });
+      return await getDownloadURL(storageRef);
+    } catch (_err) {
+      return '';
+    }
+  };
+
+  // Passo 2: usuário confirma → aplica correções, faz upload e salva no Firestore
   const handleConfirmSave = async () => {
     if (!detectionResult) return;
     setSaving(true);
     try {
-      const { summary, detections, yoloMeta } = detectionResult;
+      const result = applyOverrides();
+      const { summary, detections, yoloMeta, base64, correcoes } = result;
+      const fotoUrl = base64 ? await uploadPhoto(base64, currentUser.uid) : '';
 
       await createInventoryItem({
         scanId: `scan_${currentUser.uid}_${Date.now()}`,
@@ -182,20 +273,25 @@ export default function ScannerScreen() {
         labels: summary.labels,
         detections,
         yoloMeta: yoloMeta || {},
+        // Correções para dataset de treinamento futuro
+        correcoes: correcoes ?? [],
+        temCorrecoes: (correcoes ?? []).length > 0,
         usuarioId: currentUser.uid,
         usuarioNome: currentUser.displayName || currentUser.email || 'Usuário',
+        usuarioEmail: currentUser.email || '',
         usuarioRole,
         local: localText.trim(),
         latitude: location?.latitude ?? null,
         longitude: location?.longitude ?? null,
         empresaId,
-        fotoUrl: '',
+        fotoUrl,
       });
 
       setModalVisible(false);
       setImageUri('');
       setLocalText('');
       setDetectionResult(null);
+      setLabelOverrides({});
       navigation?.navigate(ROUTES.HISTORY, {
         filter: 'all',
         title: 'Histórico de Contagens',
@@ -210,6 +306,76 @@ export default function ScannerScreen() {
   const handleCancelModal = () => {
     setModalVisible(false);
     setDetectionResult(null);
+    setLabelOverrides({});
+    setEditingLabel(null);
+  };
+
+  const startEditLabel = (originalLabel, currentDisplay) => {
+    setEditingLabel(originalLabel);
+    setEditText(labelOverrides[originalLabel] ?? currentDisplay);
+  };
+
+  const confirmEditLabel = () => {
+    const trimmed = editText.trim();
+    if (trimmed && editingLabel) {
+      setLabelOverrides(prev => ({ ...prev, [editingLabel]: trimmed }));
+    }
+    setEditingLabel(null);
+  };
+
+  const cancelEditLabel = () => {
+    setEditingLabel(null);
+  };
+
+  // Aplica as correções do usuário antes de salvar
+  const applyOverrides = () => {
+    if (!detectionResult) return detectionResult;
+    if (Object.keys(labelOverrides).length === 0) return detectionResult;
+
+    const fixDet = d => ({
+      ...d,
+      labelOriginal: d.labelOriginal ?? d.label,
+      label: labelOverrides[d.label] ?? d.label,
+    });
+
+    const fixItem = it => ({
+      ...it,
+      labelOriginal: it.labelOriginal ?? it.label,
+      label: labelOverrides[it.label] ?? it.label,
+    });
+
+    const correcoes = Object.entries(labelOverrides).map(
+      ([labelOriginal, labelCorrigido]) => {
+        const det = detectionResult.detections.find(
+          d => d.label === labelOriginal,
+        );
+        return {
+          labelOriginal,
+          labelCorrigido,
+          confianca: det?.confidence ?? null,
+          bbox: det?.bbox ?? null,
+        };
+      },
+    );
+
+    return {
+      ...detectionResult,
+      detections: detectionResult.detections.map(fixDet),
+      summary: {
+        ...detectionResult.summary,
+        itens: detectionResult.summary.itens.map(fixItem),
+        item:
+          labelOverrides[detectionResult.summary.item] ??
+          detectionResult.summary.item,
+        labels: detectionResult.summary.labels.map(l => labelOverrides[l] ?? l),
+        descricao: detectionResult.summary.itens
+          .map(
+            it => `${labelOverrides[it.label] ?? it.label}: ${it.quantidade}`,
+          )
+          .join(' | '),
+      },
+      correcoes,
+    };
   };
 
   return (
@@ -347,17 +513,102 @@ export default function ScannerScreen() {
                 style={styles.modalBody}
                 showsVerticalScrollIndicator={false}
               >
-                {detectionResult.summary.itens.map((item, idx) => (
-                  <View key={idx} style={styles.resultRow}>
-                    <View style={styles.resultBadge}>
-                      <Text style={styles.resultQtd}>{item.quantidade}x</Text>
+                {detectionResult.summary.itens.map((item, idx) => {
+                  const firstDet = detectionResult.detections.find(
+                    d => d.label === item.label,
+                  );
+                  const corrected = labelOverrides[item.label];
+                  const displayName = corrected ?? translateLabel(item.label);
+                  const isEditing = editingLabel === item.label;
+
+                  return (
+                    <View key={idx} style={styles.resultRow}>
+                      <BBoxCrop
+                        base64={detectionResult.base64}
+                        bbox={firstDet?.bbox}
+                        imgWidth={detectionResult.imageWidth}
+                        imgHeight={detectionResult.imageHeight}
+                      />
+                      <View style={styles.resultMid}>
+                        {isEditing ? (
+                          <View style={styles.editRow}>
+                            <TextInput
+                              style={styles.editInput}
+                              value={editText}
+                              onChangeText={setEditText}
+                              autoFocus
+                              placeholder="Nome correto..."
+                              placeholderTextColor="#555"
+                              onSubmitEditing={confirmEditLabel}
+                            />
+                            <TouchableOpacity
+                              onPress={confirmEditLabel}
+                              style={styles.editBtn}
+                            >
+                              <Ionicons
+                                name="checkmark"
+                                size={18}
+                                color={COLORS.PRIMARY}
+                              />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={cancelEditLabel}
+                              style={styles.editBtn}
+                            >
+                              <Ionicons
+                                name="close"
+                                size={18}
+                                color={COLORS.GRAY}
+                              />
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <TouchableOpacity
+                            style={styles.labelRow}
+                            onPress={() =>
+                              startEditLabel(
+                                item.label,
+                                translateLabel(item.label),
+                              )
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.resultLabel,
+                                corrected && styles.resultLabelFixed,
+                              ]}
+                            >
+                              {displayName}
+                            </Text>
+                            {corrected ? (
+                              <View style={styles.correctedBadge}>
+                                <Text style={styles.correctedBadgeText}>
+                                  corrigido
+                                </Text>
+                              </View>
+                            ) : (
+                              <Ionicons
+                                name="pencil-outline"
+                                size={13}
+                                color={COLORS.GRAY}
+                                style={{ marginLeft: 4 }}
+                              />
+                            )}
+                          </TouchableOpacity>
+                        )}
+                        <Text style={styles.resultConf}>
+                          {Math.round((item.confiancaMedia ?? 0) * 100)}%
+                          {corrected
+                            ? ` · YOLO: "${translateLabel(item.label)}"`
+                            : ''}
+                        </Text>
+                      </View>
+                      <View style={styles.resultBadge}>
+                        <Text style={styles.resultQtd}>{item.quantidade}x</Text>
+                      </View>
                     </View>
-                    <Text style={styles.resultLabel}>{item.label}</Text>
-                    <Text style={styles.resultConf}>
-                      {Math.round((item.confiancaMedia ?? 0) * 100)}%
-                    </Text>
-                  </View>
-                ))}
+                  );
+                })}
                 <View style={styles.totalRow}>
                   <Text style={styles.totalLabel}>Total detectado</Text>
                   <Text style={styles.totalValue}>
@@ -550,22 +801,50 @@ const styles = StyleSheet.create({
   resultRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
+    gap: 10,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#222',
   },
+  resultMid: { flex: 1, minWidth: 0 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
+  resultLabelFixed: { color: COLORS.PRIMARY },
+  correctedBadge: {
+    backgroundColor: '#1a3a1a',
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    marginLeft: 5,
+  },
+  correctedBadgeText: {
+    color: COLORS.PRIMARY,
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  editRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  editInput: {
+    flex: 1,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    color: COLORS.WHITE,
+    fontSize: 13,
+    borderWidth: 1,
+    borderColor: COLORS.PRIMARY,
+  },
+  editBtn: { padding: 4 },
   resultBadge: {
     backgroundColor: COLORS.PRIMARY,
     borderRadius: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    minWidth: 44,
+    minWidth: 40,
     alignItems: 'center',
   },
-  resultQtd: { color: COLORS.BLACK, fontWeight: 'bold', fontSize: 15 },
-  resultLabel: { flex: 1, color: COLORS.WHITE, fontSize: 15 },
-  resultConf: { color: COLORS.GRAY, fontSize: 13 },
+  resultQtd: { color: COLORS.BLACK, fontWeight: 'bold', fontSize: 14 },
+  resultLabel: { color: COLORS.WHITE, fontSize: 14, fontWeight: '600' },
+  resultConf: { color: COLORS.GRAY, fontSize: 12, marginTop: 2 },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

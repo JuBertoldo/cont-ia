@@ -36,6 +36,7 @@ import { useHistoryFilters } from '../../hooks/useHistoryFilters';
 import logger from '../../utils/logger';
 import ImagePreviewModal from '../../components/common/ImagePreviewModal';
 import { reverseGeocode } from '../../utils/geocoding';
+import { translateLabel } from '../../utils/labelTranslation';
 
 function GeoLabel({ latitude, longitude }) {
   const [label, setLabel] = useState(null);
@@ -222,7 +223,7 @@ export default function HistoryScreen({ navigation, route }) {
 
         <View style={styles.titleRow}>
           <Text style={styles.itemTitle}>
-            {item.item || 'Não identificado'}
+            {translateLabel(item.item) || 'Não identificado'}
           </Text>
           {item.status === 'contested' && (
             <View style={styles.contestedBadge}>
@@ -248,7 +249,7 @@ export default function HistoryScreen({ navigation, route }) {
                 <View style={styles.itenBadge}>
                   <Text style={styles.itenBadgeText}>{it.quantidade}x</Text>
                 </View>
-                <Text style={styles.itenLabel}>{it.label}</Text>
+                <Text style={styles.itenLabel}>{translateLabel(it.label)}</Text>
                 <Text style={styles.itenConf}>
                   {Math.round((it.confiancaMedia ?? 0) * 100)}%
                 </Text>
@@ -355,25 +356,31 @@ export default function HistoryScreen({ navigation, route }) {
         style={styles.dateFiltersRow}
         contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
       >
-        {DATE_FILTERS.map(f => (
-          <TouchableOpacity
-            key={f.key}
-            style={[
-              styles.filterChip,
-              dateFilter === f.key && styles.filterChipActive,
-            ]}
-            onPress={() => setDateFilter(f.key)}
-          >
-            <Text
-              style={[
-                styles.filterChipText,
-                dateFilter === f.key && styles.filterChipTextActive,
-              ]}
+        {DATE_FILTERS.map(f => {
+          const isActive = dateFilter === f.key;
+          return (
+            <TouchableOpacity
+              key={f.key}
+              style={[styles.filterChip, isActive && styles.filterChipActive]}
+              onPress={() => setDateFilter(f.key)}
             >
-              {f.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Ionicons
+                name={f.icon}
+                size={13}
+                color={isActive ? COLORS.BLACK : COLORS.GRAY}
+                style={{ marginRight: 4 }}
+              />
+              <Text
+                style={[
+                  styles.filterChipText,
+                  isActive && styles.filterChipTextActive,
+                ]}
+              >
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       <Text style={styles.countText}>

@@ -101,12 +101,12 @@ async def detect(
             },
         }
 
-    except asyncio.TimeoutError:
+    except TimeoutError as exc:
         logger.error("Timeout na inferência YOLO (uid=%s)", user.get("uid"))
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
             detail=f"Inferência excedeu o tempo limite de {settings.YOLO_TIMEOUT_S}s.",
-        )
+        ) from exc
     except ValueError as exc:
         logger.warning("Imagem inválida: %s", exc)
         raise HTTPException(

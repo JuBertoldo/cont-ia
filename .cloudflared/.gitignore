@@ -1,0 +1,4 @@
+# Credenciais do Cloudflare Tunnel — NUNCA commitar
+*.json
+cert.pem
+config.yml

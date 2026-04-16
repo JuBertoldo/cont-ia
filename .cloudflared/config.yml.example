@@ -1,0 +1,30 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Cloudflare Tunnel — Cont.IA Backend
+# URL pública permanente sem abrir porta no roteador.
+#
+# PRÉ-REQUISITOS
+#   • Conta gratuita em cloudflare.com
+#   • Um domínio adicionado ao Cloudflare (ex: contia.com)
+#   • cloudflared instalado: brew install cloudflare/cloudflare/cloudflared
+#
+# SETUP (execute uma vez)
+#   1. make tunnel-login                    # abre browser para autenticar
+#   2. make tunnel-create                   # cria o tunnel → anote o UUID
+#   3. Copie ~/.cloudflared/<UUID>.json → .cloudflared/<UUID>.json
+#   4. make tunnel-route DOMINIO=api.contia.com   # cria registro DNS
+#   5. cp .cloudflared/config.yml.example .cloudflared/config.yml
+#   6. Edite config.yml: substitua <TUNNEL_UUID> e <SEU_DOMINIO>
+#   7. make tunnel-up                       # sobe via Docker Compose
+#
+# RESULTADO
+#   App mobile aponta para: https://api.<SEU_DOMINIO>
+#   Atualize YOLO_API_URL no frontend/.env com essa URL.
+# ─────────────────────────────────────────────────────────────────────────────
+
+tunnel: <TUNNEL_UUID>
+credentials-file: /etc/cloudflared/<TUNNEL_UUID>.json
+
+ingress:
+  - hostname: api.<SEU_DOMINIO>
+    service: http://backend:8000
+  - service: http_status:404

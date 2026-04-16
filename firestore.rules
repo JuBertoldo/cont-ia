@@ -73,16 +73,16 @@ service cloud.firestore {
 
     match /inventario/{docId} {
       // Leitura:
-      //   - usuário ativo lendo seus próprios registros (query por usuarioId)
+      //   - qualquer usuário autenticado lendo seus próprios registros (independente de status)
       //   - admin ativo da mesma empresa (query por empresaId)
       //   - super_admin (sem filtro)
-      allow read: if (isActive() && resource.data.usuarioId == request.auth.uid)
+      allow read: if (isAuthenticated() && resource.data.usuarioId == request.auth.uid)
         || (isActive() && isSameEmpresa(resource.data.empresaId))
         || (isActive() && isSuperAdmin());
 
-      // Criação: usuário ativo criando na sua empresa
-      allow create: if isActive()
-        && request.resource.data.empresaId == getUserData().empresaId
+      // Criação: qualquer usuário autenticado criando o próprio registro
+      // (não exige isActive para permitir uso mesmo com conta pendente de aprovação)
+      allow create: if isAuthenticated()
         && request.resource.data.usuarioId == request.auth.uid;
 
       // Atualização/exclusão: admin da empresa ou super_admin

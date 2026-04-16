@@ -27,13 +27,14 @@ const makeItem = (overrides = {}) => ({
   item: 'Parafuso',
   classificacao: 'hardware',
   quantidade: 10,
-  repetidos: 2,
   descricao: 'Detectados: Parafuso',
   usuarioNome: 'João',
+  usuarioEmail: 'joao@contia.com',
   usuarioRole: 'user',
   local: 'Estoque A',
+  latitude: null,
+  longitude: null,
   createdAt: { toDate: () => new Date('2024-01-15T10:00:00Z') },
-  fotoUrl: 'https://example.com/foto.jpg',
   ...overrides,
 });
 
@@ -58,11 +59,24 @@ describe('exportInventoryToCSV', () => {
     const csvContent = RNFS.writeFile.mock.calls[0][1];
     const lines = csvContent.split('\n');
 
-    expect(lines[0]).toContain('scanId');
-    expect(lines[0]).toContain('item');
-    expect(lines[0]).toContain('classificacao');
+    // Verifica novos headers amigáveis
+    expect(lines[0]).toContain('Classificação');
+    expect(lines[0]).toContain('Item_principal');
+    expect(lines[0]).toContain('Email');
+    expect(lines[0]).toContain('Dia e Hora');
+    expect(lines[0]).toContain('Tipo_de_usuario');
+    expect(lines[0]).toContain('ScanId');
+
+    // ScanId deve ser a última coluna
+    const headerCols = lines[0].split(',');
+    expect(headerCols[headerCols.length - 1]).toBe('ScanId');
+
+    // Valores corretos na primeira linha de dados
     expect(lines[1]).toContain('Parafuso');
     expect(lines[1]).toContain('hardware');
+    expect(lines[1]).toContain('joao@contia.com');
+    expect(lines[1]).toContain('Usuário'); // formatTipoUsuario('user')
+    expect(lines[1]).toContain('Estoque A');
   });
 
   it('escapa aspas duplas nos valores', async () => {

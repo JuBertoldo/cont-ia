@@ -18,6 +18,7 @@ function normalizeDetection(det) {
     label: String(det?.label || 'desconhecido'),
     confidence: Number(det?.confidence ?? 0),
     bbox: Array.isArray(det?.bbox) ? det.bbox : [],
+    source: String(det?.source || 'yolo'),
   };
 }
 
