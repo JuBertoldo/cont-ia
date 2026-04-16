@@ -12,176 +12,130 @@ skinparam titleFontSize 16
 skinparam noteBackgroundColor #FFFDE7
 skinparam noteBorderColor #F59E0B
 skinparam noteFontColor #555555
-skinparam sequenceGroupBackgroundColor #F9FBE7
-skinparam sequenceGroupBorderColor #AFB42B
 
-actor "Usuário" as USR
-participant "App\n(RegisterScreen)" as REG
-participant "Firestore\n/empresas" as FS_EMP
+actor "Usuario" as USR
+participant "RegisterScreen" as REG
+participant "Firestore /empresas" as FS_EMP
 participant "Firebase Auth" as FB_AUTH
-participant "Firestore\n/usuarios" as FS_USR
-participant "App\n(AdminUsersScreen)" as ADMIN_APP
-actor "Administrador\n(da empresa)" as ADM
+participant "Firestore /usuarios" as FS_USR
+participant "AdminUsersScreen" as ADMIN_APP
+actor "Administrador" as ADM
 
-' ═══════════════════════════════════════════════════════════
-' PASSO 0 — Escolha inicial
-' ═══════════════════════════════════════════════════════════
-
-USR -> REG : Acessa tela de cadastro\n("Cadastre-se")
-REG -> USR : "Você já tem empresa?"
-
-note right of REG
-  Dois caminhos possíveis:
-  • Não tenho → cria empresa + vira Admin
-  • Já tenho  → entra como Operador pendente
+note over USR, FS_USR
+  Dois caminhos: "Nao tenho empresa" (vira Admin) ou "Ja tenho empresa" (vira Operador pendente)
 end note
 
-' ═══════════════════════════════════════════════════════════
+' ════════════════════════════════════════════
 ' FLUXO A — Novo Administrador (cria empresa)
-' ═══════════════════════════════════════════════════════════
+' ════════════════════════════════════════════
 
-group Fluxo A: "Não tenho empresa" → vira Administrador ✅
+group Fluxo A: "Nao tenho empresa" - vira Administrador
 
-USR -> REG : Seleciona "Não tenho empresa"
-REG -> USR : Exibe campos:\nnome, e-mail, senha,\nmatrícula, nome da empresa
+USR -> REG : Seleciona "Nao tenho empresa"\nPreenche nome, email, senha, matricula, nome da empresa
+USR -> REG : Clica "Cadastrar"
 
-USR -> REG : Preenche todos os campos\nclica "Cadastrar"
-
-REG -> FB_AUTH : createUserWithEmailAndPassword(\n  email, senha\n)
+REG -> FB_AUTH : createUserWithEmailAndPassword(email, senha)
 FB_AUTH --> REG : userCredential (uid)
 
-REG -> FB_AUTH : updateProfile({ displayName: nome })
-FB_AUTH --> REG : perfil atualizado ✓
+REG -> FB_AUTH : updateProfile(displayName: nome)
+FB_AUTH --> REG : ok
 
-REG -> FS_EMP : addDoc(/empresas, {\n  nome, codigo (gerado),\n  adminUid\n})
-FS_EMP --> REG : empresaId ✓
+REG -> FS_EMP : addDoc(/empresas, { nome, codigo, adminUid })
+FS_EMP --> REG : empresaId
 
 note right of FS_EMP
-  Código da empresa gerado
-  automaticamente (ex: EMP-4K2X).
-  Usado por outros usuários
+  Codigo gerado automaticamente
+  ex: EMP-4K2X
+  Usado por outros usuarios
   para entrar nesta empresa.
 end note
 
-REG -> FS_USR : setDoc(/usuarios/{uid}, {\n  role: "admin",\n  status: "active",\n  empresaId\n})
-FS_USR --> REG : Perfil criado ✓
+REG -> FS_USR : setDoc(/usuarios/{uid}, { role: admin, status: active, empresaId })
+FS_USR --> REG : ok
 
-REG -> USR : Alert "Empresa criada!"\nNavega direto para o app
+REG -> USR : Alert "Empresa criada!" - Acesso liberado direto
 
 note right of REG
-  Primeiro usuário da empresa
-  é Admin com status = active.
-  Não precisa de aprovação.
+  Admin com status = active.
+  Nao precisa de aprovacao.
 end note
 
 end
 
-' ═══════════════════════════════════════════════════════════
-' FLUXO B — Novo Operador (entra em empresa existente)
-' ═══════════════════════════════════════════════════════════
+' ════════════════════════════════════════════
+' FLUXO B — Novo Operador (entra em empresa)
+' ════════════════════════════════════════════
 
-group Fluxo B: "Já tenho empresa" → Operador aguardando aprovação ⏳
+group Fluxo B: "Ja tenho empresa" - Operador aguardando aprovacao
 
-USR -> REG : Seleciona "Já tenho empresa"
-REG -> USR : Exibe campos:\nnome, e-mail, senha,\nmatrícula, código da empresa
-
-USR -> REG : Digita código da empresa\n(validação em tempo real, debounce 600ms)
+USR -> REG : Seleciona "Ja tenho empresa"\nDigita codigo da empresa (validacao em tempo real)
 
 REG -> FS_EMP : getEmpresaByCodigo(codigo)
+FS_EMP --> REG : { id, nome } ou null
 
-alt Código encontrado
-    FS_EMP --> REG : { id, nome } ✓
-    REG -> USR : Exibe "✓ Empresa: [nome]" em verde
-else Código não encontrado
-    FS_EMP --> REG : null
-    REG -> USR : Exibe "Código não encontrado" em vermelho
-    note right of REG
-      Usuário corrige o código.
-      Validação acontece automaticamente
-      a cada digitação (após 600ms).
-    end note
-end
+note right of REG
+  Validacao com debounce 600ms.
+  Codigo invalido bloqueia o cadastro.
+end note
 
-USR -> REG : Preenche demais campos\nclica "Cadastrar"
+USR -> REG : Preenche nome, email, senha, matricula\nClica "Cadastrar"
 
-REG -> FB_AUTH : createUserWithEmailAndPassword(\n  email, senha\n)
+REG -> FB_AUTH : createUserWithEmailAndPassword(email, senha)
 FB_AUTH --> REG : userCredential (uid)
 
-REG -> FB_AUTH : updateProfile({ displayName: nome })
-FB_AUTH --> REG : perfil atualizado ✓
+REG -> FB_AUTH : updateProfile(displayName: nome)
+FB_AUTH --> REG : ok
 
-REG -> FS_EMP : getEmpresaByCodigo(codigo)
-FS_EMP --> REG : { id } (empresaId)
+REG -> FS_USR : checkMatriculaExists(matricula, empresaId)
 
-REG -> FS_USR : checkMatriculaExists(\n  matricula, empresaId\n)
-
-alt Matrícula já cadastrada
+alt Matricula ja cadastrada nesta empresa
     FS_USR --> REG : true
-    REG -> FB_AUTH : deleteUser() — reverte Auth
-    REG -> USR : Alert "Matrícula já\ncadastrada nesta empresa."
-else Matrícula disponível
+    REG -> FB_AUTH : deleteUser() - rollback automatico
+    REG -> USR : Alert "Matricula ja cadastrada nesta empresa"
+else Matricula disponivel
     FS_USR --> REG : false
-
-    REG -> FS_USR : setDoc(/usuarios/{uid}, {\n  role: "user",\n  status: "pending",\n  empresaId\n})
-    FS_USR --> REG : Perfil criado ✓
-
-    REG -> USR : Alert "Aguardando aprovação"\nNavega para PendingApprovalScreen
+    REG -> FS_USR : setDoc(/usuarios/{uid}, { role: user, status: pending, empresaId })
+    FS_USR --> REG : ok
+    REG -> USR : Alert "Aguardando aprovacao" - Tela PendingApproval
 end
-
-note right of REG
-  Status = pending: usuário fica
-  na tela de espera até o Admin
-  aprovar ou recusar o cadastro.
-end note
 
 end
 
-' ═══════════════════════════════════════════════════════════
-' FLUXO C — Admin aprova ou recusa o Operador
-' ═══════════════════════════════════════════════════════════
+' ════════════════════════════════════════════
+' FLUXO C — Admin aprova ou recusa
+' ════════════════════════════════════════════
 
 group Fluxo C: Administrador aprova ou recusa o cadastro
 
-ADM -> ADMIN_APP : Abre "Gerenciar Usuários"
-ADMIN_APP -> FS_USR : subscribeToUsers(\n  empresaId, status: "pending"\n)
-FS_USR --> ADMIN_APP : Lista de pendentes em tempo real
+ADM -> ADMIN_APP : Abre "Gerenciar Usuarios"
+ADMIN_APP -> FS_USR : onSnapshot(empresaId, status: pending) - tempo real
+FS_USR --> ADMIN_APP : Lista de pendentes
 
-ADM -> ADMIN_APP : Visualiza perfil do novo usuário\n(nome, e-mail, matrícula)
+ADM -> ADMIN_APP : Visualiza perfil: nome, email, matricula
 
 alt Admin aprova
     ADM -> ADMIN_APP : Clica "Aprovar"
-    ADMIN_APP -> FS_USR : updateDoc(/usuarios/{uid}, {\n  status: "active"\n})
-    FS_USR --> ADMIN_APP : ✓ Atualizado
-
+    ADMIN_APP -> FS_USR : updateDoc({ status: active })
+    FS_USR --> ADMIN_APP : ok
     note right of ADMIN_APP
-      Usuário faz login novamente
-      e já acessa o app normalmente
-      com role = user, status = active.
+      Usuario faz login novamente
+      e acessa o app com role = user.
     end note
-
 else Admin recusa
     ADM -> ADMIN_APP : Clica "Recusar"
-    ADMIN_APP -> FS_USR : updateDoc(/usuarios/{uid}, {\n  status: "rejected"\n})
-    FS_USR --> ADMIN_APP : ✓ Atualizado
-
+    ADMIN_APP -> FS_USR : updateDoc({ status: rejected })
+    FS_USR --> ADMIN_APP : ok
     note right of ADMIN_APP
-      Usuário recebe "Acesso negado"
-      na próxima tentativa de login.
+      Usuario recebe "Acesso negado"
+      na proxima tentativa de login.
     end note
 end
 
 end
 
-' ═══════════════════════════════════════════════════════════
-' TRATAMENTO DE ERROS
-' ═══════════════════════════════════════════════════════════
-
-note bottom
-  **Rollback automático:**
-  Se qualquer etapa após a criação no Firebase Auth falhar
-  (código inválido, matrícula duplicada, erro de rede),
-  a conta criada no Auth é deletada automaticamente
-  para não deixar usuário sem perfil no Firestore.
+note over REG, FB_AUTH
+  Rollback automatico: se qualquer etapa apos a criacao no Firebase Auth falhar,
+  a conta e deletada automaticamente para nao deixar usuario sem perfil no Firestore.
 end note
 
 @enduml
