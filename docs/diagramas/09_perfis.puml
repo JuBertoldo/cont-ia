@@ -1,0 +1,147 @@
+@startuml 09_perfis
+!pragma layout smetana
+title Cont.IA — Perfis de Acesso e Permissões
+
+skinparam backgroundColor #FFFFFF
+skinparam rectangleBackgroundColor #F0FFF4
+skinparam rectangleBorderColor #00E676
+skinparam titleFontColor #1A1A1A
+skinparam titleFontSize 16
+skinparam legendBackgroundColor #FAFAFA
+skinparam legendBorderColor #CCCCCC
+skinparam noteFontColor #555555
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #F59E0B
+
+' ─────────────────────────────────────────────
+' Legenda de ícones
+' ─────────────────────────────────────────────
+legend right
+  ✅ Permitido
+  ❌ Bloqueado
+  ⚠️  Restrito (próprio ou empresa)
+end legend
+
+' ─────────────────────────────────────────────
+' PERFIL: Operador (user)
+' ─────────────────────────────────────────────
+rectangle "👤  Operador  (role = user)" as PERFIL_USER #E8F5E9 {
+    rectangle "Cadastro" {
+        card "✅ Criar conta via código da empresa" as U1
+        card "✅ Login / logout / recuperar senha" as U2
+        card "✅ Editar próprio perfil" as U3
+    }
+    rectangle "Scanner" {
+        card "✅ Fotografar itens (câmera / galeria)" as U4
+        card "✅ Detectar com YOLO + Roboflow" as U5
+        card "✅ Corrigir labels identificados" as U6
+        card "✅ Confirmar e salvar contagem" as U7
+        card "✅ Registrar localização GPS" as U8
+    }
+    rectangle "Histórico" {
+        card "⚠️  Ver apenas próprio histórico" as U9
+        card "✅ Filtrar por data e local" as U10
+        card "✅ Exportar CSV próprio" as U11
+        card "⚠️  Ver foto de auditoria (própria)" as U12
+    }
+    rectangle "Restrições" {
+        card "❌ Ver histórico de outros usuários" as U13
+        card "❌ Aprovar usuários" as U14
+        card "❌ Abrir / ver chamados" as U15
+        card "❌ Painel administrativo" as U16
+    }
+}
+
+note bottom of PERFIL_USER
+  Cadastro: status = pending até aprovação do Admin.
+  Pode escanear e ver próprio histórico mesmo pendente.
+end note
+
+' ─────────────────────────────────────────────
+' PERFIL: Administrador (admin)
+' ─────────────────────────────────────────────
+rectangle "🔑  Administrador  (role = admin)" as PERFIL_ADMIN #E3F2FD {
+    rectangle "Herda tudo do Operador +" {
+        card "✅ Ver histórico de toda a empresa" as A1
+        card "✅ Ver fotos de auditoria da empresa" as A2
+        card "✅ Exportar CSV da empresa" as A3
+    }
+    rectangle "Gestão de Usuários" {
+        card "✅ Aprovar / recusar cadastros" as A4
+        card "✅ Promover usuário a Admin" as A5
+        card "✅ Rebaixar Admin a usuário" as A6
+    }
+    rectangle "Chamados" {
+        card "✅ Abrir chamado de suporte" as A7
+        card "✅ Acompanhar chamados da empresa" as A8
+        card "❌ Responder / alterar status de chamados" as A9
+    }
+    rectangle "Restrições" {
+        card "❌ Ver dados de outras empresas" as A10
+        card "❌ Gerenciar empresas" as A11
+        card "❌ Criar convites de suporte" as A12
+    }
+}
+
+note bottom of PERFIL_ADMIN
+  Primeiro usuário de uma empresa é
+  automaticamente promovido a Admin (status = active).
+end note
+
+' ─────────────────────────────────────────────
+' PERFIL: Suporte Técnico (support)
+' ─────────────────────────────────────────────
+rectangle "🛡️  Suporte Técnico  (role = support)" as PERFIL_SUPPORT #FFF3E0 {
+    rectangle "Cadastro exclusivo por convite" {
+        card "✅ Duplo toque no logo → tela de cadastro" as S1
+        card "✅ Firebase valida convite via e-mail" as S2
+        card "✅ Conta criada com status = active" as S3
+    }
+    rectangle "Gestão de Chamados" {
+        card "✅ Ver TODOS os chamados (todas as empresas)" as S4
+        card "✅ Responder chamados e registrar solução" as S5
+        card "✅ Alterar status (respeitando fluxo)" as S6
+        card "✅ Reabrir chamado resolvido" as S7
+        card "✅ Acompanhar SLA em tempo real" as S8
+        card "✅ Buscar por número, empresa, solicitante" as S9
+    }
+    rectangle "Restrições" {
+        card "❌ Usar scanner / contagem" as S10
+        card "❌ Ver histórico de inventário" as S11
+        card "❌ Gerenciar usuários ou empresas" as S12
+        card "❌ Abrir chamados (só responde)" as S13
+        card "❌ Criar convites de suporte" as S14
+    }
+}
+
+note bottom of PERFIL_SUPPORT
+  Acesso concedido apenas se o Super Admin
+  cadastrou o e-mail em /convites_suporte.
+  Convite de uso único — não pode ser reutilizado.
+end note
+
+' ─────────────────────────────────────────────
+' PERFIL: Super Admin (super_admin)
+' ─────────────────────────────────────────────
+rectangle "⚙️  Super Admin  (role = super_admin)" as PERFIL_SA #FCE4EC {
+    rectangle "Herda tudo do Administrador +" {
+        card "✅ Ver dados de TODAS as empresas" as SA1
+        card "✅ Painel global do sistema" as SA2
+    }
+    rectangle "Gestão do Sistema" {
+        card "✅ Criar / remover empresas" as SA3
+        card "✅ Ver todos os usuários globalmente" as SA4
+    }
+    rectangle "Gestão de Convites Support" {
+        card "✅ Criar convite de acesso support" as SA5
+        card "✅ Remover convite não utilizado" as SA6
+        card "✅ Listar todos os convites e status" as SA7
+    }
+    rectangle "Chamados" {
+        card "✅ Ver todos os chamados" as SA8
+        card "✅ Responder / alterar status" as SA9
+        card "✅ Reabrir chamados" as SA10
+    }
+}
+
+@enduml

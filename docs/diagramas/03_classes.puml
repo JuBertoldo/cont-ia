@@ -1,0 +1,218 @@
+@startuml 03_classes
+!pragma layout smetana
+title Cont.IA — Diagrama de Classes
+
+skinparam backgroundColor #FFFFFF
+skinparam classBackgroundColor #F0FFF4
+skinparam classBorderColor #00E676
+skinparam classFontColor #1A1A1A
+skinparam classAttributeFontColor #444444
+skinparam arrowColor #00E676
+skinparam titleFontColor #1A1A1A
+skinparam titleFontSize 16
+skinparam stereotypeCBackgroundColor #00E676
+skinparam stereotypeCBorderColor #00C853
+
+class Usuario {
+    +id: String
+    +nome: String
+    +email: String
+    +matricula: String
+    +role: Role
+    +status: StatusUsuario
+    +empresaId: String
+    +photoURL: String
+    +convidadoPor: String
+    +createdAt: Timestamp
+    --
+    +login(): void
+    +logout(): void
+    +atualizarPerfil(): void
+}
+
+class Empresa {
+    +id: String
+    +nome: String
+    +codigo: String
+    +adminUid: String
+    +createdAt: Timestamp
+    --
+    +gerarCodigo(): String
+    +buscarPorCodigo(): Empresa
+}
+
+class RegistroContagem {
+    +id: String
+    +scanId: String
+    +usuarioId: String
+    +usuarioEmail: String
+    +empresaId: String
+    +item: String
+    +quantidade: Integer
+    +itens: List<ItemDetectado>
+    +latitude: Double
+    +longitude: Double
+    +local: String
+    +fotoUrl: String
+    +correcoes: List<CorrecaoLabel>
+    +temCorrecoes: Boolean
+    +createdAt: Timestamp
+    --
+    +salvar(): void
+    +exportarCSV(): File
+}
+
+class ItemDetectado {
+    +label: String
+    +labelOriginal: String
+    +quantidade: Integer
+    +confiancaMedia: Double
+    +source: SourceDeteccao
+    +bbox: List<Float>
+    --
+    +calcularConfianca(): Double
+}
+
+class CorrecaoLabel {
+    +labelOriginal: String
+    +labelCorrigido: String
+    +confianca: Float
+    +bbox: List<Float>
+}
+
+class DeteccaoService {
+    +imageBase64: String
+    +imageWidth: Integer
+    +imageHeight: Integer
+    +yoloConf: Float
+    +roboflowApiKey: String
+    --
+    +detectarComYolo(): List<ItemDetectado>
+    +detectarComRoboflow(): List<ItemDetectado>
+    +aplicarNMS(): List<ItemDetectado>
+    +mesclarResultados(): List<ItemDetectado>
+    +realcarBrilho(imagem): Image
+}
+
+class YoloModel {
+    +modelPath: String
+    +confThreshold: Float
+    --
+    +carregar(): void
+    +detectar(imagem): List<BBox>
+    +converterFormato(): List<ItemDetectado>
+}
+
+class RoboflowClient {
+    +apiKey: String
+    +workspaceId: String
+    +workflowId: String
+    --
+    +executarWorkflow(imagem): List<ItemDetectado>
+    +parsearResposta(): List<ItemDetectado>
+}
+
+class Chamado {
+    +id: String
+    +numero: String
+    +titulo: String
+    +descricao: String
+    +tipo: TipoChamado
+    +status: StatusChamado
+    +prioridade: String
+    +empresaId: String
+    +empresaNome: String
+    +adminId: String
+    +adminNome: String
+    +resposta: String
+    +respondidoPor: String
+    +reaberturas: Integer
+    +slaRespostaSuporteAt: Timestamp
+    +slaResolucaoAt: Timestamp
+    +slaRespostaClienteAt: Timestamp
+    +primeiraRespostaAt: Timestamp
+    +resolvidoAt: Timestamp
+    +createdAt: Timestamp
+    --
+    +responder(resposta, status): void
+    +calcularSLA(): SlaInfo
+    +reabrir(): void
+}
+
+class SlaInfo {
+    +status: String
+    +color: String
+    +label: String
+    --
+    +calcular(deadline): SlaInfo
+}
+
+class ConviteSuporte {
+    +email: String
+    +nome: String
+    +createdBy: String
+    +usado: Boolean
+    +usadoEm: Timestamp
+    +createdAt: Timestamp
+    --
+    +consumir(): void
+    +validar(): Boolean
+}
+
+class AuthService {
+    +token: String
+    --
+    +validarToken(): Usuario
+    +getUsuarioLogado(): Usuario
+}
+
+enum Role {
+    USER
+    ADMIN
+    SUPER_ADMIN
+    SUPPORT
+}
+
+enum StatusUsuario {
+    PENDING
+    ACTIVE
+    REJECTED
+}
+
+enum StatusChamado {
+    ABERTO
+    EM_ANDAMENTO
+    AGUARDANDO_CLIENTE
+    RESOLVIDO
+}
+
+enum TipoChamado {
+    PROBLEMA
+    SUGESTAO
+    CONFIGURACAO
+    OUTRO
+}
+
+enum SourceDeteccao {
+    YOLO
+    RFDETR
+}
+
+' Relacionamentos
+Usuario "1" --> "0..1" Empresa : pertence a
+Usuario "1" --> "*" RegistroContagem : realiza
+RegistroContagem "1" --> "*" ItemDetectado : contém
+RegistroContagem "1" --> "*" CorrecaoLabel : registra
+DeteccaoService --> YoloModel : usa
+DeteccaoService --> RoboflowClient : usa
+DeteccaoService --> ItemDetectado : retorna
+Usuario --> Role : possui
+Usuario --> StatusUsuario : possui
+ItemDetectado --> SourceDeteccao : origina de
+Chamado --> StatusChamado : possui
+Chamado --> TipoChamado : categorizado como
+Chamado "1" --> "1" SlaInfo : calcula
+ConviteSuporte --> Usuario : autoriza criação de
+AuthService --> Usuario : autentica
+
+@enduml

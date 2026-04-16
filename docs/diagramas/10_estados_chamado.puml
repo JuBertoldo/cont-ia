@@ -1,0 +1,104 @@
+@startuml 10_estados_chamado
+!pragma layout smetana
+title Cont.IA — Máquina de Estados do Chamado (com SLA)
+
+skinparam backgroundColor #FFFFFF
+skinparam stateBackgroundColor #F0FFF4
+skinparam stateBorderColor #00E676
+skinparam stateFontColor #1A1A1A
+skinparam arrowColor #555555
+skinparam titleFontColor #1A1A1A
+skinparam titleFontSize 16
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #F59E0B
+skinparam noteFontColor #555555
+
+' ─── Estados ──────────────────────────────────────────────────
+
+state "🔵 ABERTO" as ABERTO {
+    ABERTO : Admin criou o chamado
+    ABERTO : SLA resposta suporte: ativo
+    ABERTO : SLA resolução: ativo
+}
+
+state "🟡 EM ANDAMENTO" as EM_ANDAMENTO {
+    EM_ANDAMENTO : Suporte iniciou atendimento
+    EM_ANDAMENTO : SLA 1ª resposta: concluído ✓
+    EM_ANDAMENTO : SLA resolução: ativo
+}
+
+state "🟣 AGUARDANDO CLIENTE" as AGUARDANDO {
+    AGUARDANDO : Suporte solicitou informação ao admin
+    AGUARDANDO : SLA cliente: ativo (prazo para admin responder)
+    AGUARDANDO : SLA resolução: pausado durante espera
+}
+
+state "🟢 RESOLVIDO" as RESOLVIDO {
+    RESOLVIDO : Chamado encerrado
+    RESOLVIDO : SLA resolução: concluído ✓
+    RESOLVIDO : resolvidoAt registrado
+}
+
+' ─── Fluxo principal ─────────────────────────────────────────
+
+[*] --> ABERTO : Admin abre chamado\n→ SLAs calculados automaticamente\n  pelo tipo do chamado
+
+ABERTO --> EM_ANDAMENTO : Suporte assume o atendimento\n→ primeiraRespostaAt registrado
+
+EM_ANDAMENTO --> AGUARDANDO : Suporte precisa de\ninformação do cliente\n→ slaRespostaClienteAt calculado
+
+AGUARDANDO --> EM_ANDAMENTO : Admin responde\n→ slaRespostaClienteAt limpo
+
+EM_ANDAMENTO --> RESOLVIDO : Suporte resolve\no chamado
+
+RESOLVIDO --> ABERTO : Admin reabre\n(problema voltou)\n→ reaberturas++\n→ slaResolucaoAt recalculado
+
+' ─── Notas de SLA ────────────────────────────────────────────
+
+note right of ABERTO
+  **SLA calculado na criação:**
+  ┌─────────────────┬──────────┬──────────┬──────────┐
+  │ Tipo            │ Resposta │ Resolução│ Cliente  │
+  ├─────────────────┼──────────┼──────────┼──────────┤
+  │ 🔴 Bug          │   2h     │   12h    │   4h     │
+  │ 🟡 Configuração │   4h     │   48h    │   8h     │
+  │ 🟡 Outro        │   8h     │   72h    │   24h    │
+  │ 🟢 Sugestão     │   24h    │  30 dias │   48h    │
+  └─────────────────┴──────────┴──────────┴──────────┘
+end note
+
+note right of EM_ANDAMENTO
+  **Semáforo de SLA:**
+  🟢 verde  → dentro do prazo
+  🟡 amarelo → < 4h restantes
+  🟠 laranja → < 1h restante
+  🔴 vermelho → vencido
+end note
+
+note right of AGUARDANDO
+  **SLA do cliente ativado:**
+  Conta regressiva para o admin
+  responder à solicitação do suporte.
+  Se vencer → alerta visual no ticket.
+end note
+
+note right of RESOLVIDO
+  **Reabertura possível:**
+  Admin pode reabrir se o problema
+  recorrer. Contador de reaberturas
+  incrementado a cada reabertura.
+end note
+
+' ─── Transições permitidas ───────────────────────────────────
+
+note bottom
+  **Regras de transição (TICKET_TRANSITIONS):**
+  ABERTO           → [EM_ANDAMENTO]
+  EM_ANDAMENTO     → [AGUARDANDO_CLIENTE, RESOLVIDO]
+  AGUARDANDO_CLIENTE → [EM_ANDAMENTO]
+  RESOLVIDO        → [ABERTO]
+
+  Quem pode alterar status: Support e Super Admin
+end note
+
+@enduml

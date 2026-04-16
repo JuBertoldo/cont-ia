@@ -1,0 +1,117 @@
+@startuml 01_casos_de_uso
+!pragma layout smetana
+title Cont.IA — Diagrama de Casos de Uso
+
+skinparam backgroundColor #FFFFFF
+skinparam actorBackgroundColor #E8F5E9
+skinparam actorBorderColor #00E676
+skinparam actorFontColor #1A1A1A
+skinparam usecaseBackgroundColor #F0FFF4
+skinparam usecaseBorderColor #00E676
+skinparam usecaseFontColor #1A1A1A
+skinparam arrowColor #00E676
+skinparam rectangleBorderColor #333333
+skinparam rectangleFontColor #333333
+skinparam titleFontColor #1A1A1A
+skinparam titleFontSize 16
+
+left to right direction
+
+actor "Operador\n(user)" as OP
+actor "Administrador\n(admin)" as ADM
+actor "Suporte Técnico\n(support)" as SUP
+actor "Super Admin\n(super_admin)" as SA
+
+rectangle "Sistema Cont.IA" {
+
+    rectangle "Autenticação" {
+        usecase "Cadastrar conta (empresa)" as UC1
+        usecase "Cadastrar conta (convite suporte)" as UC1B
+        usecase "Fazer login" as UC2
+        usecase "Recuperar senha" as UC3
+    }
+
+    rectangle "Contagem / Scanner" {
+        usecase "Capturar imagem" as UC4
+        usecase "Selecionar da galeria" as UC5
+        usecase "Identificar e contar objetos (YOLO + Roboflow)" as UC6
+        usecase "Corrigir labels detectados" as UC6B
+        usecase "Confirmar e salvar contagem" as UC7
+        usecase "Registrar GPS automático" as UC8
+    }
+
+    rectangle "Histórico e Exportação" {
+        usecase "Visualizar histórico próprio" as UC9
+        usecase "Visualizar histórico da empresa" as UC10
+        usecase "Filtrar por data / local" as UC11
+        usecase "Exportar CSV" as UC12
+        usecase "Ver foto de auditoria" as UC13
+    }
+
+    rectangle "Administração da Empresa" {
+        usecase "Aprovar / recusar usuários" as UC14
+        usecase "Promover / rebaixar usuários" as UC15
+        usecase "Contestar contagem" as UC16
+        usecase "Abrir chamado de suporte" as UC17
+    }
+
+    rectangle "Suporte Técnico" {
+        usecase "Visualizar todos os chamados" as UC18
+        usecase "Responder chamado" as UC19
+        usecase "Alterar status do chamado" as UC20
+        usecase "Reabrir chamado resolvido" as UC21
+        usecase "Acompanhar SLA em tempo real" as UC22
+    }
+
+    rectangle "Super Admin / Sistema" {
+        usecase "Gerenciar todas as empresas" as UC23
+        usecase "Acessar painel global" as UC24
+        usecase "Criar convite de acesso support" as UC25
+        usecase "Remover convite de acesso" as UC26
+    }
+}
+
+' Operador
+OP --> UC1
+OP --> UC2
+OP --> UC3
+OP --> UC4
+OP --> UC5
+OP --> UC6
+OP --> UC6B
+OP --> UC7
+UC6 .> UC8 : <<include>>
+OP --> UC9
+OP --> UC11
+OP --> UC12
+
+' Administrador herda do Operador
+ADM --> OP : <<extend>>
+ADM --> UC10
+ADM --> UC13
+ADM --> UC14
+ADM --> UC15
+ADM --> UC16
+ADM --> UC17
+
+' Suporte Técnico
+SUP --> UC1B
+SUP --> UC2
+SUP --> UC18
+SUP --> UC19
+SUP --> UC20
+SUP --> UC21
+UC20 .> UC22 : <<include>>
+
+' Super Admin herda do Administrador
+SA --> ADM : <<extend>>
+SA --> UC23
+SA --> UC24
+SA --> UC25
+SA --> UC26
+SA --> UC18
+SA --> UC19
+SA --> UC20
+SA --> UC21
+
+@enduml

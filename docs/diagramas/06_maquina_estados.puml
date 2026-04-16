@@ -1,0 +1,121 @@
+@startuml 06_maquina_estados
+!pragma layout smetana
+title Cont.IA — Diagrama de Máquina de Estados (Ciclo de Vida dos Usuários)
+
+skinparam backgroundColor #FFFFFF
+skinparam stateBackgroundColor #F0FFF4
+skinparam stateBorderColor #00E676
+skinparam stateFontColor #1A1A1A
+skinparam arrowColor #00E676
+skinparam titleFontColor #1A1A1A
+skinparam titleFontSize 16
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #F59E0B
+skinparam noteFontColor #555555
+
+' ═══════════════════════════════════════════════════════════════
+' FLUXO A — Cadastro padrão (Operador / Admin)
+' ═══════════════════════════════════════════════════════════════
+
+state "Fluxo A: Cadastro padrão (Operador / Admin)" as FluxoA {
+
+    [*] --> CadastroEmpresa : Usuário informa\ncódigo da empresa
+
+    state CadastroEmpresa {
+        [*] --> ValidandoCodigo
+        ValidandoCodigo --> CodigoValido : Código encontrado
+        ValidandoCodigo --> CodigoInvalido : Código não encontrado
+        CodigoInvalido --> ValidandoCodigo : Corrige o código
+        CodigoValido --> [*]
+    }
+
+    CadastroEmpresa --> Pendente : Conta criada\n(status = pending)
+
+    state Pendente {
+        [*] --> AguardandoAdmin
+        AguardandoAdmin : Admin da empresa\nainda não aprovou
+    }
+
+    note right of Pendente
+      Usuário vê tela "Aguardando Aprovação"
+      ao tentar fazer login.
+      Pode escanear itens e ver próprio histórico
+      mas não acessa dados de outros usuários.
+    end note
+
+    Pendente --> Ativo : Admin aprova
+    Pendente --> Recusado : Admin recusa
+
+    state Ativo {
+        [*] --> Operando
+        Operando --> RealizandoContagem : Inicia nova contagem
+        RealizandoContagem --> Operando : Confirma ou cancela
+    }
+
+    note right of Ativo
+      Acesso completo conforme role:
+      • user  → scanner + histórico próprio
+      • admin → + gerenciar empresa + chamados
+    end note
+
+    Ativo --> Recusado : Admin revoga acesso
+
+    state Recusado {
+        [*] --> AcessoBloqueado
+        AcessoBloqueado : Login negado\nautomaticamente
+    }
+
+    Recusado --> Ativo : Admin reativa
+
+    Ativo --> [*] : Usuário excluído
+
+    note bottom of FluxoA
+      Primeiro usuário de uma empresa
+      torna-se Admin automaticamente
+      com status = active.
+    end note
+}
+
+' ═══════════════════════════════════════════════════════════════
+' FLUXO B — Cadastro por convite (Suporte Técnico)
+' ═══════════════════════════════════════════════════════════════
+
+state "Fluxo B: Cadastro por convite (Suporte Técnico)" as FluxoB {
+
+    [*] --> ConvitePendente : Super Admin cria\nconvite no sistema
+
+    state ConvitePendente {
+        [*] --> AguardandoTecnico
+        AguardandoTecnico : /convites_suporte/{email}\nusado = false
+    }
+
+    ConvitePendente --> ValidandoConvite : Técnico faz duplo toque\nno logo e preenche\ne-mail + senha
+
+    state ValidandoConvite {
+        [*] --> ChecandoFirestore
+        ChecandoFirestore --> ConviteEncontrado : Email tem convite\nnão utilizado
+        ChecandoFirestore --> ConviteNegado : Email sem convite\nou já utilizado
+        ConviteNegado --> [*] : Conta excluída\nautomaticamente
+    }
+
+    ValidandoConvite --> AtivoSupport : Convite consumido\nrole = support\nstatus = active
+
+    state AtivoSupport {
+        [*] --> GerenciandoChamados
+        GerenciandoChamados --> RespondendoChamado : Abre ticket
+        RespondendoChamado --> GerenciandoChamados : Salva resposta
+    }
+
+    note right of AtivoSupport
+      Acesso restrito a:
+      • Todos os chamados (todas as empresas)
+      • Responder / alterar status
+      • Acompanhar SLA em tempo real
+      Sem acesso a: scanner, histórico,
+      dados de inventário, gestão de usuários.
+    end note
+
+    AtivoSupport --> [*] : Conta excluída\npelo Super Admin
+}
+
+@enduml

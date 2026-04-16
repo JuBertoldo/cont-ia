@@ -1,0 +1,59 @@
+@startuml 04_sequencia
+title Cont.IA — Diagrama de Sequência (Fluxo de Detecção)
+
+skinparam backgroundColor #FFFFFF
+skinparam participantBackgroundColor #F0FFF4
+skinparam participantBorderColor #00E676
+skinparam participantFontColor #1A1A1A
+skinparam sequenceArrowColor #00E676
+skinparam sequenceLifeLineBorderColor #AAAAAA
+skinparam sequenceGroupBorderColor #FF6D00
+skinparam sequenceGroupFontColor #E65100
+skinparam sequenceGroupBodyBackgroundColor #F5F5F5
+skinparam titleFontColor #1A1A1A
+skinparam titleFontSize 16
+skinparam noteBorderColor #F59E0B
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteFontColor #555555
+
+actor "Operador" as OP
+participant "App Mobile\n(React Native)" as APP
+participant "Backend\n(FastAPI)" as API
+participant "YOLO11\nService" as YOLO
+participant "Roboflow\n(RF-DETR)" as RF
+participant "Firebase\nFirestore" as FS
+participant "Firebase\nStorage" as STORAGE
+
+OP -> APP : Captura imagem
+
+APP -> APP : Converte para Base64
+APP -> APP : Obtém GPS (latitude, longitude)
+
+APP -> API : POST /v1/detect\n{image_base64, platform}
+note right of API : Valida token JWT\nFirebase Auth
+
+group Detecção em Paralelo (asyncio)
+    API ->> YOLO : detectar(image_base64)
+    API ->> RF : executarWorkflow(image_base64)
+    YOLO --> API : List<BBox> + confiança
+    RF --> API : List<BBox> + confiança
+end
+
+API -> API : mesclarResultados(yolo, rfdetr)
+API -> API : aplicarNMS(IoU threshold = 0.5)
+
+API --> APP : {itens[], totalGeral, tempoProcessamento}
+
+APP -> OP : Exibe resultado da detecção
+
+OP -> APP : Confirma e salva
+
+APP -> STORAGE : Upload da imagem
+STORAGE --> APP : fotoURL
+
+APP -> FS : Salva RegistroContagem\n{usuarioId, empresaId, itens,\ngps, fotoURL, timestamp}
+FS --> APP : Confirmação
+
+APP -> OP : Exibe "Salvo com sucesso"
+
+@enduml

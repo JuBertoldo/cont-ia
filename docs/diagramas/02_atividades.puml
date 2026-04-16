@@ -1,0 +1,62 @@
+@startuml 02_atividades
+title Cont.IA — Diagrama de Atividades (Fluxo de Contagem)
+
+skinparam backgroundColor #FFFFFF
+skinparam activityBackgroundColor #F0FFF4
+skinparam activityBorderColor #00E676
+skinparam activityFontColor #1A1A1A
+skinparam arrowColor #00E676
+skinparam titleFontColor #1A1A1A
+skinparam titleFontSize 16
+skinparam noteBorderColor #F59E0B
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteFontColor #E65100
+
+|Operador|
+start
+
+:Abrir o aplicativo;
+:Fazer login;
+
+:Acessar tela de Contagem;
+
+fork
+    :Capturar imagem\npela câmera;
+fork again
+    :Selecionar imagem\nda galeria;
+end fork
+
+:Registrar GPS automaticamente;
+
+|Backend|
+:Receber imagem (Base64);
+
+fork
+    :Processar com YOLO11;
+fork again
+    :Processar com RF-DETR;
+end fork
+
+:Combinar resultados;
+:Aplicar NMS (Non-Maximum Suppression);
+:Retornar objetos detectados;
+
+|Operador|
+:Visualizar resultado da detecção;
+
+if (Resultado correto?) then (Sim)
+    :Confirmar contagem;
+
+    |Firebase|
+    :Salvar registro no Firestore\n(GPS + foto + usuário + data);
+    :Armazenar imagem no Cloud Storage;
+
+    |Operador|
+    :Visualizar confirmação de salvamento;
+    stop
+else (Não)
+    :Refazer foto;
+    :Retornar para captura de imagem;
+endif
+
+@enduml

@@ -1,0 +1,71 @@
+@startuml 08_pipeline
+!pragma layout smetana
+title Cont.IA — Pipeline de Detecção (Ensemble)
+
+skinparam backgroundColor #FFFFFF
+skinparam activityBackgroundColor #F0FFF4
+skinparam activityBorderColor #00E676
+skinparam activityFontColor #1A1A1A
+skinparam arrowColor #00E676
+skinparam titleFontColor #1A1A1A
+skinparam titleFontSize 16
+skinparam partitionBackgroundColor #FAFAFA
+skinparam partitionBorderColor #333333
+skinparam partitionFontColor #333333
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #F59E0B
+skinparam noteFontColor #E65100
+
+start
+
+:Receber imagem\ncomo Base64;
+
+:Decodificar e converter\npara formato PIL/OpenCV;
+
+note right
+  Validação:
+  tamanho mínimo
+  e formato
+end note
+
+fork
+    partition "YOLO11 (Thread)" {
+        :Carregar modelo\nyolo11m.pt;
+        :Inferência na imagem;
+        :Extrair BBoxes +\nconfiança + labels;
+    }
+fork again
+    partition "RF-DETR (Async)" {
+        :Chamar Roboflow\nInference API;
+        :Executar workflow\nremoto;
+        :Extrair BBoxes +\nconfiança + labels;
+    }
+end fork
+
+:Combinar resultados\ndos dois modelos;
+
+note right
+  Ensemble:
+  YOLO + RF-DETR
+  juntos
+end note
+
+:Calcular IoU entre\ntodas as BBoxes;
+
+:Aplicar NMS\n(IoU threshold = 0.5);
+
+note right
+  Elimina detecções
+  duplicadas do mesmo
+  objeto
+end note
+
+:Agrupar por label\ne somar quantidades;
+
+:Calcular confiança\nmédia por label;
+
+:Retornar JSON\n{itens[], totalGeral,\ntempoProcessamento};
+
+stop
+
+@enduml

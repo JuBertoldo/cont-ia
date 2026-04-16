@@ -1,0 +1,54 @@
+@startuml 07_arquitetura
+!pragma layout smetana
+title Cont.IA — Arquitetura Geral do Sistema
+
+skinparam backgroundColor #FFFFFF
+skinparam nodeBackgroundColor #F0FFF4
+skinparam nodeBorderColor #00E676
+skinparam nodeFontColor #1A1A1A
+skinparam componentBackgroundColor #FFFFFF
+skinparam componentBorderColor #333333
+skinparam componentFontColor #333333
+skinparam arrowColor #00E676
+skinparam titleFontColor #1A1A1A
+skinparam titleFontSize 16
+skinparam databaseBackgroundColor #FFF8E1
+skinparam databaseBorderColor #F59E0B
+skinparam databaseFontColor #E65100
+
+left to right direction
+
+node "📱 Dispositivo Móvel\n(iOS / Android)" as MOBILE {
+    component "App Cont.IA\n(React Native)" as APP
+    component "Câmera / Galeria" as CAM
+    component "GPS" as GPS
+    CAM --> APP : captura imagem
+    GPS --> APP : coordenadas
+}
+
+node "⚙️ Backend\n(FastAPI + Python)" as BACKEND {
+    component "API REST\n/v1/detect" as API
+    component "YOLO11\n(Ultralytics)" as YOLO
+    component "Roboflow\n(RF-DETR)" as RF
+    component "NMS\nEnsemble" as NMS
+    API --> YOLO : processa\nimagem
+    API --> RF : processa\nimagem
+    YOLO --> NMS : detecções
+    RF --> NMS : detecções
+}
+
+node "☁️ Firebase\n(Google Cloud)" as FIREBASE {
+    database "Cloud Firestore\n(Registros)" as FS
+    database "Cloud Storage\n(Imagens)" as STORAGE
+    component "Firebase Auth\n(Autenticação)" as AUTH
+}
+
+APP --> API : HTTPS\nPOST /v1/detect\n(Base64 + JWT)
+NMS --> API : resultado\nfinal
+API --> APP : JSON\n{itens, total}
+
+APP --> AUTH : login /\nvalidação
+APP --> FS : salva registro\nde contagem
+APP --> STORAGE : upload\nda imagem
+
+@enduml

@@ -1,0 +1,151 @@
+@startuml 11_cadastro_support
+title Cont.IA — Sequência: Cadastro por Convite (Suporte Técnico)
+
+skinparam backgroundColor #FFFFFF
+skinparam participantBackgroundColor #F0FFF4
+skinparam participantBorderColor #00E676
+skinparam participantFontColor #1A1A1A
+skinparam sequenceArrowColor #555555
+skinparam sequenceLifeLineBorderColor #00E676
+skinparam titleFontColor #1A1A1A
+skinparam titleFontSize 16
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #F59E0B
+skinparam noteFontColor #555555
+skinparam sequenceGroupBackgroundColor #F0FFF4
+skinparam sequenceGroupBorderColor #00E676
+
+actor "Super Admin" as SA
+participant "App\n(SuperAdminScreen)" as APP_SA
+participant "Firestore\n/convites_suporte" as FS_CONV
+participant "App\n(AuthHome)" as APP_LOGIN
+participant "App\n(SupportRegisterScreen)" as APP_REG
+participant "Firebase Auth" as FB_AUTH
+participant "Firestore\n/usuarios" as FS_USER
+
+' ═══════════════════════════════════════════════════
+' FASE 1 — Super Admin cria o convite
+' ═══════════════════════════════════════════════════
+
+group Fase 1: Super Admin cria convite
+
+SA -> APP_SA : Abre aba "Equipe Suporte"
+APP_SA -> SA : Exibe formulário\n(e-mail + nome do técnico)
+SA -> APP_SA : Preenche e-mail + nome\nclica "Criar convite"
+APP_SA -> FS_CONV : setDoc(\n  /convites_suporte/{email},\n  { nome, createdBy, usado: false }\n)
+FS_CONV --> APP_SA : Convite salvo ✓
+APP_SA -> SA : Alert "Convite criado!"
+
+note right of SA
+  O convite fica disponível em
+  /convites_suporte/{email}
+  com campo usado = false
+end note
+
+end
+
+' ═══════════════════════════════════════════════════
+' FASE 2 — Técnico acessa a tela de cadastro
+' ═══════════════════════════════════════════════════
+
+group Fase 2: Técnico acessa tela oculta
+
+actor "Técnico de Suporte" as TEC
+
+TEC -> APP_LOGIN : Abre o app
+TEC -> APP_LOGIN : Toca **2x rapidamente** no logo\n"CONT.IA" (intervalo < 400ms)
+APP_LOGIN -> APP_REG : navigation.navigate(\n  ROUTES.SUPPORT_REGISTER\n)
+
+note right of APP_LOGIN
+  Tela de cadastro não aparece
+  no menu — acessível somente
+  pelo gesto de duplo toque.
+  Invisível para usuários comuns.
+end note
+
+end
+
+' ═══════════════════════════════════════════════════
+' FASE 3 — Cadastro e validação
+' ═══════════════════════════════════════════════════
+
+group Fase 3A: Convite válido ✅
+
+TEC -> APP_REG : Preenche nome, e-mail e senha
+TEC -> APP_REG : Clica "Criar conta"
+
+APP_REG -> FB_AUTH : createUserWithEmailAndPassword(\n  email, password\n)
+FB_AUTH --> APP_REG : userCredential (uid)
+
+APP_REG -> FS_CONV : getDoc(\n  /convites_suporte/{email}\n)
+FS_CONV --> APP_REG : { nome, createdBy,\n  usado: false }
+
+APP_REG -> FS_USER : setDoc(/usuarios/{uid}, {\n  role: "support",\n  status: "active",\n  convidadoPor: createdBy\n})
+FS_USER --> APP_REG : Perfil criado ✓
+
+APP_REG -> FS_CONV : updateDoc(\n  usado: true,\n  usadoEm: now()\n)
+FS_CONV --> APP_REG : Convite consumido ✓
+
+APP_REG -> TEC : Alert "Bem-vindo!"\nRedireciona para login
+
+end
+
+group Fase 3B: Convite não encontrado ❌
+
+TEC -> APP_REG : Preenche e-mail SEM convite
+APP_REG -> FB_AUTH : createUserWithEmailAndPassword(...)
+FB_AUTH --> APP_REG : userCredential (uid)
+
+APP_REG -> FS_CONV : getDoc(/convites_suporte/{email})
+FS_CONV --> APP_REG : Documento não existe
+
+APP_REG -> FB_AUTH : deleteUser(userCredential.user)
+note right of APP_REG
+  Conta criada no Auth é
+  deletada automaticamente
+  para não deixar registro inválido.
+end note
+
+APP_REG -> TEC : Alert "Convite não encontrado\npara este e-mail."
+
+end
+
+group Fase 3C: Convite já utilizado ❌
+
+TEC -> APP_REG : Preenche e-mail com convite usado
+APP_REG -> FB_AUTH : createUserWithEmailAndPassword(...)
+FB_AUTH --> APP_REG : userCredential (uid)
+
+APP_REG -> FS_CONV : getDoc(/convites_suporte/{email})
+FS_CONV --> APP_REG : { usado: true }
+
+APP_REG -> FB_AUTH : deleteUser(userCredential.user)
+APP_REG -> TEC : Alert "Este convite já\nfoi utilizado."
+
+end
+
+' ═══════════════════════════════════════════════════
+' FASE 4 — Acesso ao sistema como Support
+' ═══════════════════════════════════════════════════
+
+group Fase 4: Login e acesso restrito
+
+TEC -> APP_LOGIN : Login normal\n(e-mail + senha)
+APP_LOGIN -> FB_AUTH : signInWithEmailAndPassword(...)
+FB_AUTH --> APP_LOGIN : user autenticado
+
+APP_LOGIN -> FS_USER : getUserProfile(uid)
+FS_USER --> APP_LOGIN : { role: "support",\n  status: "active" }
+
+APP_LOGIN -> TEC : Navega para DrawerNavigator\nMenu: apenas "Chamados" + "Perfil"
+
+note right of APP_LOGIN
+  role = support →
+  sem Scanner, sem Histórico,
+  sem Admin, sem Super Admin.
+  Somente gestão de chamados.
+end note
+
+end
+
+@enduml
