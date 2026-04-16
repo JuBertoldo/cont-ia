@@ -1,0 +1,172 @@
+@startuml 13_comunicacao_firebase
+!pragma layout smetana
+title Cont.IA — Comunicação com Firebase (Auth · Firestore · Storage)
+
+skinparam backgroundColor #FFFFFF
+skinparam componentBackgroundColor #F0FFF4
+skinparam componentBorderColor #00E676
+skinparam componentFontColor #1A1A1A
+skinparam nodeBackgroundColor #FAFAFA
+skinparam nodeBorderColor #AAAAAA
+skinparam nodeFontColor #1A1A1A
+skinparam databaseBackgroundColor #FFF8E1
+skinparam databaseBorderColor #F59E0B
+skinparam databaseFontColor #333333
+skinparam arrowColor #555555
+skinparam titleFontColor #1A1A1A
+skinparam titleFontSize 16
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #F59E0B
+skinparam noteFontColor #555555
+skinparam rectangleBorderColor #BBBBBB
+skinparam rectangleBackgroundColor #FAFAFA
+
+' ══════════════════════════════════════════════════════════
+' APP MOBILE
+' ══════════════════════════════════════════════════════════
+
+node "📱 App Mobile (React Native)" as MOBILE {
+
+    rectangle "Serviços de Auth" as SVC_AUTH {
+        component "authService.js\nloginWithEmail()\nregisterWithEmail()\nlogout()\ngetIdToken()" as AUTH_SVC
+    }
+
+    rectangle "Serviços de Dados" as SVC_DATA {
+        component "inventoryService.js\ncreateInventoryItem()\nsubscribeToUserInventory()\nsubscribeToAllInventory()" as INV_SVC
+
+        component "supportService.js\ncreateTicket()\nrespondTicket()\nsubscribeAllTickets()\ncreateSupportInvite()\nconsumeSupportInvite()" as SUP_SVC
+
+        component "empresaService.js\ncreateEmpresa()\ngetEmpresaByCodigo()" as EMP_SVC
+
+        component "adminService.js\nupdateUserStatus()\nupdateUserRole()" as ADM_SVC
+    }
+
+    rectangle "Serviço de Mídia" as SVC_MEDIA {
+        component "ScannerScreen.js\nuploadPhoto()\nuploadString()\ngetDownloadURL()" as MEDIA_SVC
+    }
+
+    rectangle "Cliente HTTP" as SVC_HTTP {
+        component "apiClient.js\ngetIdToken() → Bearer\nPOST /v1/detect" as HTTP_SVC
+    }
+}
+
+' ══════════════════════════════════════════════════════════
+' BACKEND
+' ══════════════════════════════════════════════════════════
+
+node "⚙️ Backend (FastAPI + Docker)" as BACKEND {
+    component "deps.py\nverify_id_token()" as DEPS
+    component "YOLO + Roboflow\nEnsemble" as YOLO_RF
+}
+
+' ══════════════════════════════════════════════════════════
+' FIREBASE AUTH
+' ══════════════════════════════════════════════════════════
+
+node "🔐 Firebase Auth" as FB_AUTH {
+    database "Usuários Auth\n(email + uid + token)" as AUTH_DB
+}
+
+' ══════════════════════════════════════════════════════════
+' CLOUD FIRESTORE
+' ══════════════════════════════════════════════════════════
+
+node "🗄️ Cloud Firestore" as FIRESTORE {
+
+    database "/usuarios/{uid}\n──────────────\nnome, email, role\nstatus, empresaId\nmatricula, photoURL" as COL_USERS
+
+    database "/empresas/{id}\n──────────────\nnome, codigo\nadminUid, createdAt" as COL_EMP
+
+    database "/inventario/{id}\n──────────────\nusuarioId, empresaId\nitem, itens[], totalGeral\nfotoUrl, detections[]\ncorrecoes[], temCorrecoes\nlatitude, longitude, local" as COL_INV
+
+    database "/chamados/{id}\n──────────────\nnumero, titulo, tipo\nstatus, prioridade\nempresaId, adminId\nresposta, respondidoPor\nslaRespostaSuporteAt\nslaResolucaoAt\nslaRespostaClienteAt\nprimeiraRespostaAt\nreaberturas" as COL_CHAM
+
+    database "/convites_suporte/{email}\n──────────────\nemail, nome, createdBy\nusado, usadoEm" as COL_CONV
+
+    database "/config/ticketCounter\n──────────────\ndata, count\n(número sequencial)" as COL_CFG
+}
+
+' ══════════════════════════════════════════════════════════
+' CLOUD STORAGE
+' ══════════════════════════════════════════════════════════
+
+node "📦 Cloud Storage" as STORAGE {
+    database "scans/{uid}/{timestamp}.jpg\n──────────────\nFotos tiradas no scanner\npara auditoria" as BUCKET
+}
+
+' ══════════════════════════════════════════════════════════
+' CONEXÕES — Auth
+' ══════════════════════════════════════════════════════════
+
+AUTH_SVC --> FB_AUTH : signInWithEmailAndPassword()\ncreateUserWithEmailAndPassword()\ndeleteUser() [rollback]\ngetIdToken(forceRefresh)
+FB_AUTH --> AUTH_SVC : userCredential / idToken
+
+HTTP_SVC --> DEPS : Authorization: Bearer <idToken>
+DEPS --> FB_AUTH : verify_id_token() [Admin SDK]
+FB_AUTH --> DEPS : decoded token (uid, email)
+
+' ══════════════════════════════════════════════════════════
+' CONEXÕES — Firestore (App → Firestore)
+' ══════════════════════════════════════════════════════════
+
+AUTH_SVC --> COL_USERS : setDoc() — cria perfil\nupdateDoc() — atualiza status
+EMP_SVC --> COL_EMP : addDoc() — cria empresa\ngetDoc() — busca por código
+ADM_SVC --> COL_USERS : updateDoc(status / role)
+
+INV_SVC --> COL_INV : addDoc() — salva contagem\nonSnapshot() — tempo real
+INV_SVC --> COL_USERS : getDoc() — lê empresaId
+
+SUP_SVC --> COL_CHAM : addDoc() — abre chamado\nupdateDoc() — responde\nonSnapshot() — tempo real
+SUP_SVC --> COL_CONV : setDoc() — cria convite\ngetDoc() — valida convite\nupdateDoc(usado=true)\ndeleteDoc() — remove convite
+SUP_SVC --> COL_EMP : getDoc() — busca nome empresa
+SUP_SVC --> COL_USERS : getDoc() — busca nome respondente
+SUP_SVC --> COL_CFG : transaction() — gera número sequencial
+
+' ══════════════════════════════════════════════════════════
+' CONEXÕES — Storage
+' ══════════════════════════════════════════════════════════
+
+MEDIA_SVC --> BUCKET : uploadString(base64, "base64")\ncontentType: image/jpeg
+BUCKET --> MEDIA_SVC : getDownloadURL() → fotoUrl
+MEDIA_SVC --> COL_INV : salva fotoUrl no documento
+
+' ══════════════════════════════════════════════════════════
+' CONEXÕES — Backend
+' ══════════════════════════════════════════════════════════
+
+HTTP_SVC --> BACKEND : POST /v1/detect\n{image_base64, platform}
+BACKEND --> YOLO_RF : inferência paralela
+YOLO_RF --> BACKEND : detecções + NMS
+BACKEND --> HTTP_SVC : {detections[], meta}
+
+' ══════════════════════════════════════════════════════════
+' NOTAS
+' ══════════════════════════════════════════════════════════
+
+note bottom of FIRESTORE
+  **Regras de Segurança (firestore.rules):**
+  /usuarios      → leitura/escrita própria + admin empresa + super_admin
+  /empresas      → leitura pública (busca por código) + escrita admin/super_admin
+  /inventario    → leitura própria (qualquer status) + admin empresa + super_admin
+  /chamados      → leitura/update support + super_admin + admin empresa
+  /convites_suporte → super_admin gerencia · técnico consome o próprio convite
+end note
+
+note right of FB_AUTH
+  **Dois usos distintos:**
+  • Firebase SDK (App)
+    → login, cadastro, token
+  • Firebase Admin SDK (Backend)
+    → verify_id_token() em cada
+    requisição ao /v1/detect
+end note
+
+note right of STORAGE
+  **Regra de acesso:**
+  Apenas usuários autenticados
+  podem fazer upload.
+  URL pública após upload
+  salva em /inventario.fotoUrl
+end note
+
+@enduml
