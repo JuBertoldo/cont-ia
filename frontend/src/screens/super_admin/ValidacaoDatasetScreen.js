@@ -9,6 +9,7 @@ import {
   Alert,
   Image,
   ScrollView,
+  TextInput,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { COLORS } from '../../constants/colors';
@@ -71,29 +72,38 @@ function montarLabelsParaValidar(scan) {
   return deteccoes;
 }
 
-function LabelChip({ label, labelOriginal, confidence, source }) {
-  const isCorrigido = source === 'correcao_usuario';
-  return (
-    <View style={[styles.chip, isCorrigido && styles.chipCorrigido]}>
-      <Text style={styles.chipLabel}>{translateLabel(label)}</Text>
-      {isCorrigido && labelOriginal !== label && (
-        <Text style={styles.chipOriginal}>
-          era: {translateLabel(labelOriginal)}
-        </Text>
-      )}
-      <Text style={styles.chipConf}>{Math.round(confidence * 100)}%</Text>
-    </View>
-  );
-}
-
 function ScanCard({ item, onValidar, onRejeitar, saving }) {
   const [fotoExpanded, setFotoExpanded] = useState(false);
-  const labels = montarLabelsParaValidar(item);
+  const [labelsEditados, setLabelsEditados] = useState(() =>
+    montarLabelsParaValidar(item),
+  );
+  const [editandoIdx, setEditandoIdx] = useState(null);
+  const [editText, setEditText] = useState('');
+
   const dt = item.createdAt
     ? formatDateTime(item.createdAt)
     : { date: '-', time: '-' };
   const jaValidado = item.statusDataset === 'validado';
   const jaRejeitado = item.statusDataset === 'rejeitado';
+
+  const iniciarEdicao = (idx, labelAtual) => {
+    setEditandoIdx(idx);
+    setEditText(labelAtual);
+  };
+
+  const confirmarEdicao = () => {
+    const nome = editText.trim();
+    if (nome && editandoIdx !== null) {
+      setLabelsEditados(prev =>
+        prev.map((l, i) =>
+          i === editandoIdx ? { ...l, label: nome, editadoPorAdmin: true } : l,
+        ),
+      );
+    }
+    setEditandoIdx(null);
+  };
+
+  const cancelarEdicao = () => setEditandoIdx(null);
 
   return (
     <View style={styles.card}>
@@ -156,25 +166,82 @@ function ScanCard({ item, onValidar, onRejeitar, saving }) {
         ) : null}
       </View>
 
-      {/* Labels para validar */}
+      {/* Labels para validar / editar */}
       <Text style={styles.labelsTitle}>
-        {labels.length > 0
-          ? `${labels.length} objeto${
-              labels.length !== 1 ? 's' : ''
-            } para validar:`
+        {labelsEditados.length > 0
+          ? `${labelsEditados.length} objeto${
+              labelsEditados.length !== 1 ? 's' : ''
+            } — toque para editar o nome:`
           : 'Nenhum objeto detectado com confiança suficiente'}
       </Text>
 
-      {labels.length > 0 ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.chipsRow}
-        >
-          {labels.map((l, i) => (
-            <LabelChip key={i} {...l} />
-          ))}
-        </ScrollView>
+      {labelsEditados.length > 0 ? (
+        <View style={styles.labelsContainer}>
+          {labelsEditados.map((l, i) => {
+            const isEditing = editandoIdx === i;
+            const foiCorrigido =
+              l.source === 'correcao_usuario' || l.editadoPorAdmin;
+
+            if (isEditing) {
+              return (
+                <View key={i} style={styles.editRow}>
+                  <TextInput
+                    style={styles.editInput}
+                    value={editText}
+                    onChangeText={setEditText}
+                    autoFocus
+                    placeholder="Nome correto do objeto..."
+                    placeholderTextColor="#555"
+                    onSubmitEditing={confirmarEdicao}
+                  />
+                  <TouchableOpacity
+                    onPress={confirmarEdicao}
+                    style={styles.editBtn}
+                  >
+                    <Ionicons
+                      name="checkmark"
+                      size={20}
+                      color={COLORS.PRIMARY}
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={cancelarEdicao}
+                    style={styles.editBtn}
+                  >
+                    <Ionicons name="close" size={20} color={COLORS.GRAY} />
+                  </TouchableOpacity>
+                </View>
+              );
+            }
+
+            return (
+              <TouchableOpacity
+                key={i}
+                style={[styles.chip, foiCorrigido && styles.chipCorrigido]}
+                onPress={() => iniciarEdicao(i, l.label)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.chipContent}>
+                  <Text style={styles.chipLabel}>{l.label}</Text>
+                  {l.labelOriginal && l.labelOriginal !== l.label && (
+                    <Text style={styles.chipOriginal}>
+                      era: {translateLabel(l.labelOriginal)}
+                    </Text>
+                  )}
+                  <Text style={styles.chipConf}>
+                    {Math.round((l.confidence ?? 0) * 100)}%
+                  </Text>
+                </View>
+                <Ionicons
+                  name="pencil-outline"
+                  size={12}
+                  color={foiCorrigido ? COLORS.PRIMARY : COLORS.GRAY}
+                  style={{ marginLeft: 6 }}
+                />
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       ) : (
         <Text style={styles.noLabels}>
           Confiança abaixo de 60% — recomendado rejeitar.
@@ -196,10 +263,10 @@ function ScanCard({ item, onValidar, onRejeitar, saving }) {
           <TouchableOpacity
             style={[
               styles.btnValidar,
-              (saving || labels.length === 0) && { opacity: 0.5 },
+              (saving || labelsEditados.length === 0) && { opacity: 0.5 },
             ]}
-            onPress={() => onValidar(item.id, labels)}
-            disabled={saving || labels.length === 0}
+            onPress={() => onValidar(item.id, labelsEditados)}
+            disabled={saving || labelsEditados.length === 0}
           >
             {saving ? (
               <ActivityIndicator color={COLORS.BLACK} size="small" />
@@ -583,21 +650,40 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 6,
   },
-  chipsRow: { paddingHorizontal: 12, marginBottom: 12 },
+  labelsContainer: { paddingHorizontal: 12, marginBottom: 12, gap: 8 },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#1a1a1a',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginRight: 8,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderWidth: 1,
     borderColor: '#333',
-    alignItems: 'center',
   },
   chipCorrigido: { borderColor: COLORS.PRIMARY, backgroundColor: '#0a1a0a' },
-  chipLabel: { color: COLORS.WHITE, fontWeight: '600', fontSize: 13 },
-  chipOriginal: { color: COLORS.GRAY, fontSize: 10, marginTop: 1 },
-  chipConf: { color: COLORS.GRAY, fontSize: 10 },
+  chipContent: { flex: 1 },
+  chipLabel: { color: COLORS.WHITE, fontWeight: '600', fontSize: 14 },
+  chipOriginal: { color: COLORS.GRAY, fontSize: 11, marginTop: 2 },
+  chipConf: { color: COLORS.GRAY, fontSize: 11, marginTop: 1 },
+  editRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  editInput: {
+    flex: 1,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: COLORS.WHITE,
+    fontSize: 14,
+    borderWidth: 1.5,
+    borderColor: COLORS.PRIMARY,
+  },
+  editBtn: { padding: 6 },
   noLabels: {
     color: '#ef4444',
     fontSize: 12,
