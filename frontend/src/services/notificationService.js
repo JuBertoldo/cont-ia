@@ -3,15 +3,12 @@
  *
  * Duas camadas:
  * 1. In-app (sininho): Firestore /notificacoes — sempre ativo, persiste entre sessões
- * 2. Push (opcional): @react-native-firebase/messaging — usuário pode habilitar
+ * 2. Push: @react-native-firebase/messaging — usuário ativa no Perfil
  *
- * SETUP PUSH (opcional — uma única vez):
- *   npm install @react-native-firebase/app @react-native-firebase/messaging
- *   cd ios && pod install
+ * Pendente (manual — feito uma única vez no Firebase Console + Xcode):
  *   iOS: Adicionar "Push Notifications" capability no Xcode
- *       + upload APNs Key no Firebase Console → Cloud Messaging
- *   Android: funciona automaticamente com google-services.json
- *   Depois: descomentar os blocos marcados com "DESCOMENTAR APÓS INSTALAR"
+ *        + upload APNs Key (.p8) em Firebase Console → Configurações → Cloud Messaging
+ *   Android: funciona automaticamente (google-services.json já configurado)
  */
 
 import {
@@ -28,6 +25,7 @@ import {
   limit,
   orderBy,
 } from 'firebase/firestore';
+import messaging from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
 import { auth, db } from '../config/firebaseConfig';
 import { COLLECTIONS } from '../constants/collections';
@@ -198,41 +196,75 @@ export async function marcarTodasComoLidas(uid) {
   await batch.commit();
 }
 
-// ── Push Notifications (opcional) ────────────────────────────────────────────
+// ── Push Notifications ────────────────────────────────────────────────────────
 
 /**
- * Solicita permissão de push e salva o token FCM.
- * Chamar quando o usuário ativa o toggle nas configurações de perfil.
- *
- * DESCOMENTAR APÓS INSTALAR @react-native-firebase/messaging:
+ * Solicita permissão de push ao sistema operacional e salva o token FCM.
+ * Chamado quando o usuário ativa o toggle no Perfil.
+ * iOS: exibe o popup nativo "Deseja receber notificações?"
+ * Android 13+: solicita POST_NOTIFICATIONS automaticamente.
  */
 export async function ativarPushNotifications() {
   const uid = auth.currentUser?.uid;
   if (!uid) return false;
 
   try {
-    // ── DESCOMENTAR APÓS INSTALAR @react-native-firebase/messaging ──────────
-    // const messaging = (await import('@react-native-firebase/messaging')).default;
-    // const status = await messaging().requestPermission();
-    // const authorized =
-    //   status === messaging.AuthorizationStatus.AUTHORIZED ||
-    //   status === messaging.AuthorizationStatus.PROVISIONAL;
-    // if (!authorized) return false;
-    // const token = await messaging().getToken();
-    // await salvarTokenFCM(uid, token, true);
-    // messaging().onTokenRefresh(t => salvarTokenFCM(uid, t, true));
-    // return true;
+    const status = await messaging().requestPermission();
+    const authorized =
+      status === messaging.AuthorizationStatus.AUTHORIZED ||
+      status === messaging.AuthorizationStatus.PROVISIONAL;
 
-    // Placeholder até instalar o pacote:
-    logger.debug(
-      'Push: @react-native-firebase/messaging não instalado. Siga o README.',
-    );
-    await salvarTokenFCM(uid, '', true);
+    if (!authorized) {
+      logger.info('Push: permissão negada pelo usuário.');
+      return false;
+    }
+
+    const token = await messaging().getToken();
+    if (token) {
+      await salvarTokenFCM(uid, token, true);
+      // Atualiza o token automaticamente quando o FCM o rotaciona
+      messaging().onTokenRefresh(novoToken =>
+        salvarTokenFCM(uid, novoToken, true),
+      );
+      logger.info('FCM token salvo | uid=%s platform=%s', uid, Platform.OS);
+      return true;
+    }
+
     return false;
   } catch (error) {
     logger.warning('Erro ao ativar push: %s', error);
     return false;
   }
+}
+
+/**
+ * Configura listeners para notificações recebidas (chamar no App.js).
+ * Retorna função de cleanup para o useEffect.
+ */
+export function configurarListenersPush(onNotificacao) {
+  // App em foreground
+  const unsubForeground = messaging().onMessage(async remoteMessage => {
+    logger.info(
+      'Push recebido (foreground):',
+      remoteMessage.notification?.title,
+    );
+    if (onNotificacao) onNotificacao(remoteMessage);
+  });
+
+  // App em background — aberto via toque na notificação
+  messaging().onNotificationOpenedApp(remoteMessage => {
+    logger.info('App aberto via push:', remoteMessage.notification?.title);
+    if (onNotificacao) onNotificacao(remoteMessage);
+  });
+
+  // App estava fechado — aberto pela notificação
+  messaging()
+    .getInitialNotification()
+    .then(remoteMessage => {
+      if (remoteMessage && onNotificacao) onNotificacao(remoteMessage);
+    });
+
+  return unsubForeground;
 }
 
 export async function desativarPushNotifications() {
