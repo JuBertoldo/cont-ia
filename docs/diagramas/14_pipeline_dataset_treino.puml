@@ -1,0 +1,178 @@
+@startuml 14_pipeline_dataset_treino
+title Cont.IA — Pipeline de Dataset e Treino do Modelo YOLO Proprio
+
+skinparam backgroundColor #FFFFFF
+skinparam participantBackgroundColor #F0FFF4
+skinparam participantBorderColor #00E676
+skinparam participantFontColor #1A1A1A
+skinparam sequenceArrowColor #555555
+skinparam sequenceLifeLineBorderColor #00E676
+skinparam titleFontColor #1A1A1A
+skinparam titleFontSize 16
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #F59E0B
+skinparam noteFontColor #555555
+
+actor "Operador" as OP
+participant "App (Scanner)" as APP
+participant "Firestore\n/inventario" as FS
+participant "Firebase\nStorage" as STORAGE
+participant "App (Curadoria)\nSuper Admin" as SA_APP
+actor "Super Admin" as SA
+participant "Script\nexport_dataset.py" as SCRIPT
+participant "Google\nColab" as COLAB
+participant "Backend\n(Docker)" as BACKEND
+
+' ════════════════════════════════════════════════════════════
+' FASE 1 — Coleta de dados pelo Operador
+' ════════════════════════════════════════════════════════════
+
+group Fase 1: Coleta no campo (Operador)
+
+OP -> APP : Fotografa itens no campo
+APP -> BACKEND : POST /v1/detect {image_base64}
+BACKEND --> APP : {detections[], meta}
+
+APP -> OP : Exibe resultado\n(foto + recorte por objeto + label)
+
+alt Operador identifica label errado
+    OP -> APP : Toca no chip do label
+    APP -> OP : Abre TextInput com nome atual
+    OP -> APP : Digita nome correto (ex: "Papel A4")
+    APP -> OP : Label fica verde — "corrigido"
+end
+
+OP -> APP : Clica "Confirmar e Salvar"
+APP -> STORAGE : uploadString(base64, jpeg)
+STORAGE --> APP : fotoUrl
+APP -> FS : setDoc(/inventario/{id}, {\n  detections[], correcoes[],\n  fotoUrl, statusDataset: "pendente"\n})
+
+note right of FS
+  correcoes[]:
+  - labelOriginal: "book"
+  - labelCorrigido: "Papel A4"
+  - bbox, confianca
+  statusDataset = "pendente"
+  (aguarda validacao do Super Admin)
+end note
+
+end
+
+' ════════════════════════════════════════════════════════════
+' FASE 2 — Curadoria pelo Super Admin
+' ════════════════════════════════════════════════════════════
+
+group Fase 2: Curadoria e validacao (Super Admin)
+
+SA -> SA_APP : Abre icone Dataset no Painel
+SA_APP -> FS : getDocs(statusDataset = "pendente")
+FS --> SA_APP : Lista de scans pendentes
+
+loop Para cada scan pendente
+    SA_APP -> SA : Exibe foto + labels\n(corrigidos pelo usuario ou YOLO >=60%)
+    SA -> SA_APP : Amplia foto para conferir
+
+    alt Label esta correto
+        SA -> SA_APP : Nao edita
+    else Nome errado ou impreciso
+        SA -> SA_APP : Toca no chip do label
+        SA_APP -> SA : Abre TextInput com nome atual
+        SA -> SA_APP : Corrige o nome (ex: "Folha A4")
+        note right
+          editadoPorAdmin: true
+          rastreabilidade da correcao
+        end note
+    end
+
+    alt Scan util para treino
+        SA -> SA_APP : Clica Validar
+        SA_APP -> FS : updateDoc({\n  statusDataset: "validado",\n  labelsValidados: [...],\n  validadoPor, validadoEm\n})
+    else Foto ruim ou irrelevante
+        SA -> SA_APP : Clica Rejeitar
+        SA_APP -> FS : updateDoc({ statusDataset: "rejeitado" })
+    end
+end
+
+SA_APP -> SA : Barra de progresso\nX/100 validados
+
+end
+
+' ════════════════════════════════════════════════════════════
+' FASE 3 — Exportacao do Dataset
+' ════════════════════════════════════════════════════════════
+
+group Fase 3: Exportacao (quando >=100 validados)
+
+SA -> SCRIPT : python export_dataset.py
+
+note over SCRIPT
+  3 tiers de qualidade:
+  GOLD   = statusDataset="validado" (Super Admin aprovou)
+  SILVER = temCorrecoes=true (usuario corrigiu, sem validacao)
+  BRONZE = confianca >=0.70 (pseudo-label automatico)
+end note
+
+SCRIPT -> FS : getDocs(statusDataset="validado")
+FS --> SCRIPT : Scans validados
+
+loop Para cada scan
+    SCRIPT -> STORAGE : GET fotoUrl
+    STORAGE --> SCRIPT : Imagem JPEG
+    SCRIPT -> SCRIPT : Converte bbox px -> YOLO\n(cx,cy,w,h normalizados)
+    SCRIPT -> SCRIPT : Cria arquivo .txt com labels
+end
+
+SCRIPT -> SCRIPT : Gera data.yaml\n(nc, names, train/val paths)
+SCRIPT --> SA : Dataset_correcoes/\nimages/ + labels/ + data.yaml
+
+end
+
+' ════════════════════════════════════════════════════════════
+' FASE 4 — Treino no Google Colab
+' ════════════════════════════════════════════════════════════
+
+group Fase 4: Treino (Google Colab — GPU T4 gratuito)
+
+SA -> COLAB : Upload Dataset_correcoes/ para Drive
+SA -> COLAB : Abre notebooks/treino_yolo.ipynb
+SA -> COLAB : Executa celulas (Runtime > T4 GPU)
+
+COLAB -> COLAB : pip install ultralytics
+COLAB -> COLAB : model = YOLO("yolo11n.pt")
+COLAB -> COLAB : model.train(\n  data=data.yaml, epochs=100,\n  imgsz=640, batch=16\n)
+COLAB -> COLAB : model.val() — avalia metricas
+COLAB --> SA : best.pt (modelo treinado)
+
+note right of COLAB
+  Metricas esperadas:
+  mAP50 < 0.30 -> coletar mais dados
+  mAP50 0.30-0.50 -> usar com conf=0.35
+  mAP50 > 0.50 -> producao!
+end note
+
+end
+
+' ════════════════════════════════════════════════════════════
+' FASE 5 — Deploy do modelo proprio
+' ════════════════════════════════════════════════════════════
+
+group Fase 5: Deploy do modelo proprio
+
+SA -> BACKEND : Copia best.pt -> backend/contia_v1.pt
+SA -> BACKEND : Atualiza .env: YOLO_MODEL=contia_v1.pt
+SA -> BACKEND : docker-compose restart backend
+
+BACKEND -> BACKEND : Carrega contia_v1.pt na inicializacao
+BACKEND --> SA : Modelo proprio ativo!
+
+note right of BACKEND
+  Resultado:
+  - Sem licenca AGPL (modelo proprio)
+  - Especializado nos objetos reais
+  - Labels em portugues dos clientes
+  - Custo YOLO = R$ 0 para sempre
+end note
+
+end
+
+@enduml

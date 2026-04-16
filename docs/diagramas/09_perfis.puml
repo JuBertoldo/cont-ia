@@ -34,7 +34,8 @@ rectangle "👤  Operador  (role = user)" as PERFIL_USER #E8F5E9 {
     rectangle "Scanner" {
         card "✅ Fotografar itens (câmera / galeria)" as U4
         card "✅ Detectar com YOLO + Roboflow" as U5
-        card "✅ Corrigir labels identificados" as U6
+        card "✅ Ver recorte por objeto detectado" as U5B
+        card "✅ Corrigir label incorreto (edição inline)" as U6
         card "✅ Confirmar e salvar contagem" as U7
         card "✅ Registrar localização GPS" as U8
     }
@@ -142,6 +143,23 @@ rectangle "⚙️  Super Admin  (role = super_admin)" as PERFIL_SA #FCE4EC {
         card "✅ Responder / alterar status" as SA9
         card "✅ Reabrir chamados" as SA10
     }
+    rectangle "Curadoria de Dataset YOLO" {
+        card "✅ Ver foto real + labels pendentes de validação" as SA11
+        card "✅ Ampliar foto para conferir objeto" as SA12
+        card "✅ Editar nome do label (correção final)" as SA13
+        card "✅ Validar scan para dataset de treino" as SA14
+        card "✅ Rejeitar scan inadequado" as SA15
+        card "✅ Acompanhar progresso (X/100 validados)" as SA16
+        card "❌ Acesso ao treinamento Colab (externo)" as SA17
+    }
 }
+
+note bottom of PERFIL_SA
+  Fluxo de curadoria:
+  Usuario corrige label no scanner
+  -> Super Admin valida/edita/rejeita
+  -> export_dataset.py exporta validados
+  -> Colab treina modelo proprio (YOLO)
+end note
 
 @enduml

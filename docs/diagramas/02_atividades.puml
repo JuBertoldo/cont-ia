@@ -1,5 +1,5 @@
 @startuml 02_atividades
-title Cont.IA — Diagrama de Atividades (Fluxo de Contagem)
+title Cont.IA — Diagrama de Atividades (Fluxo de Contagem + Curadoria de Dataset)
 
 skinparam backgroundColor #FFFFFF
 skinparam activityBackgroundColor #F0FFF4
@@ -12,18 +12,21 @@ skinparam noteBorderColor #F59E0B
 skinparam noteBackgroundColor #FFFDE7
 skinparam noteFontColor #E65100
 
+' ════════════════════════════════════════════════
+' PARTE 1 — Fluxo de contagem (Operador)
+' ════════════════════════════════════════════════
+
 |Operador|
 start
 
 :Abrir o aplicativo;
 :Fazer login;
-
 :Acessar tela de Contagem;
 
 fork
-    :Capturar imagem\npela câmera;
+    :Capturar imagem pela camera;
 fork again
-    :Selecionar imagem\nda galeria;
+    :Selecionar imagem da galeria;
 end fork
 
 :Registrar GPS automaticamente;
@@ -32,31 +35,109 @@ end fork
 :Receber imagem (Base64);
 
 fork
-    :Processar com YOLO11;
+    :Processar com YOLO11 (local);
 fork again
-    :Processar com RF-DETR;
+    :Processar com RF-DETR (Roboflow);
 end fork
 
-:Combinar resultados;
-:Aplicar NMS (Non-Maximum Suppression);
+:Combinar resultados via NMS;
 :Retornar objetos detectados;
 
 |Operador|
-:Visualizar resultado da detecção;
+:Visualizar resultado\n(foto + recorte por objeto + label + confianca);
 
-if (Resultado correto?) then (Sim)
-    :Confirmar contagem;
+if (Labels estao corretos?) then (Sim)
+    :Confirmar sem alteracao;
+else (Nao)
+    :Tocar no label incorreto;
+    :Digitar nome correto do objeto;
+    :Confirmar correcao;
+    note right
+      Label salvo em correcoes[]:
+      labelOriginal: "book"
+      labelCorrigido: "Papel A4"
+      bbox, confianca
+    end note
+endif
 
-    |Firebase|
-    :Salvar registro no Firestore\n(GPS + foto + usuário + data);
-    :Armazenar imagem no Cloud Storage;
+:Clicar em "Confirmar e Salvar";
 
-    |Operador|
-    :Visualizar confirmação de salvamento;
+|Firebase|
+:Salvar inventario no Firestore\n(labels, correcoes[], fotoUrl, GPS);
+:Upload da foto para Cloud Storage;
+:Campo statusDataset = "pendente";
+
+|Operador|
+:Visualizar confirmacao;
+stop
+
+' ════════════════════════════════════════════════
+' PARTE 2 — Curadoria pelo Super Admin
+' ════════════════════════════════════════════════
+
+|Super Admin|
+:Abrir icone Dataset no Painel do Sistema;
+:Ver lista de scans pendentes\n(foto + labels do usuario);
+
+repeat
+    :Ampliar foto para analise;
+    :Verificar se label corresponde ao objeto;
+
+    if (Label esta correto?) then (Sim)
+        :Nao editar;
+    else (Nome errado ou incompleto)
+        :Tocar no chip do label;
+        :Corrigir o nome;
+        :Confirmar edicao;
+        note right
+          Label marcado como
+          editadoPorAdmin: true
+        end note
+    endif
+
+    if (Scan util para treino?) then (Sim)
+        :Clicar Validar;
+        |Firebase|
+        :Salvar labelsValidados[] no Firestore;
+        :statusDataset = "validado";
+        |Super Admin|
+    else (Foto ruim ou irrelevante)
+        :Clicar Rejeitar;
+        |Firebase|
+        :statusDataset = "rejeitado";
+        |Super Admin|
+    endif
+
+repeat while (Ha mais scans pendentes?) is (Sim)
+->Nao;
+
+if (100+ scans validados?) then (Sim)
+    :Executar scripts/export_dataset.py;
+
+    |Backend / Script|
+    :Buscar scans validados no Firestore;
+    :Baixar fotos do Firebase Storage;
+    :Converter bbox para formato YOLO;
+    :Gerar data.yaml com classes;
+
+    |Super Admin|
+    :Abrir notebooks/treino_yolo.ipynb\nno Google Colab (GPU T4);
+    :Treinar YOLO11 com dataset curado;
+    :Baixar best.pt gerado;
+    :Substituir modelo no servidor;
+    :Atualizar YOLO_MODEL no .env;
+    :Reiniciar backend Docker;
+
+    note right
+      Modelo proprio:
+      - sem licenca AGPL
+      - especializado nos
+        objetos reais dos clientes
+    end note
     stop
-else (Não)
-    :Refazer foto;
-    :Retornar para captura de imagem;
+else (Ainda poucos validados)
+    :Continuar coletando scans;
+    stop
 endif
 
 @enduml

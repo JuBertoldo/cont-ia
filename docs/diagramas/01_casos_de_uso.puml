@@ -35,9 +35,18 @@ rectangle "Sistema Cont.IA" {
         usecase "Capturar imagem" as UC4
         usecase "Selecionar da galeria" as UC5
         usecase "Identificar e contar objetos (YOLO + Roboflow)" as UC6
-        usecase "Corrigir labels detectados" as UC6B
+        usecase "Corrigir labels detectados (edição inline)" as UC6B
         usecase "Confirmar e salvar contagem" as UC7
         usecase "Registrar GPS automático" as UC8
+    }
+
+    rectangle "Dataset e Treino YOLO" {
+        usecase "Visualizar fotos + labels para curadoria" as UC27
+        usecase "Editar nome do label (correção final)" as UC28
+        usecase "Validar scan para dataset de treino" as UC29
+        usecase "Rejeitar scan do dataset" as UC30
+        usecase "Exportar dataset validado (script)" as UC31
+        usecase "Treinar modelo YOLO no Google Colab" as UC32
     }
 
     rectangle "Histórico e Exportação" {
@@ -113,5 +122,11 @@ SA --> UC18
 SA --> UC19
 SA --> UC20
 SA --> UC21
+SA --> UC27
+SA --> UC28
+SA --> UC29
+SA --> UC30
+SA --> UC31
+SA --> UC32
 
 @enduml
