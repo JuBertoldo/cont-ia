@@ -159,7 +159,34 @@ Atualmente: **Free (repositório público)**
 
 ---
 
-## 11. Ferramentas 100% gratuitas (sem custo em produção)
+## 11. Claude Code (Anthropic) — Ferramenta de Desenvolvimento
+
+Plano atual: **Claude Code CLI** via assinatura Anthropic  
+Tipo: **custo de desenvolvimento** — não é cobrado do cliente final, é custo da equipe que constrói e mantém o app.
+
+| Plano | Custo/mês | O que inclui |
+|-------|-----------|--------------|
+| **Claude.ai Pro** | $20 (~R$ 110) | Claude Code com uso moderado, acesso ao claude.ai |
+| **Claude.ai Max (5x)** | $100 (~R$ 550) | Claude Code uso intenso, modelos mais avançados |
+| **Claude.ai Max (20x)** | $200 (~R$ 1.100) | Claude Code uso muito intenso, projetos grandes |
+| **API Anthropic (pay-per-use)** | Variável | Sonnet 4.6: $3/MTok input · $15/MTok output |
+
+### Como entra no custo do negócio
+
+Claude Code é uma ferramenta de **desenvolvimento e manutenção** — equivale ao salário de um desenvolvedor júnior/pleno para tarefas de código, revisão, testes e documentação. O custo deve ser considerado no **custo de construção do produto**, não no custo operacional por cliente.
+
+| Contexto | Custo Claude Code | Equivalente humano |
+|----------|-------------------|--------------------|
+| MVP / 1 dev | $20–100/mês | Horas de dev economizadas |
+| Time pequeno (2–3 devs) | $60–200/mês | ~R$ 330–1.100/mês |
+| Manutenção contínua | $20–100/mês | Substituição parcial de dev junior |
+
+> **Recomendação:** Incluir $20–100/mês (R$ 110–550) no custo fixo de operação  
+> como "ferramenta de desenvolvimento e manutenção de software".
+
+---
+
+## 12. Ferramentas 100% gratuitas (sem custo em produção)
 
 | Ferramenta | Uso | Licença |
 |------------|-----|---------|
@@ -182,39 +209,40 @@ Atualmente: **Free (repositório público)**
 
 ### Cenário 1: MVP / Piloto (5 empresas, ~20 usuários)
 
-| Serviço | Custo/mês |
-|---------|-----------|
+| Serviço | Custo/mês (USD) |
+|---------|----------------|
 | Firebase (Blaze) | $0 (dentro do free) |
 | Roboflow | $0 (desabilitar ou free tier) |
 | Infraestrutura (Railway/Fly.io) | $5 |
 | Cloudflare Tunnel | $0 |
 | Domínio (.com/ano) | ~$1 |
 | Sentry | $0 (free) |
-| **TOTAL/mês** | **~$6/mês** |
-| Apple Developer (anual) | $99/ano (~$8/mês) |
-| **TOTAL real** | **~$14/mês** |
+| Apple Developer (anual) | ~$8 |
+| Claude Code (manutenção) | $20 |
+| **TOTAL/mês** | **~$34/mês (~R$ 187)** |
 
 ---
 
 ### Cenário 2: Crescimento (20 empresas, ~100 usuários)
 
-| Serviço | Custo/mês |
-|---------|-----------|
+| Serviço | Custo/mês (USD) |
+|---------|----------------|
 | Firebase | $20–40 |
 | Roboflow (se ativo) | $249 ou $0 (só YOLO) |
 | Infraestrutura | $15–20 |
 | Domínio | $1 |
 | Sentry (Team) | $26 |
 | Apple Developer | $8 |
-| **TOTAL com Roboflow** | **~$320–344/mês** |
-| **TOTAL só YOLO** | **~$70–95/mês** |
+| Claude Code (manutenção + novos recursos) | $20–100 |
+| **TOTAL com Roboflow** | **~$340–444/mês** |
+| **TOTAL só YOLO** | **~$90–195/mês (~R$ 495–1.072)** |
 
 ---
 
 ### Cenário 3: Escala (100 empresas, ~500 usuários)
 
-| Serviço | Custo/mês |
-|---------|-----------|
+| Serviço | Custo/mês (USD) |
+|---------|----------------|
 | Firebase | $100–200 |
 | Roboflow (se ativo) | $249–1.249 |
 | Infraestrutura | $30–60 |
@@ -222,8 +250,9 @@ Atualmente: **Free (repositório público)**
 | Domínio | $1 |
 | Sentry (Business) | $80 |
 | Apple Developer | $8 |
-| **TOTAL com Roboflow** | **~$770–2.100/mês** |
-| **TOTAL só YOLO + licença** | **~$520–850/mês** |
+| Claude Code (equipe / max plan) | $100–200 |
+| **TOTAL com Roboflow** | **~$870–2.300/mês** |
+| **TOTAL só YOLO + licença** | **~$620–1.050/mês (~R$ 3.400–5.775)** |
 
 ---
 
