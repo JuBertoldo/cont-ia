@@ -41,8 +41,12 @@ from PIL import Image
 SERVICE_ACCOUNT_PATH = "../backend/firebase-service-account.json"
 OUTPUT_DIR = Path("../Dataset_correcoes")
 TRAIN_RATIO = 0.8
-MIN_CORRECOES = 1          # Mínimo de correções por scan para incluir
-MIN_CONFIANCA = 0.20       # Ignora correções com confiança muito baixa
+MIN_CONFIANCA = 0.20       # Ignora detecções com confiança muito baixa
+# Estratégia de coleta:
+# TIER_GOLD   = scans validados pelo Super Admin (labelsValidados preenchido)
+# TIER_SILVER = scans com correção humana (temCorrecoes=true) sem validação do super admin
+# TIER_BRONZE = scans sem correção, confiança >= 0.70 (pseudo-labeling)
+CONF_PSEUDOLABEL = 0.70    # Limiar mínimo para usar detecção sem correção humana
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Inicializa Firebase
@@ -83,13 +87,32 @@ def bbox_para_yolo(bbox: list, img_w: int, img_h: int) -> tuple | None:
 
 
 def coletar_classes(docs: list) -> dict:
-    """Coleta todas as classes corrigidas e atribui IDs sequenciais."""
+    """Coleta todas as classes de todos os tiers e atribui IDs sequenciais."""
     classes = set()
     for doc_data in docs:
-        for correcao in doc_data.get("correcoes", []):
-            label = correcao.get("labelCorrigido", "").strip()
+        tier = doc_data.get("_tier", "bronze")
+
+        # Gold: labelsValidados pelo super admin
+        if tier == "gold" and doc_data.get("labelsValidados"):
+            for l in doc_data["labelsValidados"]:
+                label = l.get("label", "").strip()
+                if label:
+                    classes.add(label)
+
+        # Silver/Gold sem labelsValidados: correções do usuário
+        for c in doc_data.get("correcoes", []):
+            label = c.get("labelCorrigido", "").strip()
             if label:
                 classes.add(label)
+
+        # Bronze: detecções de alta confiança
+        if tier == "bronze":
+            for d in doc_data.get("detections", []):
+                if d.get("confidence", 0) >= CONF_PSEUDOLABEL:
+                    label = d.get("label", "").strip()
+                    if label:
+                        classes.add(label)
+
     return {nome: idx for idx, nome in enumerate(sorted(classes))}
 
 
@@ -98,18 +121,38 @@ def exportar_dataset():
     print("Cont.IA — Exportação do Dataset de Correções")
     print("=" * 60)
 
-    # ── Busca scans com correções ─────────────────────────────────
-    print("\n1. Buscando scans com correções no Firestore...")
-    query = db.collection("inventario").where("temCorrecoes", "==", True)
-    docs_raw = list(query.stream())
+    # ── Busca scans com foto — três tiers de qualidade ────────────
+    print("\n1. Buscando scans com foto no Firestore...")
 
-    docs = [d.to_dict() | {"_id": d.id} for d in docs_raw]
-    docs = [
-        d for d in docs
-        if len(d.get("correcoes", [])) >= MIN_CORRECOES and d.get("fotoUrl")
+    # TIER 1 — Ouro: validados pelo Super Admin
+    gold_raw = list(db.collection("inventario").where("statusDataset", "==", "validado").stream())
+    gold = [d.to_dict() | {"_id": d.id, "_tier": "gold"} for d in gold_raw if d.to_dict().get("fotoUrl")]
+
+    # TIER 2 — Prata: corrigidos pelo usuário (ainda não validados)
+    silver_raw = list(db.collection("inventario").where("temCorrecoes", "==", True).stream())
+    gold_ids = {d["_id"] for d in gold}
+    silver = [
+        d.to_dict() | {"_id": d.id, "_tier": "silver"}
+        for d in silver_raw
+        if d.id not in gold_ids and d.to_dict().get("fotoUrl")
     ]
 
-    print(f"   Encontrados: {len(docs)} scans com correções e foto")
+    # TIER 3 — Bronze: sem correção, alta confiança (pseudo-labeling)
+    all_with_photo = list(db.collection("inventario").where("fotoUrl", "!=", "").stream())
+    known_ids = gold_ids | {d["_id"] for d in silver}
+    bronze = [
+        d.to_dict() | {"_id": d.id, "_tier": "bronze"}
+        for d in all_with_photo
+        if d.id not in known_ids
+        and d.to_dict().get("statusDataset") != "rejeitado"
+    ]
+
+    docs = gold + silver + bronze
+
+    print(f"   ⭐⭐⭐ Tier 1 (Super Admin validou): {len(gold)}")
+    print(f"   ⭐⭐  Tier 2 (usuário corrigiu):    {len(silver)}")
+    print(f"   ⭐    Tier 3 (pseudo-label ≥0.70):  {len(bronze)}")
+    print(f"   Total: {len(docs)} scans com foto")
 
     if len(docs) < 10:
         print(f"\n⚠️  Poucos dados ({len(docs)}). Recomendado: mínimo 100 imagens.")
@@ -167,9 +210,27 @@ def exportar_dataset():
                 print("✗ imagem inválida")
                 continue
 
+            # Seleciona fonte dos labels conforme o tier
+            tier = doc_data.get("_tier", "bronze")
+            if tier == "gold" and doc_data.get("labelsValidados"):
+                fonte_labels = [
+                    {"labelCorrigido": l.get("label", ""), "bbox": l.get("bbox", []), "confianca": l.get("confidence", 1.0)}
+                    for l in doc_data["labelsValidados"]
+                ]
+            elif tier in ("gold", "silver") and correcoes:
+                fonte_labels = correcoes
+            else:
+                # Bronze: usa detecções com alta confiança como pseudo-labels
+                deteccoes = doc_data.get("detections", [])
+                fonte_labels = [
+                    {"labelCorrigido": d.get("label", ""), "bbox": d.get("bbox", []), "confianca": d.get("confidence", 0)}
+                    for d in deteccoes
+                    if d.get("confidence", 0) >= CONF_PSEUDOLABEL
+                ]
+
             # Gera arquivo de labels YOLO
             linhas = []
-            for correcao in correcoes:
+            for correcao in fonte_labels:
                 label = correcao.get("labelCorrigido", "").strip()
                 bbox = correcao.get("bbox", [])
                 confianca = correcao.get("confianca", 0) or 0

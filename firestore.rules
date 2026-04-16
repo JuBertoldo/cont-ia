@@ -89,7 +89,7 @@ service cloud.firestore {
       allow create: if isAuthenticated()
         && request.resource.data.usuarioId == request.auth.uid;
 
-      // Atualização/exclusão: admin da empresa ou super_admin
+      // Atualização/exclusão: admin da empresa, super_admin ou curadoria de dataset pelo super_admin
       allow update, delete: if (isActive() && isAdmin() && isSameEmpresa(resource.data.empresaId))
         || (isActive() && isSuperAdmin());
     }

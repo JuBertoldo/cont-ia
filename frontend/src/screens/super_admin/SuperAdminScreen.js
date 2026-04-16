@@ -218,9 +218,16 @@ export default function SuperAdminScreen({ navigation }) {
           <Ionicons name="arrow-back" size={28} color={COLORS.PRIMARY} />
         </TouchableOpacity>
         <Text style={styles.title}>Painel do Sistema</Text>
-        <TouchableOpacity onPress={load}>
-          <Ionicons name="refresh-outline" size={26} color={COLORS.PRIMARY} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate(ROUTES.DATASET_VALIDATION)}
+          >
+            <Ionicons name="layers-outline" size={26} color={COLORS.PRIMARY} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={load}>
+            <Ionicons name="refresh-outline" size={26} color={COLORS.PRIMARY} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Stats globais */}

@@ -15,6 +15,7 @@ import CompanyDetailScreen from '../screens/super_admin/CompanyDetailScreen';
 import TicketDetailScreen from '../screens/super_admin/TicketDetailScreen';
 import SupportScreen from '../screens/support/SupportScreen';
 import SupportRegisterScreen from '../screens/auth/SupportRegisterScreen';
+import ValidacaoDatasetScreen from '../screens/super_admin/ValidacaoDatasetScreen';
 import QuickGuideScreen from '../screens/guide/QuickGuideScreen';
 import DrawerNavigator from './DrawerNavigator';
 import { ROUTES } from '../constants/routes';
@@ -71,6 +72,10 @@ export default function AppNavigator() {
       <Stack.Screen
         name={ROUTES.SUPPORT_REGISTER}
         component={SupportRegisterScreen}
+      />
+      <Stack.Screen
+        name={ROUTES.DATASET_VALIDATION}
+        component={ValidacaoDatasetScreen}
       />
       <Stack.Screen name={ROUTES.QUICK_GUIDE} component={QuickGuideScreen} />
       <Stack.Screen name={ROUTES.APP_DRAWER} component={DrawerNavigator} />
