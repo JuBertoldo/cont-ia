@@ -22,6 +22,7 @@ import ScannerScreen from '../screens/inventory/ScannerScreen';
 import HistoryScreen from '../screens/inventory/HistoryScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import AdminUsersScreen from '../screens/admin/AdminUsersScreen';
+import SupportTicketsScreen from '../screens/support/SupportTicketsScreen';
 
 const Drawer = createDrawerNavigator();
 
@@ -112,74 +113,88 @@ function CustomDrawerContent(props) {
       </TouchableOpacity>
 
       <View style={styles.menu}>
-        <DrawerItem
-          icon="home-outline"
-          label="Início"
-          onPress={() => props.navigation.navigate(ROUTES.HOME)}
-        />
-        <DrawerItem
-          icon="camera-outline"
-          label="Nova Contagem"
-          onPress={() => props.navigation.navigate(ROUTES.SCANNER)}
-        />
-        <DrawerItem
-          icon="list-outline"
-          label="Histórico de Contagens"
-          onPress={() =>
-            props.navigation.navigate(ROUTES.HISTORY, {
-              filter: 'all',
-              title: 'Histórico de Contagens',
-            })
-          }
-        />
-        <DrawerItem
-          icon="checkmark-done-outline"
-          label="Itens Contados"
-          onPress={() =>
-            props.navigation.navigate(ROUTES.HISTORY, {
-              filter: 'audited',
-              title: 'Itens Contados',
-            })
-          }
-        />
-        <DrawerItem
-          icon="help-circle-outline"
-          label="Guia Rápido"
-          onPress={() => props.navigation.navigate(ROUTES.QUICK_GUIDE)}
-        />
-
-        {(role === ROLES.ADMIN || role === ROLES.SUPER_ADMIN) && (
+        {/* Support: menu exclusivo — sem scanner nem histórico */}
+        {role === ROLES.SUPPORT ? (
           <>
-            <View style={styles.divider} />
-            <Text style={styles.sectionLabel}>Administração</Text>
             <DrawerItem
-              icon="people-outline"
-              label="Gerenciar Usuários"
+              icon="headset-outline"
+              label="Chamados"
               highlight
-              onPress={() => props.navigation.navigate(ROUTES.ADMIN_USERS)}
+              onPress={() => props.navigation.navigate(ROUTES.SUPPORT_TICKETS)}
             />
-            {role === ROLES.ADMIN && (
-              <DrawerItem
-                icon="headset-outline"
-                label="Suporte / Chamados"
-                onPress={() => props.navigation.navigate(ROUTES.SUPPORT)}
-              />
-            )}
           </>
-        )}
-
-        {role === ROLES.SUPER_ADMIN && (
+        ) : (
           <>
-            <View style={styles.divider} />
-            <Text style={styles.sectionLabel}>Sistema</Text>
             <DrawerItem
-              icon="globe-outline"
-              label="Painel do Sistema"
-              highlight
+              icon="home-outline"
+              label="Início"
+              onPress={() => props.navigation.navigate(ROUTES.HOME)}
+            />
+            <DrawerItem
+              icon="camera-outline"
+              label="Nova Contagem"
+              onPress={() => props.navigation.navigate(ROUTES.SCANNER)}
+            />
+            <DrawerItem
+              icon="list-outline"
+              label="Histórico de Contagens"
               onPress={() =>
-                props.navigation.navigate(ROUTES.SUPER_ADMIN_PANEL)
+                props.navigation.navigate(ROUTES.HISTORY, {
+                  filter: 'all',
+                  title: 'Histórico de Contagens',
+                })
               }
             />
+            <DrawerItem
+              icon="checkmark-done-outline"
+              label="Itens Contados"
+              onPress={() =>
+                props.navigation.navigate(ROUTES.HISTORY, {
+                  filter: 'audited',
+                  title: 'Itens Contados',
+                })
+              }
+            />
+            <DrawerItem
+              icon="help-circle-outline"
+              label="Guia Rápido"
+              onPress={() => props.navigation.navigate(ROUTES.QUICK_GUIDE)}
+            />
+
+            {(role === ROLES.ADMIN || role === ROLES.SUPER_ADMIN) && (
+              <>
+                <View style={styles.divider} />
+                <Text style={styles.sectionLabel}>Administração</Text>
+                <DrawerItem
+                  icon="people-outline"
+                  label="Gerenciar Usuários"
+                  highlight
+                  onPress={() => props.navigation.navigate(ROUTES.ADMIN_USERS)}
+                />
+                {role === ROLES.ADMIN && (
+                  <DrawerItem
+                    icon="headset-outline"
+                    label="Suporte / Chamados"
+                    onPress={() => props.navigation.navigate(ROUTES.SUPPORT)}
+                  />
+                )}
+              </>
+            )}
+
+            {role === ROLES.SUPER_ADMIN && (
+              <>
+                <View style={styles.divider} />
+                <Text style={styles.sectionLabel}>Sistema</Text>
+                <DrawerItem
+                  icon="globe-outline"
+                  label="Painel do Sistema"
+                  highlight
+                  onPress={() =>
+                    props.navigation.navigate(ROUTES.SUPER_ADMIN_PANEL)
+                  }
+                />
+              </>
+            )}
           </>
         )}
       </View>
@@ -214,6 +229,10 @@ export default function DrawerNavigator() {
       <Drawer.Screen name={ROUTES.HISTORY} component={HistoryScreen} />
       <Drawer.Screen name={ROUTES.PROFILE} component={ProfileScreen} />
       <Drawer.Screen name={ROUTES.ADMIN_USERS} component={AdminUsersScreen} />
+      <Drawer.Screen
+        name={ROUTES.SUPPORT_TICKETS}
+        component={SupportTicketsScreen}
+      />
     </Drawer.Navigator>
   );
 }

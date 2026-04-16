@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -35,6 +35,15 @@ export default function AuthHome() {
   const navigation = useNavigation();
 
   const { loading, login } = useAuth();
+  const lastTapRef = useRef(0);
+
+  const handleLogoDoubleTap = () => {
+    const now = Date.now();
+    if (now - lastTapRef.current < 400) {
+      navigation.navigate(ROUTES.SUPPORT_REGISTER);
+    }
+    lastTapRef.current = now;
+  };
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -151,11 +160,15 @@ export default function AuthHome() {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          {/* ── Logo ── */}
-          <View style={styles.header}>
+          {/* ── Logo — duplo toque abre cadastro de suporte técnico ── */}
+          <TouchableOpacity
+            style={styles.header}
+            onPress={handleLogoDoubleTap}
+            activeOpacity={1}
+          >
             <Text style={styles.logo}>CONT.IA</Text>
             <Text style={styles.subtitle}>Inteligência que conta.</Text>
-          </View>
+          </TouchableOpacity>
 
           {/* ── Formulário ── */}
           <View style={styles.formCard}>

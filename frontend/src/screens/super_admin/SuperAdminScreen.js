@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  TextInput,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { COLORS } from '../../constants/colors';
@@ -20,12 +21,16 @@ import {
 import {
   subscribeAllTickets,
   TICKET_STATUS,
+  createSupportInvite,
+  getSupportInvites,
+  deleteSupportInvite,
 } from '../../services/supportService';
 import { formatDateTime } from '../../utils/formatDate';
 
 const TABS = [
   { key: 'empresas', label: 'Empresas', icon: 'business-outline' },
   { key: 'chamados', label: 'Chamados', icon: 'headset-outline' },
+  { key: 'suporte', label: 'Equipe Suporte', icon: 'shield-checkmark-outline' },
 ];
 
 export default function SuperAdminScreen({ navigation }) {
@@ -36,6 +41,12 @@ export default function SuperAdminScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
   const unsubRef = useRef(null);
+
+  // Convites de suporte
+  const [invites, setInvites] = useState([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteNome, setInviteNome] = useState('');
+  const [savingInvite, setSavingInvite] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -53,14 +64,62 @@ export default function SuperAdminScreen({ navigation }) {
     }
   }, []);
 
+  const loadInvites = useCallback(async () => {
+    try {
+      const list = await getSupportInvites();
+      setInvites(list);
+    } catch (_) {}
+  }, []);
+
   useEffect(() => {
     load();
+    loadInvites();
     unsubRef.current = subscribeAllTickets(
       list => setTickets(list),
       () => {},
     );
     return () => unsubRef.current?.();
-  }, [load]);
+  }, [load, loadInvites]);
+
+  const handleCreateInvite = async () => {
+    if (!inviteEmail.trim() || !inviteNome.trim()) {
+      Alert.alert('Atenção', 'Preencha o e-mail e o nome do técnico.');
+      return;
+    }
+    setSavingInvite(true);
+    try {
+      await createSupportInvite({ email: inviteEmail, nome: inviteNome });
+      setInviteEmail('');
+      setInviteNome('');
+      await loadInvites();
+      Alert.alert(
+        'Convite criado!',
+        `Convite enviado para ${inviteEmail.trim().toLowerCase()}.`,
+      );
+    } catch (e) {
+      Alert.alert('Erro', e.message);
+    } finally {
+      setSavingInvite(false);
+    }
+  };
+
+  const handleDeleteInvite = invite => {
+    Alert.alert('Remover convite', `Remover convite de ${invite.email}?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Remover',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteSupportInvite(invite.email);
+            await loadInvites();
+          } catch (e) {
+            Alert.alert('Erro', e.message);
+          }
+        },
+      },
+    ]);
+  };
 
   const pendingTickets = tickets.filter(t => t.status === 'aberto').length;
 
@@ -227,12 +286,85 @@ export default function SuperAdminScreen({ navigation }) {
         ))}
       </ScrollView>
 
-      {loading ? (
+      {loading && activeTab !== 'suporte' ? (
         <ActivityIndicator
           size="large"
           color={COLORS.PRIMARY}
           style={{ marginTop: 40 }}
         />
+      ) : activeTab === 'suporte' ? (
+        <ScrollView contentContainerStyle={styles.list}>
+          {/* Formulário novo convite */}
+          <View style={styles.inviteForm}>
+            <Text style={styles.inviteFormTitle}>Novo convite de acesso</Text>
+            <TextInput
+              style={styles.inviteInput}
+              placeholder="E-mail do técnico"
+              placeholderTextColor={COLORS.GRAY}
+              value={inviteEmail}
+              onChangeText={setInviteEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+            <TextInput
+              style={styles.inviteInput}
+              placeholder="Nome do técnico"
+              placeholderTextColor={COLORS.GRAY}
+              value={inviteNome}
+              onChangeText={setInviteNome}
+            />
+            <TouchableOpacity
+              style={[styles.inviteBtn, savingInvite && { opacity: 0.6 }]}
+              onPress={handleCreateInvite}
+              disabled={savingInvite}
+            >
+              {savingInvite ? (
+                <ActivityIndicator color={COLORS.BLACK} size="small" />
+              ) : (
+                <>
+                  <Ionicons
+                    name="send-outline"
+                    size={16}
+                    color={COLORS.BLACK}
+                  />
+                  <Text style={styles.inviteBtnText}>Criar convite</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Lista de convites existentes */}
+          <Text style={styles.inviteListTitle}>
+            Convites ({invites.length})
+          </Text>
+          {invites.length === 0 ? (
+            <Text style={styles.empty}>Nenhum convite criado.</Text>
+          ) : (
+            invites.map(inv => (
+              <View key={inv.id} style={styles.inviteCard}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inviteName}>{inv.nome}</Text>
+                  <Text style={styles.inviteEmail}>{inv.email}</Text>
+                  <View
+                    style={[
+                      styles.inviteStatus,
+                      inv.usado && styles.inviteStatusUsed,
+                    ]}
+                  >
+                    <Text style={styles.inviteStatusText}>
+                      {inv.usado ? '✓ Utilizado' : '⏳ Aguardando cadastro'}
+                    </Text>
+                  </View>
+                </View>
+                {!inv.usado && (
+                  <TouchableOpacity onPress={() => handleDeleteInvite(inv)}>
+                    <Ionicons name="trash-outline" size={20} color="#B00020" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))
+          )}
+        </ScrollView>
       ) : (
         <FlatList
           data={activeTab === 'empresas' ? empresas : tickets}
@@ -330,4 +462,68 @@ const styles = StyleSheet.create({
   statusDot: { width: 10, height: 10, borderRadius: 5 },
   iconBtn: { padding: 8 },
   empty: { color: COLORS.GRAY, textAlign: 'center', marginTop: 40 },
+  inviteForm: {
+    backgroundColor: '#111',
+    borderRadius: 14,
+    padding: 16,
+    gap: 10,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#222',
+  },
+  inviteFormTitle: {
+    color: COLORS.WHITE,
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  inviteInput: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 10,
+    padding: 12,
+    color: COLORS.WHITE,
+    borderWidth: 1,
+    borderColor: '#333',
+    fontSize: 14,
+  },
+  inviteBtn: {
+    backgroundColor: COLORS.PRIMARY,
+    borderRadius: 10,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  inviteBtnText: { color: COLORS.BLACK, fontWeight: 'bold' },
+  inviteListTitle: {
+    color: COLORS.GRAY,
+    fontSize: 12,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    marginBottom: 10,
+  },
+  inviteCard: {
+    backgroundColor: '#111',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#222',
+  },
+  inviteName: { color: COLORS.WHITE, fontWeight: '600', fontSize: 14 },
+  inviteEmail: { color: COLORS.GRAY, fontSize: 12, marginTop: 2 },
+  inviteStatus: {
+    marginTop: 6,
+    backgroundColor: '#1a2a1a',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    alignSelf: 'flex-start',
+  },
+  inviteStatusUsed: { backgroundColor: '#1a1a2a' },
+  inviteStatusText: { color: COLORS.PRIMARY, fontSize: 11 },
 });

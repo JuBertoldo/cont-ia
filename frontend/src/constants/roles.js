@@ -2,6 +2,7 @@ export const ROLES = {
   USER: 'user',
   ADMIN: 'admin',
   SUPER_ADMIN: 'super_admin',
+  SUPPORT: 'support',
 };
 
 /** Label legível por role */
@@ -9,6 +10,7 @@ export const ROLE_LABELS = {
   [ROLES.USER]: 'Perfil usuário',
   [ROLES.ADMIN]: 'Perfil admin',
   [ROLES.SUPER_ADMIN]: 'Super Admin',
+  [ROLES.SUPPORT]: 'Suporte Técnico',
 };
 
 /** Roles com permissão de administração da empresa */

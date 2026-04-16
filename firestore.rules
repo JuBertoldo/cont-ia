@@ -24,6 +24,10 @@ service cloud.firestore {
       return isAuthenticated() && getUserData().role == 'super_admin';
     }
 
+    function isSupport() {
+      return isAuthenticated() && getUserData().role == 'support';
+    }
+
     function isActive() {
       return isAuthenticated() && getUserData().status == 'active';
     }
@@ -88,6 +92,40 @@ service cloud.firestore {
       // Atualização/exclusão: admin da empresa ou super_admin
       allow update, delete: if (isActive() && isAdmin() && isSameEmpresa(resource.data.empresaId))
         || (isActive() && isSuperAdmin());
+    }
+
+    // ── Chamados (/chamados/{docId}) ──────────────────────────────────────────
+
+    match /chamados/{docId} {
+      // Leitura: admin da empresa, super_admin ou support
+      allow read: if (isAuthenticated() && resource.data.adminId == request.auth.uid)
+        || (isActive() && isAdmin() && isSameEmpresa(resource.data.empresaId))
+        || (isActive() && isSuperAdmin())
+        || (isActive() && isSupport());
+
+      // Criação: admin ativo
+      allow create: if isActive() && isAdmin();
+
+      // Atualização de status/resposta: super_admin ou support
+      allow update: if (isActive() && isSuperAdmin())
+        || (isActive() && isSupport())
+        || (isActive() && isAdmin() && isSameEmpresa(resource.data.empresaId));
+
+      allow delete: if isActive() && isSuperAdmin();
+    }
+
+    // ── Convites de suporte (/convites_suporte/{email}) ───────────────────────
+
+    match /convites_suporte/{email} {
+      // Super admin gerencia convites
+      allow create, delete: if isActive() && isSuperAdmin();
+      allow read: if (isActive() && isSuperAdmin())
+        || (isAuthenticated() && request.auth.token.email == email);
+
+      // Técnico consome o próprio convite durante o cadastro
+      allow update: if isAuthenticated()
+        && request.auth.token.email == email
+        && resource.data.usado == false;
     }
   }
 }

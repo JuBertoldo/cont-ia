@@ -14,5 +14,7 @@ export const ROUTES = {
   SUPER_ADMIN_COMPANY: 'SuperAdminCompany',
   SUPER_ADMIN_TICKET: 'SuperAdminTicket',
   SUPPORT: 'Support',
+  SUPPORT_REGISTER: 'SupportRegister',
+  SUPPORT_TICKETS: 'SupportTickets',
   QUICK_GUIDE: 'QuickGuide',
 };
