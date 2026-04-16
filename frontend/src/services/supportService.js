@@ -1,4 +1,5 @@
 import { auth, db } from '../config/firebaseConfig';
+import { apiClient } from './apiClient';
 import {
   collection,
   addDoc,
@@ -171,6 +172,7 @@ export const createTicket = async ({ titulo, descricao, tipo }) => {
     empresaNome,
     adminId: uid,
     adminNome: userData.nome || userData.email || '',
+    adminEmail: userData.email || '',
     resposta: '',
     respondidoPor: '',
     reaberturas: 0,
@@ -276,6 +278,21 @@ export const respondTicket = async (ticketId, { status, resposta }) => {
   }
 
   await updateDoc(doc(db, 'chamados', ticketId), updates);
+
+  // Notifica o admin por e-mail (falha silenciosa — não bloqueia o fluxo)
+  if (ticket.adminEmail) {
+    apiClient
+      .post('/v1/notify/ticket', {
+        numero: ticket.numero || ticketId,
+        titulo: ticket.titulo || '',
+        status,
+        resposta: resposta?.trim() || '',
+        admin_email: ticket.adminEmail,
+        empresa_nome: ticket.empresaNome || '',
+        respondido_por: nome || 'Suporte Cont.IA',
+      })
+      .catch(() => {});
+  }
 };
 
 // ── Convites de suporte (/convites_suporte/{email}) ──────────────────────────

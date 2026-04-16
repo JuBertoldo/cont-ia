@@ -19,6 +19,13 @@ class Settings:
     )
     ENSEMBLE_IOU_THRESHOLD: float = float(os.getenv("ENSEMBLE_IOU_THRESHOLD", "0.5"))
 
+    # ── E-mail (SMTP) ─────────────────────────────────────────────────────────
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USER: str = os.getenv("SMTP_USER", "")
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+    EMAIL_FROM_NAME: str = os.getenv("EMAIL_FROM_NAME", "Cont.IA Suporte")
+
     @property
     def is_production(self) -> bool:
         return self.API_ENV == "production"
