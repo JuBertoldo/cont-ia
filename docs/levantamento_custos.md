@@ -7,28 +7,114 @@
 ## 1. Firebase (Google Cloud) — CRÍTICO
 
 Plano atual: **Spark (gratuito)**  
-Plano necessário para produção: **Blaze (pay-as-you-go)**
+Plano necessário para produção: **Blaze (pay-as-you-go)**  
+> Blaze não tem mensalidade fixa — você paga apenas o que ultrapassar o free tier.  
+> Migrar para Blaze é obrigatório para usar Storage em produção (Spark bloqueia upload).
 
-### Limites gratuitos vs custo após
+---
 
-| Serviço | Gratuito (Spark) | Custo após limite |
-|---------|-----------------|-------------------|
-| **Firestore — leituras** | 50.000/dia | $0,06 por 100K |
-| **Firestore — escritas** | 20.000/dia | $0,18 por 100K |
-| **Firestore — exclusões** | 20.000/dia | $0,02 por 100K |
-| **Firestore — armazenamento** | 1 GB | $0,18/GB/mês |
-| **Storage (fotos)** | 5 GB | $0,026/GB armazenado + $0,12/GB download |
-| **Authentication** | 10.000 MAU/mês | $0,0055 por MAU adicional |
-| **Cloud Functions** | 2M chamadas/mês | $0,40 por 1M chamadas |
+### 1.1 Limites exatos do plano Spark (gratuito)
 
-### Estimativa por escala (mensal)
+| Serviço Firebase | Limite gratuito | Custo após o limite |
+|-----------------|-----------------|---------------------|
+| **Firestore — leituras** | 50.000 / dia | $0,06 por 100K leituras |
+| **Firestore — escritas** | 20.000 / dia | $0,18 por 100K escritas |
+| **Firestore — exclusões** | 20.000 / dia | $0,02 por 100K exclusões |
+| **Firestore — armazenamento** | 1 GB total | $0,18 / GB / mês |
+| **Storage — armazenamento** | 5 GB total | $0,026 / GB / mês |
+| **Storage — download** | 1 GB / dia | $0,12 / GB |
+| **Storage — operações upload** | 20.000 / dia | $0,004 / 10K |
+| **Authentication — MAU** | 10.000 usuários/mês | $0,0055 por usuário adicional |
+| **Cloud Functions** | 2M chamadas / mês | $0,40 / 1M chamadas |
 
-| Escala | Empresas | Usuários ativos | Scans/dia | Custo Firebase/mês |
-|--------|----------|-----------------|-----------|-------------------|
-| Piloto | 5 | 20 | 50 | **~$0** (dentro do free) |
-| Pequeno | 20 | 100 | 200 | **~$15–30** |
-| Médio | 50 | 300 | 600 | **~$60–120** |
-| Grande | 150 | 1.000 | 2.000 | **~$200–400** |
+---
+
+### 1.2 Quanto cada ação do app consome no Firestore
+
+| Ação do usuário | Leituras | Escritas | Observação |
+|-----------------|----------|----------|------------|
+| Login / abrir app | 2 | 0 | Carrega perfil + empresa |
+| Abrir histórico | 10–30 | 0 | Depende do volume de scans |
+| Realizar 1 scan (salvar) | 2 | 2 | Lê empresaId + escreve inventário |
+| Upload foto (Storage) | 0 | 1 operação Storage | ~500KB–2MB por foto |
+| Admin abrir painel | 20–50 | 0 | Lista usuários + scans da empresa |
+| Abrir chamado | 3 | 2 | Lê empresa + escreve chamado |
+| Support ver todos os chamados | 30–100 | 0 | Depende do volume de tickets |
+
+**Estimativa por usuário ativo por dia:**
+- Usuário comum (2–3 scans): ~30–50 leituras · 5–10 escritas
+- Admin (gestão diária): ~80–150 leituras · 10–20 escritas
+
+---
+
+### 1.3 Ponto exato em que cada serviço começa a custar
+
+#### Firestore — Leituras (limite: 50.000/dia)
+
+| Usuários ativos/dia | Leituras estimadas/dia | Situação |
+|---------------------|------------------------|----------|
+| **até 50** | ~1.500–2.500 | ✅ Gratuito (5% do limite) |
+| **51–100** | ~2.500–5.000 | ✅ Gratuito (10% do limite) |
+| **101–500** | ~5.000–25.000 | ✅ Gratuito (50% do limite) |
+| **501–1.000** | ~25.000–50.000 | ⚠️ Na borda do limite |
+| **acima de 1.000** | 50.000+ | 💰 Começa a cobrar (~$0,03–0,30/dia) |
+
+#### Firestore — Escritas (limite: 20.000/dia)
+
+| Usuários ativos/dia | Escritas estimadas/dia | Situação |
+|---------------------|------------------------|----------|
+| **até 50** | ~250–500 | ✅ Gratuito (2,5% do limite) |
+| **até 500** | ~2.500–5.000 | ✅ Gratuito (25% do limite) |
+| **até 2.000** | ~10.000–20.000 | ⚠️ Na borda do limite |
+| **acima de 2.000** | 20.000+ | 💰 Começa a cobrar |
+
+#### Firebase Storage — Armazenamento (limite: 5 GB)
+
+| Scans acumulados | Tamanho médio foto | Total armazenado | Situação |
+|------------------|--------------------|------------------|----------|
+| até 5.000 scans | ~500 KB | ~2,5 GB | ✅ Gratuito |
+| até 10.000 scans | ~500 KB | ~5 GB | ⚠️ No limite |
+| acima de 10.000 | ~500 KB | 5 GB+ | 💰 ~$0,026/GB/mês |
+
+> **Na prática:** com 50 usuários fazendo 5 scans/dia = 250 fotos/dia.  
+> Em 20 dias já são 5.000 fotos (~2,5 GB). **O Storage começa a custar em ~40 dias de uso moderado.**
+
+#### Firebase Authentication (limite: 10.000 MAU/mês)
+
+| Usuários cadastrados | Situação | Custo adicional |
+|----------------------|----------|-----------------|
+| até 10.000 | ✅ Gratuito | $0 |
+| 10.001–20.000 | 💰 Paga excedente | ~$55/mês |
+| acima de 50.000 | 💰 | ~$220/mês |
+
+> Auth dificilmente será um problema — 10K usuários é muito para o início.
+
+---
+
+### 1.4 Custo Firebase por número de usuários ativos (mensal estimado)
+
+| Usuários ativos | Scans/mês | Firebase/mês | O que começa a cobrar |
+|-----------------|-----------|--------------|----------------------|
+| **até 50** | ~2.500 | **$0** | Nada — dentro do free |
+| **51–100** | ~5.000 | **$0–2** | Storage acumula |
+| **101–200** | ~10.000 | **$2–8** | Storage + leituras |
+| **201–500** | ~25.000 | **$8–25** | Storage + leituras + escritas |
+| **501–1.000** | ~50.000 | **$25–60** | Todos os serviços |
+| **acima de 1.000** | 100.000+ | **$60–150+** | Escala linear |
+
+> ✅ **Confirmado:** até ~50 usuários ativos o Firebase é $0.  
+> 💰 **Custo real começa** entre 50–100 usuários, puxado primeiro pelo **Storage (fotos)**.
+
+---
+
+### 1.5 Estratégia para adiar o custo do Firebase
+
+| Ação | Economia estimada | Impacto no produto |
+|------|------------------|--------------------|
+| Comprimir foto antes do upload (qualidade 0.5 → 0.3) | Storage -50% | Foto menos nítida na auditoria |
+| Limitar histórico a 90 dias por empresa | Leituras -30% | Exportar CSV antes de arquivar |
+| Lazy load no histórico (paginação já implementada) | Leituras -40% | Já implementado ✅ |
+| Deletar fotos de scans sem correção após 180 dias | Storage -60% | Automatizar com Cloud Function |
 
 ---
 
