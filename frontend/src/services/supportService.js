@@ -279,8 +279,15 @@ export const respondTicket = async (ticketId, { status, resposta }) => {
 
   await updateDoc(doc(db, 'chamados', ticketId), updates);
 
-  // Notifica o admin por e-mail (falha silenciosa — não bloqueia o fluxo)
+  // Notifica o admin por e-mail + push notification (falha silenciosa)
   if (ticket.adminEmail) {
+    // Busca token FCM do admin no Firestore para push notification
+    let fcmToken = '';
+    try {
+      const adminSnap = await getDoc(doc(db, 'usuarios', ticket.adminId));
+      fcmToken = adminSnap.exists() ? adminSnap.data()?.fcmToken || '' : '';
+    } catch (_) {}
+
     apiClient
       .post('/v1/notify/ticket', {
         numero: ticket.numero || ticketId,
@@ -288,6 +295,7 @@ export const respondTicket = async (ticketId, { status, resposta }) => {
         status,
         resposta: resposta?.trim() || '',
         admin_email: ticket.adminEmail,
+        admin_fcm_token: fcmToken,
         empresa_nome: ticket.empresaNome || '',
         respondido_por: nome || 'Suporte Cont.IA',
       })

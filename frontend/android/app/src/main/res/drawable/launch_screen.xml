@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Splash Screen do Cont.IA
+  Fundo preto com logo CONT.IA em verde centralizado.
+  Exibido enquanto o bundle React Native carrega.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android"
+    android:opacity="opaque">
+
+    <!-- Fundo preto -->
+    <item>
+        <color android:color="#000000" />
+    </item>
+
+    <!-- Logo CONT.IA centralizado -->
+    <item
+        android:gravity="center"
+        android:bottom="80dp">
+        <bitmap
+            android:gravity="center"
+            android:src="@mipmap/ic_launcher" />
+    </item>
+
+</layer-list>

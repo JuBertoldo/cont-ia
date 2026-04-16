@@ -164,7 +164,7 @@ export default function ScannerScreen() {
     try {
       const result = await launchImageLibrary({
         mediaType: 'photo',
-        quality: 0.9,
+        quality: 0.5,
         selectionLimit: 1,
       });
       const uri = extractUriFromPickerResult(result);
@@ -184,7 +184,7 @@ export default function ScannerScreen() {
     try {
       const result = await launchCamera({
         mediaType: 'photo',
-        quality: 0.9,
+        quality: 0.5,
         saveToPhotos: false,
       });
       const uri = extractUriFromPickerResult(result);
