@@ -1,5 +1,9 @@
 import { auth, db } from '../config/firebaseConfig';
 import {
+  criarNotificacaoParaAdminsEmpresa,
+  NOTIF_TIPOS,
+} from './notificationService';
+import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
@@ -121,6 +125,15 @@ export const registerWithEmail = async ({
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+
+    // Notifica os admins da empresa sobre o novo usuário pendente
+    criarNotificacaoParaAdminsEmpresa(
+      empresaId,
+      NOTIF_TIPOS.NOVO_USUARIO,
+      'Novo usuário aguardando aprovação',
+      `${name} quer entrar na sua empresa. Acesse Gerenciar Usuários para aprovar.`,
+      { usuarioId: user.uid, usuarioNome: name, rota: 'AdminUsers' },
+    ).catch(() => {});
 
     return user;
   } catch (err) {

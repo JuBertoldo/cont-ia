@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Image,
+  Switch,
   useWindowDimensions,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -23,6 +24,10 @@ import {
   updateProfilePhoto,
 } from '../../services/profileService';
 import { getEmpresaById } from '../../services/empresaService';
+import {
+  ativarPushNotifications,
+  desativarPushNotifications,
+} from '../../services/notificationService';
 
 export default function ProfileScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -36,6 +41,7 @@ export default function ProfileScreen({ navigation }) {
   const [role, setRole] = useState('user');
   const [matricula, setMatricula] = useState('');
   const [empresa, setEmpresa] = useState(null);
+  const [pushAtivo, setPushAtivo] = useState(false);
 
   const loadProfile = async () => {
     try {
@@ -47,6 +53,7 @@ export default function ProfileScreen({ navigation }) {
         setPhotoURL(profile.photoURL || auth.currentUser.photoURL || '');
         setRole(profile.role || 'user');
         setMatricula(profile.matricula || '');
+        setPushAtivo(profile.notificacoesHabilitadas === true);
 
         if (profile.empresaId) {
           const emp = await getEmpresaById(profile.empresaId);
@@ -239,6 +246,45 @@ export default function ProfileScreen({ navigation }) {
         </View>
       )}
 
+      {/* Notificações push */}
+      <View style={styles.pushRow}>
+        <View style={styles.pushInfo}>
+          <Ionicons
+            name="notifications-outline"
+            size={20}
+            color={COLORS.PRIMARY}
+          />
+          <View>
+            <Text style={styles.pushLabel}>Notificações push</Text>
+            <Text style={styles.pushHint}>
+              {pushAtivo
+                ? 'Ativas no seu celular'
+                : 'Só notificações no app (sininho)'}
+            </Text>
+          </View>
+        </View>
+        <Switch
+          value={pushAtivo}
+          onValueChange={async value => {
+            setPushAtivo(value);
+            if (value) {
+              const ok = await ativarPushNotifications();
+              if (!ok) {
+                setPushAtivo(false);
+                Alert.alert(
+                  'Push indisponível',
+                  'Instale o módulo de push e configure as permissões nas configurações do telefone.',
+                );
+              }
+            } else {
+              await desativarPushNotifications();
+            }
+          }}
+          trackColor={{ false: '#333', true: COLORS.PRIMARY + '88' }}
+          thumbColor={pushAtivo ? COLORS.PRIMARY : '#555'}
+        />
+      </View>
+
       <View style={styles.versionBlock}>
         <Text style={styles.version}>Cont.IA v1.0.0</Text>
         <Text style={styles.tagline}>
@@ -378,6 +424,20 @@ const styles = StyleSheet.create({
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
   linkText: { color: COLORS.WHITE, fontSize: 14, flex: 1 },
   linkDivider: { height: 1, backgroundColor: '#222', marginHorizontal: 16 },
+  pushRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#111',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#222',
+  },
+  pushInfo: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  pushLabel: { color: COLORS.WHITE, fontSize: 14, fontWeight: '600' },
+  pushHint: { color: COLORS.GRAY, fontSize: 11, marginTop: 2 },
   versionBlock: { alignItems: 'center', marginTop: 'auto', paddingTop: 16 },
   version: { color: '#333', fontSize: 12, textAlign: 'center' },
   tagline: { color: '#222', fontSize: 11, textAlign: 'center', marginTop: 4 },

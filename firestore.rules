@@ -114,6 +114,22 @@ service cloud.firestore {
       allow delete: if isActive() && isSuperAdmin();
     }
 
+    // ── Notificações (/notificacoes/{docId}) ──────────────────────────────────
+
+    match /notificacoes/{docId} {
+      // Leitura e atualização: apenas o destinatário da notificação
+      allow read, update: if isAuthenticated()
+        && resource.data.paraUid == request.auth.uid;
+
+      // Criação: qualquer usuário autenticado pode criar notificações para outros
+      // (triggers do app — authService, supportService)
+      allow create: if isAuthenticated();
+
+      // Exclusão: apenas o destinatário
+      allow delete: if isAuthenticated()
+        && resource.data.paraUid == request.auth.uid;
+    }
+
     // ── Convites de suporte (/convites_suporte/{email}) ───────────────────────
 
     match /convites_suporte/{email} {

@@ -4,4 +4,5 @@ export const COLLECTIONS = {
   COMPANIES: 'empresas',
   TICKETS: 'chamados',
   CONFIG: 'config',
+  NOTIFICATIONS: 'notificacoes',
 };

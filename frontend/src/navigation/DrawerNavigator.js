@@ -12,6 +12,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { auth } from '../config/firebaseConfig';
 import { logout, getUserProfile } from '../services/authService';
+import { subscribeContadorNaoLidas } from '../services/notificationService';
 import { ROUTES } from '../constants/routes';
 import { COLORS } from '../constants/colors';
 import { ROLES, ROLE_LABELS } from '../constants/roles';
@@ -23,6 +24,7 @@ import HistoryScreen from '../screens/inventory/HistoryScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import AdminUsersScreen from '../screens/admin/AdminUsersScreen';
 import SupportTicketsScreen from '../screens/support/SupportTicketsScreen';
+import NotificacoesScreen from '../screens/notifications/NotificacoesScreen';
 
 const Drawer = createDrawerNavigator();
 
@@ -51,6 +53,7 @@ function CustomDrawerContent(props) {
   const [userName, setUserName] = useState('Operador');
   const [photoURL, setPhotoURL] = useState('');
   const [role, setRole] = useState('user');
+  const [naoLidas, setNaoLidas] = useState(0);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -67,6 +70,12 @@ function CustomDrawerContent(props) {
       }
     };
     loadUser();
+  }, []);
+
+  useEffect(() => {
+    if (!auth.currentUser?.uid) return;
+    const unsub = subscribeContadorNaoLidas(auth.currentUser.uid, setNaoLidas);
+    return unsub;
   }, []);
 
   const handleLogout = async () => {
@@ -110,6 +119,33 @@ function CustomDrawerContent(props) {
           {ROLE_LABELS[role] || ROLE_LABELS[ROLES.USER]}
         </Text>
         <Text style={styles.tapHint}>toque para ver perfil</Text>
+      </TouchableOpacity>
+
+      {/* Sininho de notificações */}
+      <TouchableOpacity
+        style={styles.bellRow}
+        onPress={() => {
+          props.navigation.closeDrawer();
+          props.navigation.navigate(ROUTES.NOTIFICATIONS);
+        }}
+      >
+        <Ionicons
+          name="notifications-outline"
+          size={20}
+          color={naoLidas > 0 ? COLORS.PRIMARY : COLORS.GRAY}
+        />
+        <Text
+          style={[styles.bellLabel, naoLidas > 0 && { color: COLORS.PRIMARY }]}
+        >
+          Notificações
+        </Text>
+        {naoLidas > 0 && (
+          <View style={styles.bellBadge}>
+            <Text style={styles.bellBadgeText}>
+              {naoLidas > 99 ? '99+' : naoLidas}
+            </Text>
+          </View>
+        )}
       </TouchableOpacity>
 
       <View style={styles.menu}>
@@ -233,6 +269,10 @@ export default function DrawerNavigator() {
         name={ROUTES.SUPPORT_TICKETS}
         component={SupportTicketsScreen}
       />
+      <Drawer.Screen
+        name={ROUTES.NOTIFICATIONS}
+        component={NotificacoesScreen}
+      />
     </Drawer.Navigator>
   );
 }
@@ -285,6 +325,27 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 4,
   },
+  bellRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    borderRadius: 12,
+    backgroundColor: '#111',
+  },
+  bellLabel: { color: COLORS.GRAY, fontSize: 14, flex: 1 },
+  bellBadge: {
+    backgroundColor: COLORS.PRIMARY,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+  },
+  bellBadgeText: { color: COLORS.BLACK, fontSize: 11, fontWeight: 'bold' },
   userName: {
     color: COLORS.WHITE,
     fontSize: 18,

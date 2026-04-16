@@ -17,5 +17,6 @@ export const ROUTES = {
   SUPPORT_REGISTER: 'SupportRegister',
   SUPPORT_TICKETS: 'SupportTickets',
   DATASET_VALIDATION: 'DatasetValidation',
+  NOTIFICATIONS: 'Notifications',
   QUICK_GUIDE: 'QuickGuide',
 };

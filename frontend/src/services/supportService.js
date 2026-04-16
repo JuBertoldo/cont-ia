@@ -1,6 +1,11 @@
 import { auth, db } from '../config/firebaseConfig';
 import { apiClient } from './apiClient';
 import {
+  criarNotificacao,
+  criarNotificacaoParaRole,
+  NOTIF_TIPOS,
+} from './notificationService';
+import {
   collection,
   addDoc,
   getDocs,
@@ -186,6 +191,24 @@ export const createTicket = async ({ titulo, descricao, tipo }) => {
     updatedAt: serverTimestamp(),
   });
 
+  // Notifica todos os Support + Super Admin sobre o novo chamado
+  Promise.all([
+    criarNotificacaoParaRole(
+      'support',
+      NOTIF_TIPOS.CHAMADO_ABERTO,
+      `Novo chamado ${numero}`,
+      `${empresaNome} abriu: ${titulo.trim()}`,
+      { ticketId: ref.id, numero, rota: 'SupportTickets' },
+    ),
+    criarNotificacaoParaRole(
+      'super_admin',
+      NOTIF_TIPOS.CHAMADO_ABERTO,
+      `Novo chamado ${numero}`,
+      `${empresaNome} abriu: ${titulo.trim()}`,
+      { ticketId: ref.id, numero, rota: 'SupportTickets' },
+    ),
+  ]).catch(() => {});
+
   return { id: ref.id, numero };
 };
 
@@ -278,6 +301,27 @@ export const respondTicket = async (ticketId, { status, resposta }) => {
   }
 
   await updateDoc(doc(db, 'chamados', ticketId), updates);
+
+  // Notifica o admin via sininho in-app
+  if (ticket.adminId) {
+    const _STATUS_LABELS = {
+      em_andamento: 'Em andamento',
+      aguardando_cliente: 'Aguardando sua resposta',
+      resolvido: 'Resolvido ✓',
+      aberto: 'Reaberto',
+    };
+    criarNotificacao(
+      ticket.adminId,
+      resposta?.trim()
+        ? NOTIF_TIPOS.TICKET_RESPONDIDO
+        : NOTIF_TIPOS.TICKET_ATUALIZADO,
+      `Chamado ${ticket.numero} — ${_STATUS_LABELS[status] ?? status}`,
+      resposta?.trim()
+        ? `${nome || 'Suporte'}: ${resposta.trim()}`
+        : `Status atualizado para "${_STATUS_LABELS[status] ?? status}"`,
+      { ticketId, numero: ticket.numero, rota: 'Support' },
+    ).catch(() => {});
+  }
 
   // Notifica o admin por e-mail + push notification (falha silenciosa)
   if (ticket.adminEmail) {
