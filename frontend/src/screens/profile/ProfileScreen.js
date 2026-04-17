@@ -8,8 +8,10 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  KeyboardAvoidingView,
   Image,
   Switch,
+  Platform,
   useWindowDimensions,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -121,177 +123,191 @@ export default function ProfileScreen({ navigation }) {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.content, isTablet && styles.contentTablet]}
-      showsVerticalScrollIndicator={false}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.iconBtn}
-        >
-          <Ionicons name="arrow-back" size={28} color={COLORS.PRIMARY} />
-        </TouchableOpacity>
-        <Text style={[styles.title, isTablet && styles.titleTablet]}>
-          Meu Perfil
-        </Text>
-        <View style={{ width: 30 }} />
-      </View>
-
-      {/* Avatar */}
-      <View style={styles.avatarContainer}>
-        {photoURL ? (
-          <Image source={{ uri: photoURL }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Ionicons name="person-circle-outline" size={110} color="#666" />
-          </View>
-        )}
-        <TouchableOpacity
-          style={styles.cameraBtn}
-          onPress={pickImage}
-          disabled={saving}
-        >
-          <Ionicons name="camera-outline" size={20} color={COLORS.BLACK} />
-        </TouchableOpacity>
-      </View>
-
-      {role === 'super_admin' ? (
-        <View style={[styles.adminBadge, { backgroundColor: '#9333ea' }]}>
-          <Ionicons name="globe-outline" size={18} color={COLORS.WHITE} />
-          <Text style={[styles.adminText, { color: COLORS.WHITE }]}>
-            Super Admin
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[
+          styles.content,
+          isTablet && styles.contentTablet,
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.iconBtn}
+          >
+            <Ionicons name="arrow-back" size={28} color={COLORS.PRIMARY} />
+          </TouchableOpacity>
+          <Text style={[styles.title, isTablet && styles.titleTablet]}>
+            Meu Perfil
           </Text>
+          <View style={{ width: 30 }} />
         </View>
-      ) : role === 'admin' ? (
-        <View style={styles.adminBadge}>
-          <Ionicons
-            name="shield-checkmark-outline"
-            size={18}
-            color={COLORS.BLACK}
-          />
-          <Text style={styles.adminText}>Perfil admin</Text>
-        </View>
-      ) : (
-        <Text style={styles.userText}>Perfil usuário</Text>
-      )}
 
-      {/* Dados pessoais */}
-      <View style={styles.formCard}>
-        <Text style={styles.label}>Nome</Text>
-        <TextInput
-          style={[styles.input, isTablet && styles.inputTablet]}
-          value={userName}
-          onChangeText={setUserName}
-          placeholder="Digite seu nome"
-          placeholderTextColor="#666"
-        />
-        <TouchableOpacity
-          style={styles.saveBtn}
-          onPress={handleSaveName}
-          disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator color={COLORS.BLACK} />
+        {/* Avatar */}
+        <View style={styles.avatarContainer}>
+          {photoURL ? (
+            <Image source={{ uri: photoURL }} style={styles.avatar} />
           ) : (
-            <Text style={styles.saveText}>SALVAR NOME</Text>
+            <View style={styles.avatarPlaceholder}>
+              <Ionicons name="person-circle-outline" size={110} color="#666" />
+            </View>
           )}
-        </TouchableOpacity>
-
-        <Text style={styles.label}>E-mail</Text>
-        <TextInput
-          style={[
-            styles.input,
-            styles.readOnlyInput,
-            isTablet && styles.inputTablet,
-          ]}
-          value={email}
-          editable={false}
-        />
-
-        {!!matricula && (
-          <>
-            <Text style={styles.label}>Matrícula</Text>
-            <TextInput
-              style={[
-                styles.input,
-                styles.readOnlyInput,
-                isTablet && styles.inputTablet,
-              ]}
-              value={matricula}
-              editable={false}
-            />
-          </>
-        )}
-      </View>
-
-      {/* Empresa */}
-      {empresa && (
-        <View style={styles.empresaCard}>
-          <Ionicons name="business-outline" size={20} color={COLORS.PRIMARY} />
-          <View style={styles.empresaInfo}>
-            <Text style={styles.empresaNome}>{empresa.nome}</Text>
-            {role === 'admin' && (
-              <View style={styles.codigoRow}>
-                <Text style={styles.codigoLabel}>Código de acesso: </Text>
-                <Text style={styles.codigoCodigo}>{empresa.codigo}</Text>
-                <Text style={styles.codigoHint}>
-                  {' '}
-                  (compartilhe com novos usuários)
-                </Text>
-              </View>
-            )}
-          </View>
+          <TouchableOpacity
+            style={styles.cameraBtn}
+            onPress={pickImage}
+            disabled={saving}
+          >
+            <Ionicons name="camera-outline" size={20} color={COLORS.BLACK} />
+          </TouchableOpacity>
         </View>
-      )}
 
-      {/* Notificações push */}
-      <View style={styles.pushRow}>
-        <View style={styles.pushInfo}>
-          <Ionicons
-            name="notifications-outline"
-            size={20}
-            color={COLORS.PRIMARY}
-          />
-          <View>
-            <Text style={styles.pushLabel}>Notificações push</Text>
-            <Text style={styles.pushHint}>
-              {pushAtivo
-                ? 'Ativas no seu celular'
-                : 'Só notificações no app (sininho)'}
+        {role === 'super_admin' ? (
+          <View style={[styles.adminBadge, { backgroundColor: '#9333ea' }]}>
+            <Ionicons name="globe-outline" size={18} color={COLORS.WHITE} />
+            <Text style={[styles.adminText, { color: COLORS.WHITE }]}>
+              Super Admin
             </Text>
           </View>
-        </View>
-        <Switch
-          value={pushAtivo}
-          onValueChange={async value => {
-            setPushAtivo(value);
-            if (value) {
-              const ok = await ativarPushNotifications();
-              if (!ok) {
-                setPushAtivo(false);
-                Alert.alert(
-                  'Push indisponível',
-                  'Instale o módulo de push e configure as permissões nas configurações do telefone.',
-                );
-              }
-            } else {
-              await desativarPushNotifications();
-            }
-          }}
-          trackColor={{ false: '#333', true: COLORS.PRIMARY + '88' }}
-          thumbColor={pushAtivo ? COLORS.PRIMARY : '#555'}
-        />
-      </View>
+        ) : role === 'admin' ? (
+          <View style={styles.adminBadge}>
+            <Ionicons
+              name="shield-checkmark-outline"
+              size={18}
+              color={COLORS.BLACK}
+            />
+            <Text style={styles.adminText}>Perfil admin</Text>
+          </View>
+        ) : (
+          <Text style={styles.userText}>Perfil usuário</Text>
+        )}
 
-      <View style={styles.versionBlock}>
-        <Text style={styles.version}>Cont.IA v1.0.0</Text>
-        <Text style={styles.tagline}>
-          Contagem e identificação visual instantânea para o seu negócio
-        </Text>
-      </View>
-    </ScrollView>
+        {/* Dados pessoais */}
+        <View style={styles.formCard}>
+          <Text style={styles.label}>Nome</Text>
+          <TextInput
+            style={[styles.input, isTablet && styles.inputTablet]}
+            value={userName}
+            onChangeText={setUserName}
+            placeholder="Digite seu nome"
+            placeholderTextColor="#666"
+          />
+          <TouchableOpacity
+            style={styles.saveBtn}
+            onPress={handleSaveName}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color={COLORS.BLACK} />
+            ) : (
+              <Text style={styles.saveText}>SALVAR NOME</Text>
+            )}
+          </TouchableOpacity>
+
+          <Text style={styles.label}>E-mail</Text>
+          <TextInput
+            style={[
+              styles.input,
+              styles.readOnlyInput,
+              isTablet && styles.inputTablet,
+            ]}
+            value={email}
+            editable={false}
+          />
+
+          {!!matricula && (
+            <>
+              <Text style={styles.label}>Matrícula</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.readOnlyInput,
+                  isTablet && styles.inputTablet,
+                ]}
+                value={matricula}
+                editable={false}
+              />
+            </>
+          )}
+        </View>
+
+        {/* Empresa */}
+        {empresa && (
+          <View style={styles.empresaCard}>
+            <Ionicons
+              name="business-outline"
+              size={20}
+              color={COLORS.PRIMARY}
+            />
+            <View style={styles.empresaInfo}>
+              <Text style={styles.empresaNome}>{empresa.nome}</Text>
+              {role === 'admin' && (
+                <View style={styles.codigoRow}>
+                  <Text style={styles.codigoLabel}>Código de acesso: </Text>
+                  <Text style={styles.codigoCodigo}>{empresa.codigo}</Text>
+                  <Text style={styles.codigoHint}>
+                    {' '}
+                    (compartilhe com novos usuários)
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Notificações push */}
+        <View style={styles.pushRow}>
+          <View style={styles.pushInfo}>
+            <Ionicons
+              name="notifications-outline"
+              size={20}
+              color={COLORS.PRIMARY}
+            />
+            <View>
+              <Text style={styles.pushLabel}>Notificações push</Text>
+              <Text style={styles.pushHint}>
+                {pushAtivo
+                  ? 'Ativas no seu celular'
+                  : 'Só notificações no app (sininho)'}
+              </Text>
+            </View>
+          </View>
+          <Switch
+            value={pushAtivo}
+            onValueChange={async value => {
+              setPushAtivo(value);
+              if (value) {
+                const ok = await ativarPushNotifications();
+                if (!ok) {
+                  setPushAtivo(false);
+                  Alert.alert(
+                    'Push indisponível',
+                    'Instale o módulo de push e configure as permissões nas configurações do telefone.',
+                  );
+                }
+              } else {
+                await desativarPushNotifications();
+              }
+            }}
+            trackColor={{ false: '#333', true: COLORS.PRIMARY + '88' }}
+            thumbColor={pushAtivo ? COLORS.PRIMARY : '#555'}
+          />
+        </View>
+
+        <View style={styles.versionBlock}>
+          <Text style={styles.version}>Cont.IA v1.0.0</Text>
+          <Text style={styles.tagline}>
+            Contagem e identificação visual instantânea para o seu negócio
+          </Text>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
