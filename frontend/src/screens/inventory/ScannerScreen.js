@@ -789,7 +789,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     padding: 20,
     paddingBottom: 36,
-    maxHeight: '50%',
+    minHeight: 260,
+    maxHeight: '60%',
   },
   modalPanelHandle: {
     width: 40,
@@ -805,7 +806,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 12,
   },
-  modalBody: { maxHeight: 160 },
+  modalBody: { maxHeight: 200 },
   resultRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -860,7 +861,13 @@ const styles = StyleSheet.create({
   },
   totalLabel: { color: COLORS.GRAY, fontWeight: 'bold' },
   totalValue: { color: COLORS.PRIMARY, fontWeight: 'bold', fontSize: 16 },
-  noResultBox: { alignItems: 'center', paddingVertical: 24, gap: 12 },
+  noResultBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    gap: 12,
+    minHeight: 120,
+  },
   noResultText: { color: COLORS.GRAY, textAlign: 'center', lineHeight: 22 },
   modalActions: { flexDirection: 'row', gap: 12, marginTop: 14 },
   btnCancel: {
