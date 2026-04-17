@@ -36,18 +36,21 @@ node "Servidor de Producao\n(Hetzner VPS / Railway)" as SERVER {
         component "API REST\nFastAPI + Uvicorn" as API
         component "YOLO11m\n(Ultralytics — CPU)" as YOLO
         component "NMS Ensemble\n(merge por classe)" as NMS
-        component "E-mail Service\n(SMTP / Gmail)" as EMAIL
-        component "Push Service\n(Firebase Admin SDK)" as PUSH
 
         API --> YOLO : detect(image)
         API --> NMS : merge(yolo, rfdetr)
-        API --> EMAIL : notify ticket
-        API --> PUSH : send FCM
         YOLO --> NMS : deteccoes locais
     }
 
     component "Cloudflare Tunnel\n(URL publica permanente)" as TUNNEL
     TUNNEL --> API : HTTPS → HTTP interno
+}
+
+' ── Servicos de Notificacao (externos, acionados pelo backend) ───────────────
+
+node "Notificacoes\n(Servicos Externos)" as NOTIF {
+    component "Gmail SMTP\nsmtp.gmail.com:587\n(e-mail de tickets)" as GMAIL
+    component "Firebase Cloud Messaging\n(push notifications)" as FCM
 }
 
 ' ── Roboflow (API externa) ───────────────────────────────────────────────────
@@ -74,6 +77,9 @@ API --> APP : JSON {detections[], meta}
 
 APP --> AUTH : login / getIdToken
 AUTH --> API : verify_id_token() [Admin SDK]
+
+API --> GMAIL : smtplib STARTTLS\n(alerta de ticket)
+API --> FCM : Firebase Admin SDK\n(push — aguarda APNs)
 
 APP --> FS : onSnapshot / addDoc\n(tempo real)
 APP --> STORAGE : uploadString(base64)\ngetDownloadURL()
