@@ -10,6 +10,8 @@ import {
   TextInput,
   Modal,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import Geolocation from '@react-native-community/geolocation';
@@ -503,167 +505,173 @@ export default function ScannerScreen() {
             <Ionicons name="close" size={22} color={COLORS.WHITE} />
           </TouchableOpacity>
 
-          {/* Painel inferior com resultados */}
-          <View style={styles.modalPanel}>
-            <View style={styles.modalPanelHandle} />
-            <Text style={styles.modalTitle}>Resultado da Contagem</Text>
+          {/* Painel inferior com resultados — sobe quando teclado abre */}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            <View style={styles.modalPanel}>
+              <View style={styles.modalPanelHandle} />
+              <Text style={styles.modalTitle}>Resultado da Contagem</Text>
 
-            {detectionResult?.summary?.itens?.length > 0 ? (
-              <ScrollView
-                style={styles.modalBody}
-                showsVerticalScrollIndicator={false}
-              >
-                {detectionResult.summary.itens.map((item, idx) => {
-                  const firstDet = detectionResult.detections.find(
-                    d => d.label === item.label,
-                  );
-                  const corrected = labelOverrides[item.label];
-                  const displayName = corrected ?? translateLabel(item.label);
-                  const isEditing = editingLabel === item.label;
+              {detectionResult?.summary?.itens?.length > 0 ? (
+                <ScrollView
+                  style={styles.modalBody}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {detectionResult.summary.itens.map((item, idx) => {
+                    const firstDet = detectionResult.detections.find(
+                      d => d.label === item.label,
+                    );
+                    const corrected = labelOverrides[item.label];
+                    const displayName = corrected ?? translateLabel(item.label);
+                    const isEditing = editingLabel === item.label;
 
-                  return (
-                    <View key={idx} style={styles.resultRow}>
-                      <BBoxCrop
-                        base64={detectionResult.base64}
-                        bbox={firstDet?.bbox}
-                        imgWidth={detectionResult.imageWidth}
-                        imgHeight={detectionResult.imageHeight}
-                      />
-                      <View style={styles.resultMid}>
-                        {isEditing ? (
-                          <View style={styles.editRow}>
-                            <TextInput
-                              style={styles.editInput}
-                              value={editText}
-                              onChangeText={setEditText}
-                              autoFocus
-                              placeholder="Nome correto..."
-                              placeholderTextColor="#555"
-                              onSubmitEditing={confirmEditLabel}
-                            />
+                    return (
+                      <View key={idx} style={styles.resultRow}>
+                        <BBoxCrop
+                          base64={detectionResult.base64}
+                          bbox={firstDet?.bbox}
+                          imgWidth={detectionResult.imageWidth}
+                          imgHeight={detectionResult.imageHeight}
+                        />
+                        <View style={styles.resultMid}>
+                          {isEditing ? (
+                            <View style={styles.editRow}>
+                              <TextInput
+                                style={styles.editInput}
+                                value={editText}
+                                onChangeText={setEditText}
+                                autoFocus
+                                placeholder="Nome correto..."
+                                placeholderTextColor="#555"
+                                onSubmitEditing={confirmEditLabel}
+                              />
+                              <TouchableOpacity
+                                onPress={confirmEditLabel}
+                                style={styles.editBtn}
+                              >
+                                <Ionicons
+                                  name="checkmark"
+                                  size={18}
+                                  color={COLORS.PRIMARY}
+                                />
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                onPress={cancelEditLabel}
+                                style={styles.editBtn}
+                              >
+                                <Ionicons
+                                  name="close"
+                                  size={18}
+                                  color={COLORS.GRAY}
+                                />
+                              </TouchableOpacity>
+                            </View>
+                          ) : (
                             <TouchableOpacity
-                              onPress={confirmEditLabel}
-                              style={styles.editBtn}
+                              style={styles.labelRow}
+                              onPress={() =>
+                                startEditLabel(
+                                  item.label,
+                                  translateLabel(item.label),
+                                )
+                              }
                             >
-                              <Ionicons
-                                name="checkmark"
-                                size={18}
-                                color={COLORS.PRIMARY}
-                              />
+                              <Text
+                                style={[
+                                  styles.resultLabel,
+                                  corrected && styles.resultLabelFixed,
+                                ]}
+                              >
+                                {displayName}
+                              </Text>
+                              {corrected ? (
+                                <View style={styles.correctedBadge}>
+                                  <Text style={styles.correctedBadgeText}>
+                                    corrigido
+                                  </Text>
+                                </View>
+                              ) : (
+                                <Ionicons
+                                  name="pencil-outline"
+                                  size={13}
+                                  color={COLORS.GRAY}
+                                  style={{ marginLeft: 4 }}
+                                />
+                              )}
                             </TouchableOpacity>
-                            <TouchableOpacity
-                              onPress={cancelEditLabel}
-                              style={styles.editBtn}
-                            >
-                              <Ionicons
-                                name="close"
-                                size={18}
-                                color={COLORS.GRAY}
-                              />
-                            </TouchableOpacity>
-                          </View>
-                        ) : (
-                          <TouchableOpacity
-                            style={styles.labelRow}
-                            onPress={() =>
-                              startEditLabel(
-                                item.label,
-                                translateLabel(item.label),
-                              )
-                            }
-                          >
-                            <Text
-                              style={[
-                                styles.resultLabel,
-                                corrected && styles.resultLabelFixed,
-                              ]}
-                            >
-                              {displayName}
-                            </Text>
-                            {corrected ? (
-                              <View style={styles.correctedBadge}>
-                                <Text style={styles.correctedBadgeText}>
-                                  corrigido
-                                </Text>
-                              </View>
-                            ) : (
-                              <Ionicons
-                                name="pencil-outline"
-                                size={13}
-                                color={COLORS.GRAY}
-                                style={{ marginLeft: 4 }}
-                              />
-                            )}
-                          </TouchableOpacity>
-                        )}
-                        <Text style={styles.resultConf}>
-                          {Math.round((item.confiancaMedia ?? 0) * 100)}%
-                          {corrected
-                            ? ` · YOLO: "${translateLabel(item.label)}"`
-                            : ''}
-                        </Text>
+                          )}
+                          <Text style={styles.resultConf}>
+                            {Math.round((item.confiancaMedia ?? 0) * 100)}%
+                            {corrected
+                              ? ` · YOLO: "${translateLabel(item.label)}"`
+                              : ''}
+                          </Text>
+                        </View>
+                        <View style={styles.resultBadge}>
+                          <Text style={styles.resultQtd}>
+                            {item.quantidade}x
+                          </Text>
+                        </View>
                       </View>
-                      <View style={styles.resultBadge}>
-                        <Text style={styles.resultQtd}>{item.quantidade}x</Text>
-                      </View>
-                    </View>
-                  );
-                })}
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Total detectado</Text>
-                  <Text style={styles.totalValue}>
-                    {detectionResult.summary.totalGeral}{' '}
-                    {detectionResult.summary.totalGeral !== 1
-                      ? 'itens'
-                      : 'item'}
+                    );
+                  })}
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Total detectado</Text>
+                    <Text style={styles.totalValue}>
+                      {detectionResult.summary.totalGeral}{' '}
+                      {detectionResult.summary.totalGeral !== 1
+                        ? 'itens'
+                        : 'item'}
+                    </Text>
+                  </View>
+                </ScrollView>
+              ) : (
+                <View style={styles.noResultBox}>
+                  <Ionicons
+                    name="alert-circle-outline"
+                    size={48}
+                    color={COLORS.GRAY}
+                  />
+                  <Text style={styles.noResultText}>
+                    Nenhum item reconhecido.{'\n'}Tente uma foto com melhor
+                    iluminação.
                   </Text>
                 </View>
-              </ScrollView>
-            ) : (
-              <View style={styles.noResultBox}>
-                <Ionicons
-                  name="alert-circle-outline"
-                  size={48}
-                  color={COLORS.GRAY}
-                />
-                <Text style={styles.noResultText}>
-                  Nenhum item reconhecido.{'\n'}Tente uma foto com melhor
-                  iluminação.
-                </Text>
+              )}
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.btnCancel}
+                  onPress={handleCancelModal}
+                  disabled={saving}
+                >
+                  <Text style={styles.btnCancelText}>Refazer foto</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.btnConfirm, saving && { opacity: 0.7 }]}
+                  onPress={handleConfirmSave}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator color={COLORS.BLACK} size="small" />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name="checkmark-outline"
+                        size={18}
+                        color={COLORS.BLACK}
+                      />
+                      <Text style={styles.btnConfirmText}>
+                        Confirmar e Salvar
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               </View>
-            )}
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.btnCancel}
-                onPress={handleCancelModal}
-                disabled={saving}
-              >
-                <Text style={styles.btnCancelText}>Refazer foto</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.btnConfirm, saving && { opacity: 0.7 }]}
-                onPress={handleConfirmSave}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator color={COLORS.BLACK} size="small" />
-                ) : (
-                  <>
-                    <Ionicons
-                      name="checkmark-outline"
-                      size={18}
-                      color={COLORS.BLACK}
-                    />
-                    <Text style={styles.btnConfirmText}>
-                      Confirmar e Salvar
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </View>
