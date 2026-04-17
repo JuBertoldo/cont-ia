@@ -25,7 +25,6 @@ import {
   limit,
   orderBy,
 } from 'firebase/firestore';
-import messaging from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
 import { auth, db } from '../config/firebaseConfig';
 import { COLLECTIONS } from '../constants/collections';
@@ -204,67 +203,18 @@ export async function marcarTodasComoLidas(uid) {
  * iOS: exibe o popup nativo "Deseja receber notificações?"
  * Android 13+: solicita POST_NOTIFICATIONS automaticamente.
  */
+/**
+ * Ativa push notifications — requer @react-native-firebase/messaging
+ * e chave APNs no Firebase Console (stand-by até Apple Developer).
+ * As notificações in-app (sininho) funcionam sem este setup.
+ */
 export async function ativarPushNotifications() {
-  const uid = auth.currentUser?.uid;
-  if (!uid) return false;
-
-  try {
-    const status = await messaging().requestPermission();
-    const authorized =
-      status === messaging.AuthorizationStatus.AUTHORIZED ||
-      status === messaging.AuthorizationStatus.PROVISIONAL;
-
-    if (!authorized) {
-      logger.info('Push: permissão negada pelo usuário.');
-      return false;
-    }
-
-    const token = await messaging().getToken();
-    if (token) {
-      await salvarTokenFCM(uid, token, true);
-      // Atualiza o token automaticamente quando o FCM o rotaciona
-      messaging().onTokenRefresh(novoToken =>
-        salvarTokenFCM(uid, novoToken, true),
-      );
-      logger.info('FCM token salvo | uid=%s platform=%s', uid, Platform.OS);
-      return true;
-    }
-
-    return false;
-  } catch (error) {
-    logger.warning('Erro ao ativar push: %s', error);
-    return false;
-  }
+  logger.debug('Push notifications: aguardando APNs key (Apple Developer).');
+  return false;
 }
 
-/**
- * Configura listeners para notificações recebidas (chamar no App.js).
- * Retorna função de cleanup para o useEffect.
- */
-export function configurarListenersPush(onNotificacao) {
-  // App em foreground
-  const unsubForeground = messaging().onMessage(async remoteMessage => {
-    logger.info(
-      'Push recebido (foreground):',
-      remoteMessage.notification?.title,
-    );
-    if (onNotificacao) onNotificacao(remoteMessage);
-  });
-
-  // App em background — aberto via toque na notificação
-  messaging().onNotificationOpenedApp(remoteMessage => {
-    logger.info('App aberto via push:', remoteMessage.notification?.title);
-    if (onNotificacao) onNotificacao(remoteMessage);
-  });
-
-  // App estava fechado — aberto pela notificação
-  messaging()
-    .getInitialNotification()
-    .then(remoteMessage => {
-      if (remoteMessage && onNotificacao) onNotificacao(remoteMessage);
-    });
-
-  return unsubForeground;
+export function configurarListenersPush(_onNotificacao) {
+  return () => {};
 }
 
 export async function desativarPushNotifications() {
