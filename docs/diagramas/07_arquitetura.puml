@@ -30,7 +30,7 @@ node "Dispositivo Movel\n(iOS / Android)" as MOBILE {
 
 ' ── Infraestrutura do Backend ────────────────────────────────────────────────
 
-node "Servidor de Producao\n(Hetzner VPS / Railway)" as SERVER {
+node "Servidor Local\n(Mac — Docker)" as SERVER {
 
     node "Docker Container\n(python:3.11-slim)" as DOCKER {
         component "API REST\nFastAPI + Uvicorn" as API
@@ -42,7 +42,7 @@ node "Servidor de Producao\n(Hetzner VPS / Railway)" as SERVER {
         YOLO --> NMS : deteccoes locais
     }
 
-    component "Cloudflare Tunnel\n(URL publica permanente)" as TUNNEL
+    component "ngrok\n(URL publica de desenvolvimento)" as TUNNEL
     TUNNEL --> API : HTTPS → HTTP interno
 }
 
@@ -92,9 +92,9 @@ note bottom of DOCKER
 end note
 
 note bottom of TUNNEL
-  Substitui ngrok com URL
-  permanente e gratuita.
-  Sem abrir porta no roteador.
+  Expoe o backend local
+  para o app mobile via
+  URL publica temporaria.
 end note
 
 @enduml
