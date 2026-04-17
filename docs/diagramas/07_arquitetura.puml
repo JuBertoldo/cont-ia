@@ -48,9 +48,8 @@ node "Servidor de Producao\n(Hetzner VPS / Railway)" as SERVER {
 
 ' ── Servicos de Notificacao (externos, acionados pelo backend) ───────────────
 
-node "Notificacoes\n(Servicos Externos)" as NOTIF {
-    component "Gmail SMTP\nsmtp.gmail.com:587\n(e-mail de tickets)" as GMAIL
-    component "Firebase Cloud Messaging\n(push notifications)" as FCM
+node "E-mail\n(Servico Externo)" as NOTIF {
+    component "Gmail SMTP\nsmtp.gmail.com:587\n(alertas de ticket)" as GMAIL
 }
 
 ' ── Roboflow (API externa) ───────────────────────────────────────────────────
@@ -79,7 +78,6 @@ APP --> AUTH : login / getIdToken
 AUTH --> API : verify_id_token() [Admin SDK]
 
 API --> GMAIL : smtplib STARTTLS\n(alerta de ticket)
-API --> FCM : Firebase Admin SDK\n(push — aguarda APNs)
 
 APP --> FS : onSnapshot / addDoc\n(tempo real)
 APP --> STORAGE : uploadString(base64)\ngetDownloadURL()
