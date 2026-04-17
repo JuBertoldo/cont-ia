@@ -18,37 +18,79 @@ skinparam databaseFontColor #E65100
 
 left to right direction
 
-node "📱 Dispositivo Móvel\n(iOS / Android)" as MOBILE {
-    component "App Cont.IA\n(React Native)" as APP
-    component "Câmera / Galeria" as CAM
+' ── App Mobile ───────────────────────────────────────────────────────────────
+
+node "Dispositivo Movel\n(iOS / Android)" as MOBILE {
+    component "App Cont.IA\n(React Native 0.84)" as APP
+    component "Camera / Galeria" as CAM
     component "GPS" as GPS
     CAM --> APP : captura imagem
     GPS --> APP : coordenadas
 }
 
-node "⚙️ Backend\n(FastAPI + Python)" as BACKEND {
-    component "API REST\n/v1/detect" as API
-    component "YOLO11\n(Ultralytics)" as YOLO
-    component "Roboflow\n(RF-DETR)" as RF
-    component "NMS\nEnsemble" as NMS
-    API --> YOLO : processa\nimagem
-    API --> RF : processa\nimagem
-    YOLO --> NMS : detecções
-    RF --> NMS : detecções
+' ── Infraestrutura do Backend ────────────────────────────────────────────────
+
+node "Servidor de Producao\n(Hetzner VPS / Railway)" as SERVER {
+
+    node "Docker Container\n(python:3.11-slim)" as DOCKER {
+        component "API REST\nFastAPI + Uvicorn" as API
+        component "YOLO11m\n(Ultralytics — CPU)" as YOLO
+        component "NMS Ensemble\n(merge por classe)" as NMS
+        component "E-mail Service\n(SMTP / Gmail)" as EMAIL
+        component "Push Service\n(Firebase Admin SDK)" as PUSH
+
+        API --> YOLO : detect(image)
+        API --> NMS : merge(yolo, rfdetr)
+        API --> EMAIL : notify ticket
+        API --> PUSH : send FCM
+        YOLO --> NMS : deteccoes locais
+    }
+
+    component "Cloudflare Tunnel\n(URL publica permanente)" as TUNNEL
+    TUNNEL --> API : HTTPS → HTTP interno
 }
 
-node "☁️ Firebase\n(Google Cloud)" as FIREBASE {
-    database "Cloud Firestore\n(Registros)" as FS
-    database "Cloud Storage\n(Imagens)" as STORAGE
-    component "Firebase Auth\n(Autenticação)" as AUTH
+' ── Roboflow (API externa) ───────────────────────────────────────────────────
+
+node "Roboflow\n(API Cloud)" as ROBOFLOW {
+    component "RF-DETR Workflow\n(smart-bottle-counting)" as RFDETR
 }
 
-APP --> API : HTTPS\nPOST /v1/detect\n(Base64 + JWT)
-NMS --> API : resultado\nfinal
-API --> APP : JSON\n{itens, total}
+' ── Firebase (Google Cloud) ──────────────────────────────────────────────────
 
-APP --> AUTH : login /\nvalidação
-APP --> FS : salva registro\nde contagem
-APP --> STORAGE : upload\nda imagem
+node "Firebase\n(Google Cloud)" as FIREBASE {
+    database "Cloud Firestore\n/usuarios /inventario\n/chamados /notificacoes\n/convites_suporte" as FS
+    database "Cloud Storage\nscans/{uid}/*.jpg" as STORAGE
+    component "Firebase Auth\n(JWT — email/password)" as AUTH
+}
+
+' ── Conexoes ─────────────────────────────────────────────────────────────────
+
+APP --> TUNNEL : HTTPS POST /v1/detect\n(Base64 + Bearer JWT)
+API --> RFDETR : inference-sdk\n(paralelo com YOLO)
+RFDETR --> NMS : deteccoes nuvem
+NMS --> API : resultado final
+API --> APP : JSON {detections[], meta}
+
+APP --> AUTH : login / getIdToken
+AUTH --> API : verify_id_token() [Admin SDK]
+
+APP --> FS : onSnapshot / addDoc\n(tempo real)
+APP --> STORAGE : uploadString(base64)\ngetDownloadURL()
+
+' ── Nota ─────────────────────────────────────────────────────────────────────
+
+note bottom of DOCKER
+  Docker resolve o problema do _lzma
+  no Python/pyenv do macOS.
+  Imagem: python:3.11-slim (lzma nativo).
+  Volumes: yolo11m.pt + firebase-service-account.json
+end note
+
+note bottom of TUNNEL
+  Substitui ngrok com URL
+  permanente e gratuita.
+  Sem abrir porta no roteador.
+end note
 
 @enduml
