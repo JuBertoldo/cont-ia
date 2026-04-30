@@ -40,17 +40,11 @@ export default function ForgotScreen({ navigation }) {
     setLoading(true);
     try {
       await resetPassword(cleanEmail);
-      setSent(true);
-    } catch (err) {
-      if (err.code === 'auth/user-not-found') {
-        Alert.alert('Erro', MESSAGES.EMAIL_NOT_FOUND);
-      } else if (err.code === 'auth/invalid-email') {
-        Alert.alert('Erro', MESSAGES.INVALID_EMAIL);
-      } else {
-        Alert.alert('Erro', MESSAGES.GENERIC_ERROR);
-      }
+    } catch {
+      // Erros são silenciados propositalmente para não revelar se o e-mail existe
     } finally {
       setLoading(false);
+      setSent(true);
     }
   };
 
@@ -229,5 +223,9 @@ const styles = StyleSheet.create({
   },
   backToLoginText: { color: COLORS.BLACK, fontWeight: 'bold', fontSize: 16 },
   resendBtn: { paddingVertical: 12 },
-  resendText: { color: COLORS.GRAY, fontSize: 14, textDecoration: 'underline' },
+  resendText: {
+    color: COLORS.GRAY,
+    fontSize: 14,
+    textDecorationLine: 'underline',
+  },
 });

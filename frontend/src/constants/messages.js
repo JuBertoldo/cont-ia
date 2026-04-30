@@ -4,7 +4,9 @@ export const MESSAGES = {
   EMAIL_ALREADY_EXISTS: 'Este e-mail já está cadastrado.',
   EMAIL_NOT_FOUND: 'E-mail não encontrado.',
   WRONG_PASSWORD: 'E-mail ou senha incorretos.',
+  INVALID_CREDENTIALS: 'E-mail ou senha incorretos.',
   WEAK_PASSWORD:
     'A senha deve ter no mínimo 8 caracteres, com número e caractere especial.',
+  PASSWORD_MISMATCH: 'As senhas não coincidem.',
   GENERIC_ERROR: 'Ocorreu um erro. Tente novamente.',
 };

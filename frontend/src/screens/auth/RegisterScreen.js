@@ -31,6 +31,9 @@ export default function RegisterScreen({ navigation }) {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [matricula, setMatricula] = useState('');
   const [codigoEmpresa, setCodigoEmpresa] = useState('');
   const [nomeEmpresa, setNomeEmpresa] = useState('');
@@ -79,8 +82,19 @@ export default function RegisterScreen({ navigation }) {
     const cleanEmail = email.trim();
     const cleanMatricula = matricula.trim();
 
-    if (!cleanName || !cleanEmail || !password || !cleanMatricula) {
+    if (
+      !cleanName ||
+      !cleanEmail ||
+      !password ||
+      !confirmPassword ||
+      !cleanMatricula
+    ) {
       Alert.alert('Atenção', MESSAGES.REQUIRED_FIELDS);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Atenção', MESSAGES.PASSWORD_MISMATCH);
       return;
     }
 
@@ -370,16 +384,65 @@ export default function RegisterScreen({ navigation }) {
                 autoCorrect={false}
               />
 
-              <TextInput
-                style={[styles.input, isTablet && styles.inputTablet]}
-                placeholder="Senha (mín. 8, 1 número, 1 especial)"
-                placeholderTextColor={COLORS.GRAY}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
+              <View
+                style={[
+                  styles.passwordWrapper,
+                  isTablet && styles.passwordWrapperTablet,
+                ]}
+              >
+                <TextInput
+                  style={[styles.passwordInput, isTablet && styles.inputTablet]}
+                  placeholder="Senha (mín. 8, 1 número, 1 especial)"
+                  placeholderTextColor={COLORS.GRAY}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowPassword(prev => !prev)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={22}
+                    color={COLORS.GRAY}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <View
+                style={[
+                  styles.passwordWrapper,
+                  isTablet && styles.passwordWrapperTablet,
+                ]}
+              >
+                <TextInput
+                  style={[styles.passwordInput, isTablet && styles.inputTablet]}
+                  placeholder="Confirmar senha"
+                  placeholderTextColor={COLORS.GRAY}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <TouchableOpacity
+                  style={styles.eyeBtn}
+                  onPress={() => setShowConfirmPassword(prev => !prev)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={
+                      showConfirmPassword ? 'eye-off-outline' : 'eye-outline'
+                    }
+                    size={22}
+                    color={COLORS.GRAY}
+                  />
+                </TouchableOpacity>
+              </View>
 
               <TouchableOpacity
                 style={[
@@ -537,6 +600,25 @@ const styles = StyleSheet.create({
   buttonTablet: { paddingVertical: 18 },
   buttonText: { color: COLORS.BLACK, fontSize: 16, fontWeight: 'bold' },
   buttonDisabled: { opacity: 0.4 },
+  passwordWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.DARK,
+    borderRadius: 12,
+    marginBottom: 14,
+  },
+  passwordWrapperTablet: { borderRadius: 14 },
+  passwordInput: {
+    flex: 1,
+    color: COLORS.WHITE,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    fontSize: 16,
+  },
+  eyeBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
   codeRow: {
     flexDirection: 'row',
     alignItems: 'center',

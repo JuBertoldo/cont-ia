@@ -24,11 +24,20 @@ import { MESSAGES } from '../../constants/messages';
 import { isValidEmail } from '../../utils/validators';
 import logger from '../../utils/logger';
 import { useAuth } from '../../hooks/useAuth';
-import { getUserStatus, logout } from '../../services/authService';
+import {
+  getUserStatus,
+  logout,
+  logLoginAudit,
+} from '../../services/authService';
+import {
+  checkLoginBlock,
+  recordFailedAttempt,
+  clearLoginAttempts,
+  MAX_LOGIN_ATTEMPTS,
+} from '../../services/loginAttemptService';
 import {
   getRememberEmailData,
   saveRememberEmailData,
-  updateSavedEmail,
 } from '../../services/rememberEmailService';
 
 export default function AuthHome() {
@@ -73,12 +82,8 @@ export default function AuthHome() {
     });
   };
 
-  const handleEmailChange = async value => {
+  const handleEmailChange = value => {
     setEmail(value);
-
-    if (rememberEmail) {
-      await updateSavedEmail(value);
-    }
   };
 
   const handleLogin = async () => {
@@ -96,18 +101,25 @@ export default function AuthHome() {
       return;
     }
 
-    try {
-      await saveRememberEmailData({
-        rememberEmail,
-        email: cleanEmail,
-      });
+    const { blocked, remainingMinutes } = await checkLoginBlock(cleanEmail);
+    if (blocked) {
+      Alert.alert(
+        'Acesso bloqueado',
+        `Conta bloqueada após ${MAX_LOGIN_ATTEMPTS} tentativas falhas. Tente novamente em ${remainingMinutes} minuto(s).`,
+      );
+      return;
+    }
 
+    try {
       const user = await login(cleanEmail, password);
+
+      await clearLoginAttempts(cleanEmail);
+
+      await saveRememberEmailData({ rememberEmail, email: cleanEmail });
 
       if (!rememberEmail) setEmail('');
       setPassword('');
 
-      // Verifica status da conta antes de liberar o acesso
       const status = await getUserStatus(user.uid);
 
       if (status === 'rejected') {
@@ -124,19 +136,31 @@ export default function AuthHome() {
         return;
       }
 
+      logLoginAudit(user.uid, true);
       navigation.replace(ROUTES.APP_DRAWER);
     } catch (error) {
       logger.error('Erro no login:', error);
 
       const code = error?.code;
 
-      if (code === 'auth/user-not-found') {
-        Alert.alert('Erro', MESSAGES.EMAIL_NOT_FOUND);
+      const { count, blocked: nowBlocked } = await recordFailedAttempt(
+        cleanEmail,
+      );
+
+      if (nowBlocked) {
+        Alert.alert(
+          'Acesso bloqueado',
+          `Conta bloqueada após ${MAX_LOGIN_ATTEMPTS} tentativas falhas. Tente novamente em 15 minuto(s).`,
+        );
       } else if (
+        code === 'auth/user-not-found' ||
         code === 'auth/wrong-password' ||
         code === 'auth/invalid-credential'
       ) {
-        Alert.alert('Erro', MESSAGES.WRONG_PASSWORD);
+        const remaining = MAX_LOGIN_ATTEMPTS - count;
+        const suffix =
+          remaining > 0 ? ` (${remaining} tentativa(s) restante(s))` : '';
+        Alert.alert('Erro', MESSAGES.INVALID_CREDENTIALS + suffix);
       } else if (code === 'auth/invalid-email') {
         Alert.alert('Erro', MESSAGES.INVALID_EMAIL);
       } else {

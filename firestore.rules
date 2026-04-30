@@ -130,6 +130,17 @@ service cloud.firestore {
         && resource.data.paraUid == request.auth.uid;
     }
 
+    // ── Auditoria de login (/login_audit/{docId}) ─────────────────────────────
+
+    match /login_audit/{docId} {
+      // Apenas o próprio usuário autenticado pode registrar seu login
+      allow create: if isAuthenticated()
+        && request.resource.data.uid == request.auth.uid;
+      // Leitura restrita a admins e super_admins ativos
+      allow read: if isActive() && (isAdmin() || isSuperAdmin());
+      allow update, delete: if false;
+    }
+
     // ── Convites de suporte (/convites_suporte/{email}) ───────────────────────
 
     match /convites_suporte/{email} {

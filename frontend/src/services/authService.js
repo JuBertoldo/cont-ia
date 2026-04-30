@@ -15,6 +15,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  addDoc,
   getDocs,
   collection,
   query,
@@ -60,24 +61,30 @@ export const registerWithEmail = async ({
       password,
     );
     const user = userCredential.user;
-    await updateProfile(user, { displayName: name });
 
-    const empresa = await createEmpresa(nomeEmpresa.trim(), user.uid);
-    empresaId = empresa.id;
+    try {
+      await updateProfile(user, { displayName: name });
 
-    await setDoc(doc(db, COLLECTIONS.USERS, user.uid), {
-      nome: name,
-      email,
-      matricula: cleanMatricula,
-      photoURL: '',
-      role: ROLES.ADMIN,
-      status: 'active',
-      empresaId,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+      const empresa = await createEmpresa(nomeEmpresa.trim(), user.uid);
+      empresaId = empresa.id;
 
-    return user;
+      await setDoc(doc(db, COLLECTIONS.USERS, user.uid), {
+        nome: name,
+        email,
+        matricula: cleanMatricula,
+        photoURL: '',
+        role: ROLES.ADMIN,
+        status: 'active',
+        empresaId,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      return user;
+    } catch (err) {
+      await user.delete().catch(() => {});
+      throw err;
+    }
   }
 
   if (!cleanCodigo) {
@@ -189,4 +196,16 @@ export const getIdToken = async (forceRefresh = false) => {
   const user = auth.currentUser;
   if (!user) throw new Error('Usuário não autenticado.');
   return firebaseGetIdToken(user, forceRefresh);
+};
+
+export const logLoginAudit = async (uid, success) => {
+  try {
+    await addDoc(collection(db, COLLECTIONS.LOGIN_AUDIT), {
+      uid,
+      success,
+      timestamp: serverTimestamp(),
+    });
+  } catch {
+    // falha no audit não deve bloquear o login
+  }
 };

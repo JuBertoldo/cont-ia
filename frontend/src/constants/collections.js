@@ -5,4 +5,5 @@ export const COLLECTIONS = {
   TICKETS: 'chamados',
   CONFIG: 'config',
   NOTIFICATIONS: 'notificacoes',
+  LOGIN_AUDIT: 'login_audit',
 };
