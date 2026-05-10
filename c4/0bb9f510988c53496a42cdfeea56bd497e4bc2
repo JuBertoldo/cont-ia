@@ -1,0 +1,19 @@
+CONTRIBUTING.md
+  s_39d5bc69090e8b::t_193925ef62a2e5 232,235,238-243,249-294
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.5",
+  "base_commit_sha": "c40bb9f510988c53496a42cdfeea56bd497e4bc2",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
