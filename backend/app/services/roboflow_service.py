@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from inference_sdk import InferenceHTTPClient
 
+from app.core.circuit_breaker import CircuitBreaker
 from app.core.config import settings
 from app.core.logging import get_logger
 
@@ -12,6 +13,13 @@ logger = get_logger(__name__)
 _rf_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="roboflow")
 
 _client: InferenceHTTPClient | None = None
+
+# Abre após 3 falhas consecutivas; testa reconexão após 60s
+_circuit_breaker = CircuitBreaker(
+    name="roboflow",
+    failure_threshold=3,
+    reset_timeout_s=60.0,
+)
 
 
 def _get_client() -> InferenceHTTPClient:
@@ -85,15 +93,26 @@ def _run_workflow(image_base64: str) -> list[dict]:
 async def detect_with_roboflow(image_base64: str) -> list[dict]:
     """
     Wrapper async: executa o workflow Roboflow no executor.
-    Retorna lista vazia se ROBOFLOW_API_KEY não estiver configurada.
+    Retorna lista vazia se ROBOFLOW_API_KEY não estiver configurada
+    ou se o circuit breaker estiver aberto.
     """
     if not settings.ROBOFLOW_API_KEY:
         logger.debug("ROBOFLOW_API_KEY não configurada — RF-DETR desativado.")
         return []
 
+    # Falha rápida: não tenta chamar o Roboflow se o circuito está aberto
+    if _circuit_breaker.is_open():
+        logger.warning(
+            "CircuitBreaker[roboflow] OPEN — ignorando chamada RF-DETR (usando só YOLO)."
+        )
+        return []
+
     try:
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(_rf_executor, _run_workflow, image_base64)
+        result = await loop.run_in_executor(_rf_executor, _run_workflow, image_base64)
+        _circuit_breaker.record_success()
+        return result
     except Exception as exc:
+        _circuit_breaker.record_failure()
         logger.warning("Roboflow workflow falhou — usando só YOLO: %s", exc)
         return []

@@ -35,10 +35,19 @@ fork
         :Extrair BBoxes +\nconfiança + labels;
     }
 fork again
-    partition "RF-DETR (Async)" {
-        :Chamar Roboflow\nInference API;
-        :Executar workflow\nremoto;
-        :Extrair BBoxes +\nconfiança + labels;
+    partition "RF-DETR (Async + Circuit Breaker)" {
+        if (Circuit Breaker OPEN?) then (Sim)
+            :Retornar lista vazia\n(falha rápida);
+        else (Não)
+            :Chamar Roboflow\nInference API;
+            if (Chamada OK?) then (Sim)
+                :record_success();
+                :Extrair BBoxes +\nconfiança + labels;
+            else (Falha)
+                :record_failure();
+                :Retornar lista vazia;
+            endif
+        endif
     }
 end fork
 

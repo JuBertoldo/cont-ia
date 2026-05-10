@@ -41,10 +41,11 @@ O **Cont.IA** é um aplicativo mobile multiplataforma que **identifica, classifi
 | Detecção IA | YOLO11m (Ultralytics) + RF-DETR (Roboflow) em ensemble |
 | Backend | Python 3.11 + FastAPI 0.115 |
 | Auth | Firebase Authentication |
-| Banco de dados | Cloud Firestore |
+| Banco de dados | Cloud Firestore (paginação + 9 índices compostos) |
 | Storage | Firebase Storage |
 | Containerização | Docker + Cloudflare Tunnel |
-| Observabilidade | Sentry (erros) + Prometheus `/metrics` |
+| Resiliência | Retry backoff exponencial · Queue offline · Circuit Breaker |
+| Observabilidade | Sentry (erros) + Prometheus `/metrics` + telemetria de inferência |
 | CI/CD | GitHub Actions (lint, testes, pip-audit, npm audit, secrets scan) |
 | Testes | pytest 80%+ (backend) · Jest 80%+ (frontend) · Detox E2E |
 
@@ -130,12 +131,15 @@ O sistema implementa **4 perfis** com permissões distintas:
 ### Scanner e Contagem
 - Captura via câmera ou galeria
 - Dois modelos de IA em paralelo: **YOLO11** (local) + **RF-DETR** (Roboflow)
-- Merge inteligente via **Non-Maximum Suppression (NMS)** — sem duplicatas
+- Merge inteligente por **label + IoU** — sem duplicatas, preserva objetos de classes diferentes
 - **GPS automático** + geocodificação reversa (OpenStreetMap)
 - Campo de local descritivo (ex: "Almoxarifado A")
 - Modal com recorte de cada objeto detectado e % de confiança
 - Edição inline de labels — correções viram dados de treinamento futuro
 - Realce automático em imagens escuras (PIL brightness/contrast)
+- **Retry automático** com backoff exponencial (3 tentativas: 500ms → 1s → 2s)
+- **Queue offline** — scans sem conexão são salvos localmente e sincronizados ao reconectar
+- **Circuit Breaker** no Roboflow — após 3 falhas consecutivas, bloqueia chamadas por 60s e continua com YOLO
 
 ### Histórico e Exportação
 - Filtros por período: Hoje / 7 / 30 / 60 / 90 dias

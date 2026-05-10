@@ -36,10 +36,13 @@ node "Servidor Local\n(Mac — Docker)" as SERVER {
         component "API REST\nFastAPI + Uvicorn" as API
         component "YOLO11m\n(Ultralytics — CPU)" as YOLO
         component "Ensemble\n(IoU merge por label)" as NMS
+        component "Circuit Breaker\n(Roboflow — 3 falhas → 60s off)" as CB
 
         API --> YOLO : detect(image)
+        API --> CB : guarda chamada RF-DETR
+        CB --> NMS : detecções RF-DETR (ou vazio se OPEN)
         API --> NMS : merge(yolo, rfdetr)
-        YOLO --> NMS : deteccoes locais
+        YOLO --> NMS : detecções locais
     }
 
     component "Cloudflare Tunnel / ngrok\n(URL pública — desenvolvimento)" as TUNNEL
@@ -85,6 +88,14 @@ API --> FCM_PUSH : Firebase Admin SDK\n(push notification)
 
 APP --> FS : onSnapshot / addDoc\n(tempo real)
 APP --> STORAGE : uploadString(base64)\ngetDownloadURL()
+
+note right of APP
+  Resiliência no cliente:
+  • Retry backoff exponencial
+    (3x: 500ms → 1s → 2s)
+  • Queue offline (AsyncStorage)
+    sincroniza ao reconectar
+end note
 
 ' ── Nota ─────────────────────────────────────────────────────────────────────
 

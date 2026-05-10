@@ -4,7 +4,18 @@ import {
   checkInferenceSLA,
   recordInferenceMetric,
 } from './inferenceMetricsService';
+import { enqueue } from './offlineScanQueueService';
 import logger from '../utils/logger';
+
+function isNetworkError(error) {
+  const msg = error?.message?.toLowerCase() ?? '';
+  return (
+    msg.includes('network') ||
+    msg.includes('connection') ||
+    msg.includes('tempo limite') ||
+    msg.includes('yolo_api_url')
+  );
+}
 
 /**
  * Converte URI de imagem para base64.
@@ -146,7 +157,6 @@ export async function processScan({
   } catch (error) {
     logger.error('Erro no scanner pipeline:', error);
 
-    // Registra falha na telemetria
     recordInferenceMetric({
       inferenceMs: 0,
       yoloCount: 0,
@@ -158,8 +168,32 @@ export async function processScan({
       errorSource: error?.message ?? 'unknown',
     });
 
+    // Erro de rede → enfileira para processar quando a conexão voltar
+    if (isNetworkError(error)) {
+      await enqueue({
+        imageUri,
+        imageBase64,
+        usuarioId,
+        usuarioNome,
+        usuarioRole,
+        local,
+        latitude,
+        longitude,
+        empresaId,
+        fotoUrl,
+      });
+      return {
+        success: false,
+        queued: true,
+        message:
+          'Sem conexão. Scan salvo e será enviado automaticamente ao reconectar.',
+        error,
+      };
+    }
+
     return {
       success: false,
+      queued: false,
       message: error?.message || 'Erro ao processar auditoria.',
       error,
     };

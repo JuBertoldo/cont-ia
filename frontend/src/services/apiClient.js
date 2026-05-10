@@ -4,6 +4,26 @@ import { getIdToken } from './authService';
 const API_BASE_URL = Config.YOLO_API_URL || '';
 const REQUEST_TIMEOUT_MS = 120000; // 120s — YOLO pode demorar na 1ª inferência
 
+const RETRY_CONFIG = {
+  maxAttempts: 3,
+  baseDelayMs: 500, // 500ms → 1000ms → 2000ms (backoff exponencial)
+  retryableStatuses: new Set([408, 429, 500, 502, 503, 504]),
+};
+
+function isRetryableError(error, status) {
+  if (RETRY_CONFIG.retryableStatuses.has(status)) return true;
+  const msg = error?.message?.toLowerCase() ?? '';
+  return (
+    msg.includes('network') ||
+    msg.includes('connection') ||
+    msg.includes('tempo limite')
+  );
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function executeRequest(path, options, timeout, forceRefresh) {
   let token = null;
   try {
@@ -42,7 +62,9 @@ async function executeRequest(path, options, timeout, forceRefresh) {
     if (!response.ok) {
       const message =
         payload?.detail || payload?.message || `Erro HTTP ${response.status}`;
-      throw new Error(message);
+      const error = new Error(message);
+      error.status = response.status;
+      throw error;
     }
 
     return payload;
@@ -56,16 +78,39 @@ async function executeRequest(path, options, timeout, forceRefresh) {
   }
 }
 
-async function request(path, options = {}, timeout = REQUEST_TIMEOUT_MS) {
+async function requestWithRetry(
+  path,
+  options = {},
+  timeout = REQUEST_TIMEOUT_MS,
+) {
   if (!API_BASE_URL) {
     throw new Error('YOLO_API_URL não configurada no .env.');
   }
-  return executeRequest(path, options, timeout, false);
+
+  let lastError;
+
+  for (let attempt = 1; attempt <= RETRY_CONFIG.maxAttempts; attempt++) {
+    try {
+      return await executeRequest(path, options, timeout, false);
+    } catch (error) {
+      lastError = error;
+
+      const isLast = attempt === RETRY_CONFIG.maxAttempts;
+      const shouldRetry = isRetryableError(error, error?.status);
+
+      if (isLast || !shouldRetry) throw error;
+
+      const waitMs = RETRY_CONFIG.baseDelayMs * 2 ** (attempt - 1);
+      await delay(waitMs);
+    }
+  }
+
+  throw lastError;
 }
 
 export const apiClient = {
   post: (path, body, options = {}) =>
-    request(path, {
+    requestWithRetry(path, {
       method: 'POST',
       body: JSON.stringify(body),
       ...options,
