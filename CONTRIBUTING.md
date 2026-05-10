@@ -13,8 +13,9 @@
 5. [Rodando o app mobile](#5-rodando-o-app-mobile)
 6. [Padrões de branches e commits](#6-padrões-de-branches-e-commits)
 7. [Fluxo de PR](#7-fluxo-de-pr)
-8. [Variáveis de ambiente](#8-variáveis-de-ambiente)
-9. [Troubleshooting](#9-troubleshooting)
+8. [**Regra de Ouro — Novos Serviços**](#8-regra-de-ouro--novos-serviços)
+9. [Variáveis de ambiente](#9-variáveis-de-ambiente)
+10. [Troubleshooting](#10-troubleshooting)
 
 ---
 
@@ -324,7 +325,87 @@ Exemplos válidos:
 
 ---
 
-## 8. Variáveis de ambiente
+## 8. Regra de Ouro — Novos Serviços
+
+> **Todo serviço que precisa ser inicializado no `App.js` deve ter um teste de smoke correspondente.**
+
+Esta regra existe porque testes unitários cobrem funções isoladas, mas **não detectam wiring quebrado** — um serviço pode ter 100% de cobertura e nunca ser ativado na aplicação real.
+
+### O ciclo correto ao criar um novo serviço
+
+```
+1. Cria o serviço com sua lógica
+       ↓
+2. Escreve o smoke test em __tests__/App.smoke.test.js
+   (o teste FALHA — red)
+       ↓
+3. Adiciona o wiring no App.js (useEffect ou chamada direta)
+   (o teste PASSA — green)
+       ↓
+4. Abre o PR → CI valida automaticamente
+       ↓
+5. Merge seguro ✅
+```
+
+### O que o CI valida automaticamente
+
+| Verificação | Ferramenta | O que detecta |
+|---|---|---|
+| Import sem `package.json` | `depcheck` | `import X from 'pkg-nao-instalado'` |
+| Serviço criado mas não conectado | `App.smoke.test.js` | `startConnectivityListener()` nunca chamado |
+| Vulnerabilidades em deps | `npm audit` + `pip-audit` | CVEs HIGH/CRITICAL |
+| Segredos hardcoded | `detect-secrets` | API keys, tokens no código |
+
+### Adicionando um novo serviço — checklist
+
+```bash
+# 1. Crie o serviço
+touch frontend/src/services/meuServicoService.js
+
+# 2. Adicione o teste de smoke ANTES de implementar o wiring
+# Edite: frontend/__tests__/App.smoke.test.js
+# Adicione um teste que verifique que o serviço é chamado na montagem
+
+# 3. Rode o smoke test (deve FALHAR)
+npx jest __tests__/App.smoke.test.js --no-coverage
+
+# 4. Adicione o wiring no App.js
+# useEffect(() => { inicializarMeuServico(); }, []);
+
+# 5. Rode novamente (deve PASSAR)
+npx jest __tests__/App.smoke.test.js --no-coverage
+```
+
+### Exemplo real — como o `offlineScanQueueService` foi adicionado
+
+```js
+// frontend/__tests__/App.smoke.test.js
+it('inicia o listener de conectividade na montagem', () => {
+  render(<App />);
+  expect(mockStartListener).toHaveBeenCalledTimes(1); // teria falhado antes do wiring
+});
+
+it('cancela o listener ao desmontar (sem memory leak)', () => {
+  const mockUnsubscribe = jest.fn();
+  mockStartListener.mockReturnValueOnce(mockUnsubscribe);
+  const { unmount } = render(<App />);
+  unmount();
+  expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
+});
+```
+
+```js
+// frontend/App.js — wiring que faz os testes passarem
+useEffect(() => {
+  initSentry();
+  const unsubscribe = startConnectivityListener();
+  return unsubscribe; // cleanup automático = sem memory leak
+}, []);
+```
+
+---
+
+## 9. Variáveis de ambiente
 
 ### `frontend/.env`
 
@@ -387,7 +468,7 @@ CORS_ORIGINS=http://localhost:8081,http://localhost:3000
 
 ---
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 ### Metro bundler não conecta ao backend
 

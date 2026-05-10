@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -116,6 +116,7 @@ export default function ScannerScreen() {
   const [imageUri, setImageUri] = useState('');
   const [detecting, setDetecting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const actionInProgressRef = useRef(false); // guard contra double-tap
   const [location, setLocation] = useState(null);
   const [locationName, setLocationName] = useState('');
   const [localText, setLocalText] = useState('');
@@ -163,10 +164,14 @@ export default function ScannerScreen() {
   };
 
   const openGallery = async () => {
+    if (actionInProgressRef.current) return;
+    actionInProgressRef.current = true;
     try {
       const result = await launchImageLibrary({
         mediaType: 'photo',
         quality: 0.5,
+        maxWidth: 1280,
+        maxHeight: 1280,
         selectionLimit: 1,
       });
       const uri = extractUriFromPickerResult(result);
@@ -179,14 +184,20 @@ export default function ScannerScreen() {
       }
     } catch (error) {
       Alert.alert('Erro', error?.message || 'Falha ao abrir galeria.');
+    } finally {
+      actionInProgressRef.current = false;
     }
   };
 
   const openCamera = async () => {
+    if (actionInProgressRef.current) return;
+    actionInProgressRef.current = true;
     try {
       const result = await launchCamera({
         mediaType: 'photo',
         quality: 0.5,
+        maxWidth: 1280,
+        maxHeight: 1280,
         saveToPhotos: false,
       });
       const uri = extractUriFromPickerResult(result);
@@ -199,6 +210,8 @@ export default function ScannerScreen() {
       }
     } catch (error) {
       Alert.alert('Erro', error?.message || 'Falha ao abrir câmera.');
+    } finally {
+      actionInProgressRef.current = false;
     }
   };
 
