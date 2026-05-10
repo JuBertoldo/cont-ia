@@ -12,6 +12,8 @@
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx}\"",
     "test": "jest",
     "test:coverage": "jest --coverage --watchAll=false",
+    "test:e2e:build": "detox build --configuration ios.sim.debug",
+    "test:e2e": "detox test --configuration ios.sim.debug",
     "type-check": "tsc --noEmit",
     "prepare": "cd .. && git config core.hooksPath frontend/.husky || true"
   },
@@ -63,7 +65,9 @@
     "lint-staged": "^15.2.10",
     "prettier": "2.8.8",
     "react-test-renderer": "19.2.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "detox": "^20.26.2",
+    "@types/detox": "^18.1.0"
   },
   "engines": {
     "node": ">= 22.11.0"

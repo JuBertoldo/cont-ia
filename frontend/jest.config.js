@@ -12,10 +12,10 @@ module.exports = {
   ],
 
   coverageThreshold: {
-    global: { lines: 60, functions: 60, branches: 50, statements: 60 },
-    './src/services/': { lines: 70, functions: 70 },
-    './src/hooks/': { lines: 70, functions: 70 },
-    './src/utils/': { lines: 80, functions: 80 },
+    global: { lines: 80, functions: 80, branches: 70, statements: 80 },
+    './src/services/': { lines: 85, functions: 85 },
+    './src/hooks/': { lines: 85, functions: 85 },
+    './src/utils/': { lines: 90, functions: 90 },
   },
 
   coverageReporters: ['text', 'lcov', 'html'],

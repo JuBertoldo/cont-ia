@@ -6,4 +6,5 @@ export const COLLECTIONS = {
   CONFIG: 'config',
   NOTIFICATIONS: 'notificacoes',
   LOGIN_AUDIT: 'login_audit',
+  INFERENCE_METRICS: 'inference_metrics',
 };

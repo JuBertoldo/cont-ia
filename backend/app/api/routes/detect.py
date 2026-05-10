@@ -8,6 +8,12 @@ from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import get_logger
+from app.core.metrics import (
+    active_requests,
+    detection_duration_seconds,
+    detection_errors_total,
+    detections_total,
+)
 from app.schemas.detect import DetectRequest, DetectResponse
 from app.services.ensemble import merge_detections
 from app.services.roboflow_service import detect_with_roboflow
@@ -40,6 +46,7 @@ async def detect(
     )
 
     started = time.time()
+    active_requests.inc()
 
     try:
         loop = asyncio.get_running_loop()
@@ -60,15 +67,20 @@ async def detect(
         # ── Trata falhas individuais sem derrubar a requisição ───────────────
         if isinstance(yolo_result, Exception):
             logger.error("YOLO falhou: %s", yolo_result)
+            detection_errors_total.labels(source="yolo").inc()
             yolo_detections = []
             yolo_meta = {}
         else:
             yolo_detections = yolo_result.get("detections", [])
             yolo_meta = yolo_result.get("meta", {})
+            detections_total.labels(source="yolo").inc(len(yolo_detections))
 
         if isinstance(rfdetr_detections, Exception):
             logger.warning("RF-DETR falhou: %s", rfdetr_detections)
+            detection_errors_total.labels(source="rfdetr").inc()
             rfdetr_detections = []
+        else:
+            detections_total.labels(source="rfdetr").inc(len(rfdetr_detections))
 
         # ── Merge com NMS ────────────────────────────────────────────────────
         merged = merge_detections(
@@ -77,7 +89,11 @@ async def detect(
             iou_threshold=settings.ENSEMBLE_IOU_THRESHOLD,
         )
 
-        elapsed_ms = int((time.time() - started) * 1000)
+        elapsed = time.time() - started
+        elapsed_ms = int(elapsed * 1000)
+
+        detection_duration_seconds.observe(elapsed)
+        detections_total.labels(source="merged").inc(len(merged))
 
         logger.info(
             "Ensemble concluído | yolo=%d rfdetr=%d merged=%d ms=%d",
@@ -102,20 +118,25 @@ async def detect(
         }
 
     except TimeoutError as exc:
+        detection_errors_total.labels(source="timeout").inc()
         logger.error("Timeout na inferência YOLO (uid=%s)", user.get("uid"))
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
             detail=f"Inferência excedeu o tempo limite de {settings.YOLO_TIMEOUT_S}s.",
         ) from exc
     except ValueError as exc:
+        detection_errors_total.labels(source="internal").inc()
         logger.warning("Imagem inválida: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
         ) from exc
     except Exception as exc:
+        detection_errors_total.labels(source="internal").inc()
         logger.error("Erro interno na detecção: %s", exc, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Erro interno ao processar imagem.",
         ) from exc
+    finally:
+        active_requests.dec()

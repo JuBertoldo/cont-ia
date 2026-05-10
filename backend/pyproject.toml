@@ -39,6 +39,7 @@ addopts = [
     "--strict-markers",
     "-v",
 ]
+asyncio_mode = "auto"
 markers = [
     "unit: testes unitários (sem I/O externo)",
     "integration: testes de integração (com servidor de teste)",
@@ -52,7 +53,7 @@ omit = ["app/core/logging.py", "tests/*"]
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 70
+fail_under = 80
 exclude_lines = [
     "pragma: no cover",
     "if __name__ == .__main__.:",

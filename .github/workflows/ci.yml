@@ -7,9 +7,9 @@ on:
     branches: [develop]
 
 jobs:
-  # ── Backend ──────────────────────────────────────────────────────────────────
+  # ── Backend — Lint, Tests & Security ─────────────────────────────────────────
   backend:
-    name: Backend — Lint & Tests
+    name: Backend — Lint, Tests & Audit
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -31,7 +31,7 @@ jobs:
         run: ruff check app/ tests/
 
       - name: Testes com cobertura
-        run: pytest tests/ --cov=app --cov-report=xml --cov-fail-under=70
+        run: pytest tests/ --cov=app --cov-report=xml --cov-fail-under=80
 
       - name: Upload cobertura
         uses: codecov/codecov-action@v4
@@ -40,9 +40,33 @@ jobs:
           files: backend/coverage.xml
           flags: backend
 
-  # ── Frontend ─────────────────────────────────────────────────────────────────
+      # ── SCA — Software Composition Analysis ─────────────────────────────────
+      - name: Instalar pip-audit
+        run: pip install pip-audit
+
+      - name: Auditoria de dependências Python (pip-audit)
+        run: |
+          pip-audit -r requirements.txt \
+            --ignore-vuln PYSEC-2024-229 \
+            --format json \
+            --output pip-audit-report.json || true
+          pip-audit -r requirements.txt \
+            --ignore-vuln PYSEC-2024-229 \
+            --severity high
+        # Falha apenas em vulnerabilidades HIGH ou CRITICAL
+        # --ignore-vuln permite suprimir falsos positivos documentados
+
+      - name: Upload relatório pip-audit
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pip-audit-report
+          path: backend/pip-audit-report.json
+          retention-days: 30
+
+  # ── Frontend — Lint, Tests & Security ────────────────────────────────────────
   frontend:
-    name: Frontend — Lint & Tests
+    name: Frontend — Lint, Tests & Audit
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -64,4 +88,42 @@ jobs:
         run: npm run lint
 
       - name: Testes com cobertura
-        run: npm test -- --coverage --watchAll=false --coverageThreshold='{"global":{"lines":60}}'
+        run: npm test -- --coverage --watchAll=false --coverageThreshold='{"global":{"lines":80}}'
+
+      # ── SCA — Software Composition Analysis ─────────────────────────────────
+      - name: Auditoria de dependências Node.js (npm audit)
+        run: |
+          npm audit --audit-level=high --json > npm-audit-report.json || true
+          npm audit --audit-level=high
+        # Falha apenas em vulnerabilidades HIGH ou CRITICAL
+        # --json gera artefato para análise posterior
+
+      - name: Upload relatório npm audit
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: npm-audit-report
+          path: frontend/npm-audit-report.json
+          retention-days: 30
+
+  # ── Secrets Scan ─────────────────────────────────────────────────────────────
+  secrets-scan:
+    name: Secrets Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # histórico completo para scan de todos os commits do PR
+
+      - name: Instalar detect-secrets
+        run: pip install detect-secrets
+
+      - name: Scan de segredos nos arquivos alterados
+        run: |
+          detect-secrets scan \
+            --baseline .secrets.baseline \
+            --exclude-files 'package-lock\.json' \
+            --exclude-files '\.secrets\.baseline' \
+            --exclude-files 'vendor/.*' \
+            --exclude-files 'node_modules/.*'

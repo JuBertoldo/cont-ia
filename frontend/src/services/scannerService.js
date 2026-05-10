@@ -1,5 +1,9 @@
 import { detectWithYolo, summarizeDetections } from './yoloService';
 import { createInventoryItem } from './inventoryService';
+import {
+  checkInferenceSLA,
+  recordInferenceMetric,
+} from './inferenceMetricsService';
 import logger from '../utils/logger';
 
 /**
@@ -96,16 +100,34 @@ export async function processScan({
       throw new Error('Imagem não informada para análise.');
     }
 
+    const inferenceStart = Date.now();
     const yoloResult = await detectWithYolo(base64);
+    const inferenceMs = Date.now() - inferenceStart;
+
     const detections = Array.isArray(yoloResult?.detections)
       ? yoloResult.detections
       : [];
     const summary = summarizeDetections(detections);
 
+    // Registra telemetria de performance (fire-and-forget, não bloqueia)
+    const meta = yoloResult?.meta ?? {};
+    recordInferenceMetric({
+      inferenceMs,
+      yoloCount: meta?.ensemble?.yolo_count ?? detections.length,
+      rfdetrCount: meta?.ensemble?.rfdetr_count ?? 0,
+      mergedCount: meta?.ensemble?.merged_count ?? detections.length,
+      usuarioId: usuarioId ?? '',
+      empresaId: empresaId ?? '',
+      success: true,
+    });
+
+    // Alerta se o tempo violou o SLA (loga no Sentry sem parar o fluxo)
+    checkInferenceSLA(inferenceMs);
+
     const payload = buildPayload({
       summary,
       detections,
-      yoloMeta: yoloResult?.meta,
+      yoloMeta: meta,
       usuarioId,
       usuarioNome,
       usuarioRole,
@@ -123,6 +145,18 @@ export async function processScan({
     };
   } catch (error) {
     logger.error('Erro no scanner pipeline:', error);
+
+    // Registra falha na telemetria
+    recordInferenceMetric({
+      inferenceMs: 0,
+      yoloCount: 0,
+      rfdetrCount: 0,
+      mergedCount: 0,
+      usuarioId: usuarioId ?? '',
+      empresaId: empresaId ?? '',
+      success: false,
+      errorSource: error?.message ?? 'unknown',
+    });
 
     return {
       success: false,
