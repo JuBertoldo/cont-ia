@@ -171,7 +171,7 @@ ngrok http 8000
 Copie a URL gerada e configure em `frontend/.env`:
 
 ```env
-API_BASE_URL=https://sua-url-aqui.trycloudflare.com
+YOLO_API_URL=https://sua-url-aqui.trycloudflare.com
 ```
 
 ### 4.4 Testar o scanner em desenvolvimento
@@ -473,7 +473,7 @@ FIREBASE_MESSAGING_SENDER_ID=seu_sender_id
 FIREBASE_APP_ID=seu_app_id
 
 # Backend
-API_BASE_URL=http://localhost:8000
+YOLO_API_URL=http://localhost:8000
 
 # Sentry (opcional em dev)
 SENTRY_DSN=
@@ -531,7 +531,7 @@ CORS_ORIGINS=http://localhost:8081,http://localhost:3000
 curl http://localhost:8000/health
 
 # No iOS Simulator, use o IP da máquina (não localhost)
-# Ajuste API_BASE_URL para http://SEU_IP_LOCAL:8000
+# Ajuste YOLO_API_URL para http://SEU_IP_LOCAL:8000
 ipconfig getifaddr en0   # macOS
 ```
 

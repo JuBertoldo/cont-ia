@@ -264,7 +264,7 @@ npm run test:e2e         # executa os cenários
 | `FIREBASE_API_KEY` | Chave da API Firebase |
 | `FIREBASE_PROJECT_ID` | ID do projeto Firebase |
 | `FIREBASE_STORAGE_BUCKET` | Bucket do Firebase Storage |
-| `API_BASE_URL` | URL do backend (ex: `http://localhost:8000`) |
+| `YOLO_API_URL` | URL do backend (ex: `http://localhost:8000`) |
 | `SENTRY_DSN` | DSN do Sentry (opcional) |
 | `USE_FIREBASE_EMULATOR` | `true` para usar o emulador local |
 
