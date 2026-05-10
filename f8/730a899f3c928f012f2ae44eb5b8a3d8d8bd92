@@ -1,0 +1,40 @@
+frontend/src/services/__tests__/offlineScanQueueService.test.js
+  s_39d5bc69090e8b::t_a0349c9292c702 1-9,11-20,22-151
+  s_39d5bc69090e8b::t_0d5f92d6bb606f 21
+  s_39d5bc69090e8b::t_dd0078f6925a86 10
+firebase.json
+  s_39d5bc69090e8b::t_c9870193e54772 5-13
+frontend/src/screens/inventory/ScannerScreen.js
+  s_39d5bc69090e8b::t_7b457f4ae9d41a 167-168,173-174
+  s_39d5bc69090e8b::t_8e1d90bedb1c72 119
+  s_39d5bc69090e8b::t_cc75c5647b2cc9 187-188,193-194,199-200
+  s_39d5bc69090e8b::t_29d3735711e152 1
+  s_39d5bc69090e8b::t_d75e5f76ffd128 213-214
+CONTRIBUTING.md
+  s_39d5bc69090e8b::t_929f4376362f54 328-408
+  s_39d5bc69090e8b::t_957b7a2382ad8f 16-18
+  s_39d5bc69090e8b::t_7632a59002e4b7 471
+storage.rules
+  s_39d5bc69090e8b::t_e7aa77e1af0a29 1-33
+frontend/src/services/__tests__/apiClient.test.js
+  s_39d5bc69090e8b::t_f739b96f753e38 60-88,97-99,140-149,164-166
+  s_39d5bc69090e8b::t_785a4502328945 39
+  s_39d5bc69090e8b::t_ece3daa95d7c09 14,42-47,49,51-53,55,57,59,89-90,103,113-130,132-133,136,154,159,161-162
+  s_39d5bc69090e8b::t_21b294606da4ee 1-13,15-38,40-41,48,50,54,56,58,91-96,100-102,104-112,131,134-135,137-139,150-153,155-158,160,163,167-172
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.5",
+  "base_commit_sha": "f8730a899f3c928f012f2ae44eb5b8a3d8d8bd92",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
