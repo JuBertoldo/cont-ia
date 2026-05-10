@@ -1,0 +1,21 @@
+frontend/.env.example
+  s_39d5bc69090e8b::t_5117a30c2efb6f 2-10,13,15,18-20,22-27,29,31-33,35,37-39,41
+backend/.env.example
+  s_39d5bc69090e8b::t_3412776c525812 1-13,15-20,23-34,37-38,41-61,65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.5",
+  "base_commit_sha": "84f5d07eca2581f34e0d2e200709a85dff85d4e7",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
