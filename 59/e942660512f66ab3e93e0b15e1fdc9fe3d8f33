@@ -1,0 +1,22 @@
+backend/tests/test_cleanup_storage.py
+  s_39d5bc69090e8b::t_bd69168bd7796c 1-2,4-8,10-22,24-27,29-30,34-61,63-64,68-93,103-107,117-122,131-135,144-159,161-162,166-181,188-193,203-206,215-218,228-232,242-244
+  s_39d5bc69090e8b::t_b062f67ccbf410 3,9,23,28,31-33,62,65-67,94-102,108-116,123-130,136-143,160,163-165,182-187,194-202,207-214,219-227,233-241
+scripts/cleanup_storage.py
+  s_39d5bc69090e8b::t_4b94c11f4fdc52 1-304
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.5",
+  "base_commit_sha": "59e942660512f66ab3e93e0b15e1fdc9fe3d8f33",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
