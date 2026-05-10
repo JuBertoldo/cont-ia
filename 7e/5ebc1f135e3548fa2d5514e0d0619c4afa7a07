@@ -1,0 +1,100 @@
+frontend/src/utils/__tests__/errorHandler.test.js
+  s_39d5bc69090e8b::t_57e0af8a454813 1,7-29,33-71
+  s_39d5bc69090e8b::t_3406c9a75f436b 2-6,30-32
+frontend/jest.config.js
+  s_39d5bc69090e8b::t_61e3d0d2486ed9 15-18
+backend/requirements.txt
+  s_39d5bc69090e8b::t_d07512e1de6bd3 17-19
+  s_39d5bc69090e8b::t_0a85dec841643e 20
+backend/tests/test_push_service.py
+  s_39d5bc69090e8b::t_fe5a2b3065d6ae 70,73-77
+  s_39d5bc69090e8b::t_c63e2d57f7c03b 1-6,8-69,71-72,78-99
+  s_39d5bc69090e8b::t_b60ea6f90d2850 7
+frontend/e2e/auth.e2e.js
+  s_39d5bc69090e8b::t_8122d5fd602b5a 1-54
+frontend/e2e/history.e2e.js
+  s_39d5bc69090e8b::t_1f4448b16d81ba 1-48
+backend/app/main.py
+  s_39d5bc69090e8b::t_fe5a2b3065d6ae 37,74
+  s_39d5bc69090e8b::t_030c75dc0f36fb 9
+  s_39d5bc69090e8b::t_84af1ee00b7e45 7,24-25,35-36,50-51,73,75,86-95
+frontend/src/services/scannerService.js
+  s_39d5bc69090e8b::t_863b9b422a3fcc 103,105-106,112-126,130,149-159
+  s_39d5bc69090e8b::t_8b82cd06f7a84f 3-6
+frontend/.detoxrc.js
+  s_39d5bc69090e8b::t_424569921770c8 1-34
+frontend/src/services/inferenceMetricsService.js
+  s_39d5bc69090e8b::t_363a0761e7853c 1-17,20-21,23-83,85-112
+  s_39d5bc69090e8b::t_64a44e0a317836 18-19,22
+  s_39d5bc69090e8b::t_3406c9a75f436b 84
+backend/tests/test_email_service.py
+  s_39d5bc69090e8b::t_fe5a2b3065d6ae 15,38-40,48-50,60
+  s_39d5bc69090e8b::t_d773d3c1d554cb 1-8,10-14,16-37,41-47,51-59,61-144
+  s_39d5bc69090e8b::t_b60ea6f90d2850 9
+.github/workflows/ci.yml
+  s_39d5bc69090e8b::t_dba0f3943b33ff 10,12,34,43-67,69,91-129
+CONTRIBUTING.md
+  s_39d5bc69090e8b::t_20a3e8e20bc334 1-445
+frontend/package.json
+  s_39d5bc69090e8b::t_c16419bf78ce62 68-70
+  s_39d5bc69090e8b::t_f911ac32058790 15-16
+backend/app/core/metrics.py
+  s_39d5bc69090e8b::t_34f58df4baa9de 1-29
+frontend/src/constants/collections.js
+  s_39d5bc69090e8b::t_b439df2294a327 9
+frontend/src/utils/__tests__/mapAiErrorMessage.test.js
+  s_39d5bc69090e8b::t_983adb92e087dc 1-52
+frontend/src/config/sentryConfig.js
+  s_39d5bc69090e8b::t_3406c9a75f436b 26-27
+  s_39d5bc69090e8b::t_31c8d4b532dcf6 1-7,10,14-15,18-25,28-35,38,41-56,58-60,63-95
+backend/app/api/routes/detect.py
+  s_39d5bc69090e8b::t_2ba7994f076ab7 11
+  s_39d5bc69090e8b::t_69c7c35afbeedb 12-16
+  s_39d5bc69090e8b::t_ce82e687a1a998 49,70,76,80,82-83,92-96,121,128,135,141-142
+frontend/e2e/scanner.e2e.js
+  s_39d5bc69090e8b::t_c81df10ca437fa 1-66
+backend/pyproject.toml
+  s_39d5bc69090e8b::t_d56905b03148cf 42
+  s_39d5bc69090e8b::t_f180ab47320cdc 56
+backend/tests/test_metrics.py
+  s_39d5bc69090e8b::t_2e66435fc2cb52 1-36
+frontend/src/utils/__tests__/formatDate.test.js
+  s_39d5bc69090e8b::t_7022287c14d036 1-45
+frontend/e2e/jest.config.js
+  s_39d5bc69090e8b::t_19f8096979d6bc 1-12
+frontend/src/utils/logger.js
+  s_39d5bc69090e8b::t_3406c9a75f436b 22-25
+  s_39d5bc69090e8b::t_268bc6dada35e7 38
+  s_39d5bc69090e8b::t_bf77afed81da63 4,6-7,12,16-21,31,33-37,39-40
+frontend/src/utils/__tests__/validators.test.js
+  s_39d5bc69090e8b::t_e60e53b253fbb8 1-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.5",
+  "base_commit_sha": "7e5ebc1f135e3548fa2d5514e0d0619c4afa7a07",
+  "prompts": {
+    "1d4c9a40f74c34f6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8616ed22-7a9a-462b-9b7f-42af848f3ad6",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>",
+      "total_additions": 1317,
+      "total_deletions": 0,
+      "accepted_lines": 1317,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
