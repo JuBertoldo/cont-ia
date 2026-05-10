@@ -53,8 +53,6 @@ jobs:
           pip-audit -r requirements.txt \
             --ignore-vuln PYSEC-2024-229 \
             --severity high
-        # Falha apenas em vulnerabilidades HIGH ou CRITICAL
-        # --ignore-vuln permite suprimir falsos positivos documentados
 
       - name: Upload relatório pip-audit
         uses: actions/upload-artifact@v4
@@ -87,6 +85,26 @@ jobs:
       - name: Lint (ESLint)
         run: npm run lint
 
+      # ── Dependency Check — detecta imports sem package.json ──────────────────
+      - name: Verificar dependências não declaradas (depcheck)
+        run: |
+          npx depcheck \
+            --ignores="@types/*,jest,babel-jest,react-test-renderer,detox,@types/detox" \
+            --ignore-dirs="node_modules,vendor,e2e,__mocks__" \
+            --json > depcheck-report.json || true
+          # Falha se houver pacotes USADOS mas NÃO declarados em package.json
+          npx depcheck \
+            --ignores="@types/*,jest,babel-jest,react-test-renderer,detox,@types/detox" \
+            --ignore-dirs="node_modules,vendor,e2e,__mocks__"
+
+      - name: Upload relatório depcheck
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: depcheck-report
+          path: frontend/depcheck-report.json
+          retention-days: 30
+
       - name: Testes com cobertura
         run: npm test -- --coverage --watchAll=false --coverageThreshold='{"global":{"lines":80}}'
 
@@ -95,8 +113,6 @@ jobs:
         run: |
           npm audit --audit-level=high --json > npm-audit-report.json || true
           npm audit --audit-level=high
-        # Falha apenas em vulnerabilidades HIGH ou CRITICAL
-        # --json gera artefato para análise posterior
 
       - name: Upload relatório npm audit
         uses: actions/upload-artifact@v4
@@ -114,7 +130,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # histórico completo para scan de todos os commits do PR
+          fetch-depth: 0
 
       - name: Instalar detect-secrets
         run: pip install detect-secrets

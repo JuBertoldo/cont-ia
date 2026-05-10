@@ -8,8 +8,14 @@ export const uploadImage = async ({
   contentType = 'image/jpeg',
 }) => {
   try {
-    const response = await fetch(uri);
-    const blob = await response.blob();
+    const blob = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = () => resolve(xhr.response);
+      xhr.onerror = () => reject(new TypeError('Falha ao carregar imagem'));
+      xhr.responseType = 'blob';
+      xhr.open('GET', uri, true);
+      xhr.send(null);
+    });
 
     const storageRef = ref(storage, path);
     await uploadBytes(storageRef, blob, { contentType });

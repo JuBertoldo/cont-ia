@@ -3,9 +3,10 @@ import {
   initializeAuth,
   getReactNativePersistence,
   getAuth,
+  connectAuthEmulator,
 } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -39,3 +40,11 @@ export const auth = authInstance;
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app, 'us-central1');
+
+// Conecta ao Firebase Local Emulator quando USE_FIREBASE_EMULATOR=true
+// Só executa uma vez (getApps().length === 1 garante que já foi inicializado)
+if (Config.USE_FIREBASE_EMULATOR === 'true' && getApps().length === 1) {
+  connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+  connectFirestoreEmulator(db, 'localhost', 8080);
+  connectStorageEmulator(storage, 'localhost', 9199);
+}
