@@ -1,0 +1,35 @@
+frontend/src/config/firebaseConfig.js
+  s_39d5bc69090e8b::t_1a30c6d66e2292 6,43-50
+  s_39d5bc69090e8b::t_674c9cea28ce9e 8-9
+frontend/package.json
+  s_39d5bc69090e8b::t_a3e41a20c5f276 42-43
+frontend/__mocks__/@react-native-community/netinfo.js
+  s_39d5bc69090e8b::t_ad3f0e2d2bd007 1-6
+frontend/__tests__/App.smoke.test.js
+  s_39d5bc69090e8b::t_9cc5001f9f9f4d 1-17,19-24,28,30-41,43-47,50-60,64-65,67,69-70,72,74-80
+  s_39d5bc69090e8b::t_6435bef3793717 18,25-27,29,42,68,71,73
+  s_39d5bc69090e8b::t_2ca50f31571e02 48-49,61-63,66
+frontend/src/services/storageService.js
+  s_39d5bc69090e8b::t_05acefa6f9552d 11-18
+frontend/App.js
+  s_39d5bc69090e8b::t_449f66ee6f46b8 13
+  s_39d5bc69090e8b::t_b8574a235557b0 1,8-9,12,14-17
+.github/workflows/ci.yml
+  s_39d5bc69090e8b::t_ea6430271a53dc 88-107,133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.5",
+  "base_commit_sha": "dd3a7312642937a1e3e9b60402ba118396e649ec",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
