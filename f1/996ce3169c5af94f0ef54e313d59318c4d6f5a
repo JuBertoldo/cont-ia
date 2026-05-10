@@ -1,0 +1,19 @@
+README.md
+  s_39d5bc69090e8b::t_0cc58105736a88 1,3,5,12-31,41,46-49,57-61,63-91,93-94,99,101,103-105,107-124,126,128,130,132-134,136-138,140,142-143,146-182,187,192,194,199-202,211,213-218,224-225,227-233,241,244-245,247-254,257,262-265,269,271,274-275,278,287-302,306-309
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.5",
+  "base_commit_sha": "f1996ce3169c5af94f0ef54e313d59318c4d6f5a",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
