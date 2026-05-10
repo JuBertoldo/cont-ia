@@ -1,0 +1,41 @@
+docs/diagramas/07_arquitetura.puml
+  s_39d5bc69090e8b::t_0012d2dd43b07e 53-55
+  s_39d5bc69090e8b::t_c22053f7711961 38
+  s_39d5bc69090e8b::t_3c31d62f03fb73 45-46,48
+  s_39d5bc69090e8b::t_ee6e6dd2641b54 96-97,101-103
+  s_39d5bc69090e8b::t_6f9efe10bc003e 84
+docs/diagramas/08_pipeline.puml
+  s_39d5bc69090e8b::t_50b4affad91207 55,58-62
+docs/diagramas/13_comunicacao_firebase.puml
+  s_39d5bc69090e8b::t_cf7f33389d1071 87-92
+  s_39d5bc69090e8b::t_85877d563b4c5a 131-134
+  s_39d5bc69090e8b::t_ed0c8254be88d1 159-162,164-166
+  s_39d5bc69090e8b::t_fb6f5e939a6d39 59-60
+docs/diagramas/14_pipeline_dataset_treino.puml
+  s_39d5bc69090e8b::t_e4cbe541132a4b 109-112
+docs/diagramas/02_atividades.puml
+  s_39d5bc69090e8b::t_b855cea6e22635 43
+docs/diagramas/05_implantacao.puml
+  s_39d5bc69090e8b::t_d12b14ddb5f7cd 48-59,67-69,83-88
+docs/diagramas/03_classes.puml
+  s_39d5bc69090e8b::t_1ca165f225c9ca 235-236
+  s_39d5bc69090e8b::t_0484ea08f8f688 93
+  s_39d5bc69090e8b::t_0bbb6d69283c7b 59
+  s_39d5bc69090e8b::t_b42a959b2fd8da 202-223
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.5",
+  "base_commit_sha": "c45a58e0ad443e36d9860068bf294a651282afc9",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "unknown"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
