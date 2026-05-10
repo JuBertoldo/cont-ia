@@ -1,0 +1,45 @@
+backend/tests/test_circuit_breaker.py
+  s_39d5bc69090e8b::t_adc2730694ba33 1-71
+firestore.indexes.json
+  s_39d5bc69090e8b::t_089a3c2bf48d0a 18-75
+README.md
+  s_39d5bc69090e8b::t_283beb6da73443 44,47-48
+  s_39d5bc69090e8b::t_be278d9ab1ee72 134,140-142
+frontend/src/services/offlineScanQueueService.js
+  s_39d5bc69090e8b::t_eba4c5c6b089d9 1-80,86-112,116-121
+  s_39d5bc69090e8b::t_7f97f44e7684d7 81-85,113-115
+backend/app/core/circuit_breaker.py
+  s_39d5bc69090e8b::t_8395cfe529a991 1-71,73-95
+  s_39d5bc69090e8b::t_bbaebd67288412 72
+docs/diagramas/07_arquitetura.puml
+  s_39d5bc69090e8b::t_3503022b98ac75 92-99
+  s_39d5bc69090e8b::t_654c8c2fbaffcb 39,42-43,45
+frontend/src/services/scannerService.js
+  s_39d5bc69090e8b::t_b4add0bf12583a 7,10-18
+  s_39d5bc69090e8b::t_c86ff6cdfdc268 171-187,190-193,196
+  s_39d5bc69090e8b::t_7f97f44e7684d7 188-189
+docs/diagramas/08_pipeline.puml
+  s_39d5bc69090e8b::t_2b334a4c6429fb 38-50
+backend/app/services/roboflow_service.py
+  s_39d5bc69090e8b::t_5ff8359287a094 6,17-22
+  s_39d5bc69090e8b::t_026d03a4325459 96-97,103-109,112-114,116
+frontend/src/services/apiClient.js
+  s_39d5bc69090e8b::t_7f97f44e7684d7 81-85
+  s_39d5bc69090e8b::t_b5850de41a23f2 7-26,65-67,89-108,113
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.5",
+  "base_commit_sha": "22913b613812939dfdf1da96095953dd06164cf9",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "unknown"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
