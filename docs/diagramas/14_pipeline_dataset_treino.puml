@@ -106,10 +106,10 @@ group Fase 3: Exportacao (quando >=100 validados)
 SA -> SCRIPT : python export_dataset.py
 
 note over SCRIPT
-  3 tiers de qualidade:
-  GOLD   = statusDataset="validado" (Super Admin aprovou)
-  SILVER = temCorrecoes=true (usuario corrigiu, sem validacao)
-  BRONZE = confianca >=0.70 (pseudo-label automatico)
+  Exporta scans com statusDataset="validado"
+  (aprovados pelo Super Admin na curadoria).
+  Converte bbox para formato YOLO normalizado
+  e gera data.yaml com classes do dataset.
 end note
 
 SCRIPT -> FS : getDocs(statusDataset="validado")

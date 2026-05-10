@@ -40,7 +40,7 @@ fork again
     :Processar com RF-DETR (Roboflow);
 end fork
 
-:Combinar resultados via NMS;
+:Merge por label + IoU\n(elimina duplicatas do mesmo objeto,\npreserva objetos de classes diferentes);
 :Retornar objetos detectados;
 
 |Operador|

@@ -52,12 +52,14 @@ end note
 
 :Calcular IoU entre\ntodas as BBoxes;
 
-:Aplicar NMS\n(IoU threshold = 0.5);
+:Merge por label + IoU\n(threshold = 0.5);
 
 note right
-  Elimina detecções
-  duplicadas do mesmo
-  objeto
+  Elimina duplicatas
+  apenas do MESMO label.
+  Objetos de labels diferentes
+  são preservados mesmo com
+  alto IoU (ex: parafuso ≠ porca)
 end note
 
 :Agrupar por label\ne somar quantidades;

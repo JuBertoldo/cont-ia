@@ -35,21 +35,24 @@ node "Servidor Local\n(Mac — Docker)" as SERVER {
     node "Docker Container\n(python:3.11-slim)" as DOCKER {
         component "API REST\nFastAPI + Uvicorn" as API
         component "YOLO11m\n(Ultralytics — CPU)" as YOLO
-        component "NMS Ensemble\n(merge por classe)" as NMS
+        component "Ensemble\n(IoU merge por label)" as NMS
 
         API --> YOLO : detect(image)
         API --> NMS : merge(yolo, rfdetr)
         YOLO --> NMS : deteccoes locais
     }
 
-    component "ngrok\n(URL publica de desenvolvimento)" as TUNNEL
+    component "Cloudflare Tunnel / ngrok\n(URL pública — desenvolvimento)" as TUNNEL
+    component "GET /metrics\n(Prometheus scraping)" as METRICS
     TUNNEL --> API : HTTPS → HTTP interno
+    API --> METRICS : expõe métricas
 }
 
 ' ── Servicos de Notificacao (externos, acionados pelo backend) ───────────────
 
-node "E-mail\n(Servico Externo)" as NOTIF {
-    component "Gmail SMTP\nsmtp.gmail.com:587\n(alertas de ticket)" as GMAIL
+node "Notificações\n(Serviços Externos)" as NOTIF {
+    component "Gmail SMTP\nsmtp.gmail.com:587\n(alertas de ticket por e-mail)" as GMAIL
+    component "Firebase Cloud Messaging\n(push notifications — tickets)" as FCM_PUSH
 }
 
 ' ── Roboflow (API externa) ───────────────────────────────────────────────────
@@ -78,6 +81,7 @@ APP --> AUTH : login / getIdToken
 AUTH --> API : verify_id_token() [Admin SDK]
 
 API --> GMAIL : smtplib STARTTLS\n(alerta de ticket)
+API --> FCM_PUSH : Firebase Admin SDK\n(push notification)
 
 APP --> FS : onSnapshot / addDoc\n(tempo real)
 APP --> STORAGE : uploadString(base64)\ngetDownloadURL()
@@ -89,12 +93,14 @@ note bottom of DOCKER
   no Python/pyenv do macOS.
   Imagem: python:3.11-slim (lzma nativo).
   Volumes: yolo11m.pt + firebase-service-account.json
+  Métricas Prometheus: GET /metrics
+  (contia_detections_total, duration, errors, active_requests)
 end note
 
 note bottom of TUNNEL
-  Expoe o backend local
-  para o app mobile via
-  URL publica temporaria.
+  Cloudflare Tunnel: URL permanente gratuita.
+  ngrok: URL temporária (desenvolvimento).
+  Expõe o backend local para o app mobile.
 end note
 
 @enduml

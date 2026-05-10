@@ -56,7 +56,8 @@ node "📱 App Mobile (React Native)" as MOBILE {
 
 node "⚙️ Backend (FastAPI + Docker)" as BACKEND {
     component "deps.py\nverify_id_token()" as DEPS
-    component "YOLO + Roboflow\nEnsemble" as YOLO_RF
+    component "YOLO + Roboflow\nEnsemble (IoU merge)" as YOLO_RF
+    component "email_service.py\npush_service.py\n(notificações de ticket)" as NOTIF_SVC
 }
 
 ' ══════════════════════════════════════════════════════════
@@ -82,6 +83,12 @@ node "🗄️ Cloud Firestore" as FIRESTORE {
     database "/chamados/{id}\n──────────────\nnumero, titulo, tipo\nstatus, prioridade\nempresaId, adminId\nresposta, respondidoPor\nslaRespostaSuporteAt\nslaResolucaoAt\nslaRespostaClienteAt\nprimeiraRespostaAt\nreaberturas" as COL_CHAM
 
     database "/convites_suporte/{email}\n──────────────\nemail, nome, createdBy\nusado, usadoEm" as COL_CONV
+
+    database "/notificacoes/{id}\n──────────────\nparaUid, tipo, titulo\nmensagem, lida, createdAt" as COL_NOTIF
+
+    database "/login_audit/{id}\n──────────────\nuid, email, ip\ncreatedAt (imutável)" as COL_AUDIT
+
+    database "/inference_metrics/{id}\n──────────────\ndeviceModel, platform\nosVersion, inferenceMs\nyoloCount, rfdetrCount\nmergedCount, success\nusuarioId, empresaId" as COL_METRICS
 
     database "/config/ticketCounter\n──────────────\ndata, count\n(número sequencial)" as COL_CFG
 }
@@ -121,6 +128,10 @@ SUP_SVC --> COL_CONV : setDoc() — cria convite\ngetDoc() — valida convite\nu
 SUP_SVC --> COL_EMP : getDoc() — busca nome empresa
 SUP_SVC --> COL_USERS : getDoc() — busca nome respondente
 SUP_SVC --> COL_CFG : transaction() — gera número sequencial
+SUP_SVC --> COL_NOTIF : addDoc() — notifica admin/support
+NOTIF_SVC --> COL_NOTIF : addDoc() — notificações backend
+AUTH_SVC --> COL_AUDIT : addDoc() — audit log de login
+HTTP_SVC --> COL_METRICS : addDoc() — telemetria de inferência
 
 ' ══════════════════════════════════════════════════════════
 ' CONEXÕES — Storage
@@ -145,11 +156,14 @@ BACKEND --> HTTP_SVC : {detections[], meta}
 
 note bottom of FIRESTORE
   **Regras de Segurança (firestore.rules):**
-  /usuarios      → leitura/escrita própria + admin empresa + super_admin
-  /empresas      → leitura pública (busca por código) + escrita admin/super_admin
-  /inventario    → leitura própria (qualquer status) + admin empresa + super_admin
-  /chamados      → leitura/update support + super_admin + admin empresa
+  /usuarios         → leitura/escrita própria + admin empresa + super_admin
+  /empresas         → leitura pública (busca por código) + escrita admin/super_admin
+  /inventario       → leitura própria (qualquer status) + admin empresa + super_admin
+  /chamados         → leitura/update support + super_admin + admin empresa
   /convites_suporte → super_admin gerencia · técnico consome o próprio convite
+  /notificacoes     → leitura/update apenas pelo destinatário (paraUid)
+  /login_audit      → create própria · read admin/super_admin · update/delete negado
+  /inference_metrics → write autenticado · read apenas super_admin
 end note
 
 note right of FB_AUTH

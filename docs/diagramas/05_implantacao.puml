@@ -45,6 +45,18 @@ node "Roboflow\n(API Cloud)" as ROBOFLOW {
     component "RF-DETR Workflow\n(Inference API)" as RFDETR
 }
 
+node "E-mail\n(Serviço Externo)" as EMAIL {
+    component "Gmail SMTP\nsmtp.gmail.com:587\n(alertas de ticket)" as SMTP
+}
+
+node "Firebase Cloud Messaging\n(Google)" as FCM {
+    component "Push Notifications\n(FCM — tickets e aprovações)" as PUSH
+}
+
+node "Observabilidade" as OBS {
+    component "GET /metrics\n(Prometheus scraping)" as PROM
+}
+
 APP --> API : HTTPS\nPOST /v1/detect\n(Base64 + JWT)
 API --> RFDETR : HTTPS\nInference SDK
 API --> FS : Firebase Admin SDK
@@ -52,6 +64,9 @@ APP --> FS : Firebase SDK\n(Firestore)
 APP --> STORAGE : Firebase SDK\n(Upload imagem)
 APP --> AUTH : Firebase SDK\n(Autenticação)
 AUTH --> API : Validação JWT
+API --> SMTP : smtplib STARTTLS\n(notificação de ticket)
+API --> PUSH : Firebase Admin SDK\n(push notification)
+SERVER --> PROM : exposição de métricas
 
 note bottom of DEVICE
   Usuário acessa o app
@@ -63,6 +78,14 @@ note bottom of FIREBASE
   Plano Spark (gratuito)
   até 50 empresas ativas.
   Escalável sob demanda.
+end note
+
+note bottom of OBS
+  Métricas expostas:
+  contia_detections_total
+  contia_detection_duration_seconds
+  contia_detection_errors_total
+  contia_active_requests
 end note
 
 @enduml

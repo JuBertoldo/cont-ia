@@ -56,6 +56,7 @@ class RegistroContagem {
     +fotoUrl: String
     +correcoes: List<CorrecaoLabel>
     +temCorrecoes: Boolean
+    +statusDataset: StatusDataset
     +createdAt: Timestamp
     --
     +salvar(): void
@@ -89,7 +90,7 @@ class DeteccaoService {
     --
     +detectarComYolo(): List<ItemDetectado>
     +detectarComRoboflow(): List<ItemDetectado>
-    +aplicarNMS(): List<ItemDetectado>
+    +mergeComIoU(): List<ItemDetectado>
     +mesclarResultados(): List<ItemDetectado>
     +realcarBrilho(imagem): Image
 }
@@ -198,6 +199,28 @@ enum SourceDeteccao {
     RFDETR
 }
 
+enum StatusDataset {
+    PENDENTE
+    VALIDADO
+    REJEITADO
+}
+
+class InferenceMetrics {
+    +id: String
+    +deviceModel: String
+    +platform: String
+    +osVersion: String
+    +inferenceMs: Integer
+    +yoloCount: Integer
+    +rfdetrCount: Integer
+    +mergedCount: Integer
+    +success: Boolean
+    +errorSource: String
+    +usuarioId: String
+    +empresaId: String
+    +createdAt: Timestamp
+}
+
 ' Relacionamentos
 Usuario "1" --> "0..1" Empresa : pertence a
 Usuario "1" --> "*" RegistroContagem : realiza
@@ -209,6 +232,8 @@ DeteccaoService --> ItemDetectado : retorna
 Usuario --> Role : possui
 Usuario --> StatusUsuario : possui
 ItemDetectado --> SourceDeteccao : origina de
+RegistroContagem --> StatusDataset : possui
+RegistroContagem "1" --> "0..1" InferenceMetrics : gera telemetria
 Chamado --> StatusChamado : possui
 Chamado --> TipoChamado : categorizado como
 Chamado "1" --> "1" SlaInfo : calcula
