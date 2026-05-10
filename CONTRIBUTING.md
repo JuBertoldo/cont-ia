@@ -229,15 +229,69 @@ npx react-native run-android
 ```bash
 cd frontend
 
-# Testes unitários
+# Todos os testes unitários (rápido, sem cobertura)
 npm test
 
-# Testes com cobertura
+# Testes com relatório de cobertura (falha se < 80%)
 npm run test:coverage
+
+# Arquivo específico
+npx jest src/services/__tests__/apiClient.test.js --no-coverage
+
+# Smoke tests de wiring (garante que App.js está conectado corretamente)
+npx jest __tests__/App.smoke.test.js --no-coverage
 
 # Testes E2E Detox (requer simulador iOS)
 npm run test:e2e:build   # compila uma vez
 npm run test:e2e         # executa os cenários
+```
+
+```bash
+cd backend
+
+# Todos os testes com cobertura (falha se < 80%)
+pytest tests/ -v --cov=app --cov-fail-under=80
+
+# Arquivo específico
+pytest tests/test_circuit_breaker.py -v
+
+# Por categoria (unit / integration)
+pytest tests/ -m unit -v
+```
+
+---
+
+## 5.4 Validação completa antes do PR
+
+Execute todos os passos abaixo antes de abrir um PR. O CI roda os mesmos comandos automaticamente — se passar localmente, passa no CI.
+
+```bash
+# ── Frontend ──────────────────────────────────────────────────────────────────
+cd frontend
+
+npm run lint                          # ESLint — zero warnings
+npm run format:check                  # Prettier — formatação
+npm run type-check                    # TypeScript strict
+npm run test:coverage                 # Testes + cobertura ≥ 80%
+npx jest __tests__/App.smoke.test.js  # Wiring do App.js
+npx depcheck \
+  --ignores="@types/*,jest,babel-jest,react-test-renderer,detox,@types/detox" \
+  --ignore-dirs="node_modules,vendor,e2e,__mocks__"  # Deps não declaradas
+
+# ── Backend ───────────────────────────────────────────────────────────────────
+cd ../backend
+
+ruff check app/ tests/                # Lint Python
+ruff format --check app/ tests/       # Formatação Python
+pytest tests/ --cov=app --cov-fail-under=80  # Testes + cobertura ≥ 80%
+pip-audit -r requirements.txt --severity high  # Vulnerabilidades HIGH+
+
+# ── Secrets ───────────────────────────────────────────────────────────────────
+cd ..
+detect-secrets scan \
+  --baseline .secrets.baseline \
+  --exclude-files 'package-lock\.json' \
+  --exclude-files 'node_modules/.*'
 ```
 
 ---
