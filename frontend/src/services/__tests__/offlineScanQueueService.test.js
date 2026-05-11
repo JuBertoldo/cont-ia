@@ -63,6 +63,18 @@ describe('enqueue', () => {
     expect(queue[0].usuarioId).toBe(SCAN_ARGS.usuarioId);
     expect(queue[0].empresaId).toBe(SCAN_ARGS.empresaId);
   });
+
+  it('NÃO salva imageBase64 na fila (previne estouro de memória no AsyncStorage)', async () => {
+    const scanComBase64 = {
+      ...SCAN_ARGS,
+      imageBase64: 'data:image/jpeg;base64,' + 'A'.repeat(1000),
+    };
+    await enqueue(scanComBase64);
+    const raw = await AsyncStorage.getItem('@contia:offline_scan_queue');
+    const queue = JSON.parse(raw);
+    expect(queue[0].imageBase64).toBeUndefined();
+    expect(queue[0].imageUri).toBe(SCAN_ARGS.imageUri);
+  });
 });
 
 // ── getPendingCount ───────────────────────────────────────────────────────────

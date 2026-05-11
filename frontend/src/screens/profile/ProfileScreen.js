@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   TextInput,
+  Modal,
   Alert,
   ActivityIndicator,
   ScrollView,
@@ -45,6 +46,9 @@ export default function ProfileScreen({ navigation }) {
   const [matricula, setMatricula] = useState('');
   const [empresa, setEmpresa] = useState(null);
   const [pushAtivo, setPushAtivo] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const deleteInputRef = useRef(null);
 
   const loadProfile = async () => {
     try {
@@ -116,7 +120,7 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleDeleteAccount = () => {
-    // Etapa 1 — informa o usuário sobre o que será removido
+    // Etapa 1 — informa o usuário (Alert nativo, funciona em iOS e Android)
     Alert.alert(
       'Excluir minha conta',
       'Esta ação é permanente e não pode ser desfeita.\n\n' +
@@ -132,39 +136,29 @@ export default function ProfileScreen({ navigation }) {
           text: 'Continuar',
           style: 'destructive',
           onPress: () => {
-            // Etapa 2 — confirmação final com digitação
-            Alert.prompt(
-              'Confirmar exclusão',
-              'Digite EXCLUIR para confirmar:',
-              [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                  text: 'Excluir conta',
-                  style: 'destructive',
-                  onPress: async input => {
-                    if (input?.trim().toUpperCase() !== 'EXCLUIR') {
-                      Alert.alert(
-                        'Cancelado',
-                        'Texto incorreto. Conta mantida.',
-                      );
-                      return;
-                    }
-                    setSaving(true);
-                    const result = await requestAccountDeletion();
-                    setSaving(false);
-                    if (!result.success) {
-                      Alert.alert('Erro', result.message);
-                    }
-                    // Logout já é feito pelo deletionService
-                  },
-                },
-              ],
-              'plain-text',
-            );
+            // Etapa 2 — abre modal com TextInput (cross-platform)
+            setDeleteConfirmText('');
+            setDeleteModalVisible(true);
+            setTimeout(() => deleteInputRef.current?.focus(), 100);
           },
         },
       ],
     );
+  };
+
+  const handleConfirmDelete = async () => {
+    if (deleteConfirmText.trim().toUpperCase() !== 'EXCLUIR') {
+      Alert.alert('Cancelado', 'Texto incorreto. Conta mantida.');
+      setDeleteModalVisible(false);
+      return;
+    }
+    setDeleteModalVisible(false);
+    setSaving(true);
+    const result = await requestAccountDeletion();
+    setSaving(false);
+    if (!result.success) {
+      Alert.alert('Erro', result.message);
+    }
   };
 
   if (loading) {
@@ -371,6 +365,47 @@ export default function ProfileScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Modal de confirmação de exclusão — cross-platform (iOS + Android) */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <View style={styles.deleteModalOverlay}>
+          <View style={styles.deleteModalBox}>
+            <Text style={styles.deleteModalTitle}>Confirmar exclusão</Text>
+            <Text style={styles.deleteModalBody}>
+              Digite <Text style={styles.deleteModalKeyword}>EXCLUIR</Text> para
+              confirmar:
+            </Text>
+            <TextInput
+              ref={deleteInputRef}
+              style={styles.deleteModalInput}
+              value={deleteConfirmText}
+              onChangeText={setDeleteConfirmText}
+              autoCapitalize="characters"
+              placeholder="EXCLUIR"
+              placeholderTextColor="#555"
+            />
+            <View style={styles.deleteModalActions}>
+              <TouchableOpacity
+                style={styles.deleteModalCancel}
+                onPress={() => setDeleteModalVisible(false)}
+              >
+                <Text style={styles.deleteModalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteModalConfirm}
+                onPress={handleConfirmDelete}
+              >
+                <Text style={styles.deleteModalConfirmText}>Excluir conta</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -532,5 +567,76 @@ const styles = StyleSheet.create({
     color: '#555',
     fontSize: 12,
     textDecorationLine: 'underline',
+  },
+  // ── Modal de confirmação de exclusão ────────────────────────────────────────
+  deleteModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  deleteModalBox: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 24,
+    width: '100%',
+    maxWidth: 360,
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  deleteModalTitle: {
+    color: COLORS.WHITE,
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  deleteModalBody: {
+    color: COLORS.GRAY,
+    fontSize: 14,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  deleteModalKeyword: {
+    color: '#ff4444',
+    fontWeight: 'bold',
+  },
+  deleteModalInput: {
+    backgroundColor: '#111',
+    borderWidth: 1,
+    borderColor: '#444',
+    borderRadius: 8,
+    padding: 12,
+    color: COLORS.WHITE,
+    fontSize: 16,
+    letterSpacing: 2,
+    marginBottom: 20,
+  },
+  deleteModalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  deleteModalCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#444',
+    alignItems: 'center',
+  },
+  deleteModalCancelText: {
+    color: COLORS.GRAY,
+    fontWeight: '600',
+  },
+  deleteModalConfirm: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#ff4444',
+    alignItems: 'center',
+  },
+  deleteModalConfirmText: {
+    color: COLORS.WHITE,
+    fontWeight: 'bold',
   },
 });

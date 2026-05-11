@@ -36,13 +36,17 @@ async function saveQueue(queue) {
 
 /**
  * Adiciona um scan à fila offline.
- * Cada entrada inclui os argumentos originais do `processScan` + timestamp.
+ *
+ * imageBase64 é EXCLUÍDO intencionalmente — pode ter até 3 MB por scan
+ * e causaria estouro de memória no AsyncStorage em celulares Android básicos.
+ * Na sincronização, processScan() reconverte imageUri → base64.
  *
  * @param {object} scanArgs — os mesmos argumentos passados para processScan()
  */
 export async function enqueue(scanArgs) {
+  const { imageBase64: _ignored, ...safeArgs } = scanArgs;
   const queue = await getQueue();
-  queue.push({ ...scanArgs, _queuedAt: Date.now() });
+  queue.push({ ...safeArgs, _queuedAt: Date.now() });
   await saveQueue(queue);
   logger.info(`Scan adicionado à fila offline. Total na fila: ${queue.length}`);
 }
