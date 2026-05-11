@@ -155,5 +155,26 @@ service cloud.firestore {
         && request.auth.token.email == email
         && resource.data.usado == false;
     }
+
+    // ── Log de exclusão LGPD (/deletion_log/{docId}) ─────────────────────────
+    // Escrito exclusivamente pelo backend via Admin SDK (ignora estas regras).
+    // Leitura restrita ao super_admin para fins de auditoria de conformidade.
+    // Nenhum client pode escrever, atualizar ou deletar diretamente.
+
+    match /deletion_log/{docId} {
+      allow read: if isActive() && isSuperAdmin();
+      allow write: if false;
+    }
+
+    // ── Métricas de inferência (/inference_metrics/{docId}) ───────────────────
+    // Escrito pelo app (telemetria de performance).
+    // Leitura restrita ao super_admin — contém dados de dispositivo e empresa.
+
+    match /inference_metrics/{docId} {
+      allow create: if isAuthenticated()
+        && request.resource.data.usuarioId == request.auth.uid;
+      allow read: if isActive() && isSuperAdmin();
+      allow update, delete: if false;
+    }
   }
 }

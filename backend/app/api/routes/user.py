@@ -2,9 +2,10 @@
 Rotas de gerenciamento de conta do usuário.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.api.deps import get_current_user
+from app.core.limiter import limiter
 from app.core.logging import get_logger
 from app.services.deletion_service import delete_user_account
 
@@ -17,7 +18,8 @@ logger = get_logger(__name__)
     status_code=status.HTTP_200_OK,
     summary="Exclui a conta do usuário autenticado (LGPD art. 18, II)",
 )
-async def delete_account(user: dict = Depends(get_current_user)):
+@limiter.limit("3/hour")  # máx 3 tentativas por hora — exclusão é irreversível
+async def delete_account(request: Request, user: dict = Depends(get_current_user)):
     """
     Remove todos os dados pessoais do usuário autenticado, conforme LGPD.
 
