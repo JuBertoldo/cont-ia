@@ -46,6 +46,12 @@ jest.mock('../src/services/offlineScanQueueService', () => ({
   enqueue: jest.fn(),
 }));
 
+// processScan é injetado no startConnectivityListener — mockado para verificar o wiring
+const mockProcessScan = jest.fn();
+jest.mock('../src/services/scannerService', () => ({
+  processScan: mockProcessScan,
+}));
+
 const App = require('../App').default;
 
 // ── Testes ──────────────────────────────────────────────────────────────────
@@ -83,6 +89,13 @@ describe('App — smoke tests de inicialização', () => {
 
     expect(callOrder).toEqual(['sentry', 'listener']);
     expect(callOrder).toHaveLength(2);
+  });
+
+  it('injeta processScan no listener de conectividade (sem dependência circular)', () => {
+    // Garante que App.tsx passa processScan para startConnectivityListener,
+    // mantendo offlineScanQueueService desacoplado de scannerService.
+    render(<App />);
+    expect(mockStartListener).toHaveBeenCalledWith(mockProcessScan);
   });
 
   it('cancela o listener de conectividade ao desmontar (sem memory leak)', () => {

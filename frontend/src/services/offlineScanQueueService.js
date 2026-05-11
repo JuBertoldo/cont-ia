@@ -10,11 +10,15 @@
  *   2. `enqueue()` salva o scan localmente
  *   3. Ao detectar conexão, `syncPendingScans()` drena a fila
  *
+ * Injeção de dependência:
+ *   `syncPendingScans` e `startConnectivityListener` recebem `processFunction`
+ *   como parâmetro em vez de importar `processScan` diretamente.
+ *   Isso quebra a dependência circular com scannerService.js.
+ *
  * Coleção local (AsyncStorage): OFFLINE_SCAN_QUEUE_KEY → JSON[]
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import { processScan } from './scannerService';
 import logger from '../utils/logger';
 
 const QUEUE_KEY = '@contia:offline_scan_queue';
@@ -59,14 +63,17 @@ export async function getPendingCount() {
 
 /**
  * Processa todos os scans pendentes na fila offline.
- * Chamada automaticamente ao detectar reconexão.
+ *
+ * Recebe `processFunction` como parâmetro (injeção de dependência) em vez de
+ * importar `processScan` diretamente — evita dependência circular com scannerService.
  *
  * - Scans bem-sucedidos são removidos da fila.
  * - Scans que falham novamente permanecem na fila para a próxima tentativa.
  *
- * @returns {{ synced: number, failed: number }}
+ * @param {function} processFunction — função com a mesma assinatura de processScan()
+ * @returns {Promise<{ synced: number, failed: number }>}
  */
-export async function syncPendingScans() {
+export async function syncPendingScans(processFunction) {
   const queue = await getQueue();
   if (queue.length === 0) return { synced: 0, failed: 0 };
 
@@ -79,7 +86,7 @@ export async function syncPendingScans() {
   for (const item of queue) {
     const { _queuedAt, ...scanArgs } = item;
     try {
-      const result = await processScan(scanArgs);
+      const result = await processFunction(scanArgs);
       if (result.success) {
         synced++;
         logger.info(
@@ -104,12 +111,15 @@ export async function syncPendingScans() {
 
 /**
  * Inicia o listener de conectividade.
- * Quando a rede voltar, dispara `syncPendingScans()` automaticamente.
- * Retorna a função de cleanup para usar em useEffect.
+ * Quando a rede voltar, dispara `syncPendingScans(processFunction)` automaticamente.
  *
- * @returns {() => void} unsubscribe
+ * Recebe `processFunction` via injeção de dependência para evitar
+ * dependência circular com scannerService.js.
+ *
+ * @param {function} processFunction — função com a mesma assinatura de processScan()
+ * @returns {() => void} unsubscribe — use no cleanup do useEffect
  */
-export function startConnectivityListener() {
+export function startConnectivityListener(processFunction) {
   const unsubscribe = NetInfo.addEventListener(async state => {
     if (state.isConnected && state.isInternetReachable) {
       const count = await getPendingCount();
@@ -117,7 +127,7 @@ export function startConnectivityListener() {
         logger.info(
           `Conexão restaurada. Sincronizando ${count} scan(s) offline...`,
         );
-        await syncPendingScans();
+        await syncPendingScans(processFunction);
       }
     }
   });

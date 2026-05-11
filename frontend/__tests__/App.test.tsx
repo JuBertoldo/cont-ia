@@ -34,6 +34,10 @@ jest.mock('../src/services/offlineScanQueueService', () => ({
   enqueue: jest.fn(),
 }));
 
+jest.mock('../src/services/scannerService', () => ({
+  processScan: jest.fn(),
+}));
+
 test('renders correctly', async () => {
   await ReactTestRenderer.act(async () => {
     ReactTestRenderer.create(<App />);

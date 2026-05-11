@@ -7,11 +7,14 @@ import AppNavigator from './src/navigation/AppNavigator';
 import ErrorBoundary from './src/components/common/ErrorBoundary';
 import { initSentry } from './src/config/sentryConfig';
 import { startConnectivityListener } from './src/services/offlineScanQueueService';
+import { processScan } from './src/services/scannerService';
 
 export default function App(): React.JSX.Element {
   useEffect(() => {
     initSentry();
-    const unsubscribe = startConnectivityListener();
+    // processScan é injetado em startConnectivityListener para evitar
+    // dependência circular entre offlineScanQueueService ↔ scannerService
+    const unsubscribe = startConnectivityListener(processScan);
     return unsubscribe;
   }, []);
 

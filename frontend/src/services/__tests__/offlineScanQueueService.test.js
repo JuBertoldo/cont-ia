@@ -9,15 +9,13 @@ import {
 
 jest.mock('@react-native-async-storage/async-storage');
 
-jest.mock('../scannerService', () => ({
-  processScan: jest.fn(),
-}));
-
 jest.mock('@react-native-community/netinfo', () => ({
   addEventListener: jest.fn(() => jest.fn()),
 }));
 
-const { processScan } = require('../scannerService');
+// processFunction é injetada como parâmetro — não há mais mock de scannerService aqui
+const mockProcessScan = jest.fn();
+
 const AsyncStorage = require('@react-native-async-storage/async-storage');
 
 const SCAN_ARGS = {
@@ -95,53 +93,53 @@ describe('getPendingCount', () => {
 
 describe('syncPendingScans', () => {
   it('retorna { synced: 0, failed: 0 } quando a fila está vazia', async () => {
-    const result = await syncPendingScans();
+    const result = await syncPendingScans(mockProcessScan);
     expect(result).toEqual({ synced: 0, failed: 0 });
-    expect(processScan).not.toHaveBeenCalled();
+    expect(mockProcessScan).not.toHaveBeenCalled();
   });
 
   it('processa e remove scans bem-sucedidos da fila', async () => {
-    processScan.mockResolvedValue({ success: true, id: 'doc-123' });
+    mockProcessScan.mockResolvedValue({ success: true, id: 'doc-123' });
     await enqueue(SCAN_ARGS);
     await enqueue(SCAN_ARGS);
 
-    const result = await syncPendingScans();
+    const result = await syncPendingScans(mockProcessScan);
 
     expect(result).toEqual({ synced: 2, failed: 0 });
     expect(await getPendingCount()).toBe(0);
   });
 
   it('mantém scans com falha na fila para próxima tentativa', async () => {
-    processScan
+    mockProcessScan
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce({ success: false, message: 'Erro' });
 
     await enqueue(SCAN_ARGS);
     await enqueue({ ...SCAN_ARGS, local: 'Galpão B' });
 
-    const result = await syncPendingScans();
+    const result = await syncPendingScans(mockProcessScan);
 
     expect(result).toEqual({ synced: 1, failed: 1 });
     expect(await getPendingCount()).toBe(1);
   });
 
-  it('mantém scan na fila quando processScan lança exceção', async () => {
-    processScan.mockRejectedValue(new Error('network error'));
+  it('mantém scan na fila quando processFunction lança exceção', async () => {
+    mockProcessScan.mockRejectedValue(new Error('network error'));
     await enqueue(SCAN_ARGS);
 
-    const result = await syncPendingScans();
+    const result = await syncPendingScans(mockProcessScan);
 
     expect(result.failed).toBe(1);
     expect(await getPendingCount()).toBe(1);
   });
 
-  it('chama processScan sem o campo _queuedAt', async () => {
-    processScan.mockResolvedValue({ success: true });
+  it('chama processFunction sem o campo _queuedAt', async () => {
+    mockProcessScan.mockResolvedValue({ success: true });
     await enqueue(SCAN_ARGS);
 
-    await syncPendingScans();
+    await syncPendingScans(mockProcessScan);
 
-    const callArgs = processScan.mock.calls[0][0];
+    const callArgs = mockProcessScan.mock.calls[0][0];
     expect(callArgs._queuedAt).toBeUndefined();
     expect(callArgs.usuarioId).toBe(SCAN_ARGS.usuarioId);
   });
@@ -152,12 +150,12 @@ describe('syncPendingScans', () => {
 describe('startConnectivityListener', () => {
   it('registra um listener no NetInfo', () => {
     const NetInfo = require('@react-native-community/netinfo');
-    startConnectivityListener();
+    startConnectivityListener(mockProcessScan);
     expect(NetInfo.addEventListener).toHaveBeenCalledTimes(1);
   });
 
   it('retorna uma função de cleanup (unsubscribe)', () => {
-    const unsubscribe = startConnectivityListener();
+    const unsubscribe = startConnectivityListener(mockProcessScan);
     expect(typeof unsubscribe).toBe('function');
   });
 });
