@@ -13,6 +13,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.routes.detect import router as detect_router
 from app.api.routes.notify import router as notify_router
+from app.api.routes.user import router as user_router
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import get_logger, setup_logging
@@ -96,3 +97,4 @@ def metrics():
 
 app.include_router(detect_router)
 app.include_router(notify_router)
+app.include_router(user_router)

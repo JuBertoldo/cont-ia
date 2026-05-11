@@ -30,6 +30,7 @@ import {
   ativarPushNotifications,
   desativarPushNotifications,
 } from '../../services/notificationService';
+import { requestAccountDeletion } from '../../services/deletionService';
 
 export default function ProfileScreen({ navigation }) {
   const { width } = useWindowDimensions();
@@ -112,6 +113,58 @@ export default function ProfileScreen({ navigation }) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDeleteAccount = () => {
+    // Etapa 1 — informa o usuário sobre o que será removido
+    Alert.alert(
+      'Excluir minha conta',
+      'Esta ação é permanente e não pode ser desfeita.\n\n' +
+        'Serão removidos:\n' +
+        '• Seu perfil e dados pessoais\n' +
+        '• Foto de perfil\n' +
+        '• Histórico de notificações\n\n' +
+        'Seus registros de inventário serão anonimizados ' +
+        '(obrigação fiscal — Lei nº 5.172/1966).',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Continuar',
+          style: 'destructive',
+          onPress: () => {
+            // Etapa 2 — confirmação final com digitação
+            Alert.prompt(
+              'Confirmar exclusão',
+              'Digite EXCLUIR para confirmar:',
+              [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                  text: 'Excluir conta',
+                  style: 'destructive',
+                  onPress: async input => {
+                    if (input?.trim().toUpperCase() !== 'EXCLUIR') {
+                      Alert.alert(
+                        'Cancelado',
+                        'Texto incorreto. Conta mantida.',
+                      );
+                      return;
+                    }
+                    setSaving(true);
+                    const result = await requestAccountDeletion();
+                    setSaving(false);
+                    if (!result.success) {
+                      Alert.alert('Erro', result.message);
+                    }
+                    // Logout já é feito pelo deletionService
+                  },
+                },
+              ],
+              'plain-text',
+            );
+          },
+        },
+      ],
+    );
   };
 
   if (loading) {
@@ -306,6 +359,17 @@ export default function ProfileScreen({ navigation }) {
             Contagem e identificação visual instantânea para o seu negócio
           </Text>
         </View>
+
+        {/* Exclusão de dados — LGPD art. 18, II */}
+        <TouchableOpacity
+          style={styles.deleteAccountBtn}
+          onPress={handleDeleteAccount}
+          disabled={saving}
+        >
+          <Text style={styles.deleteAccountText}>
+            Excluir minha conta e dados
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -457,4 +521,16 @@ const styles = StyleSheet.create({
   versionBlock: { alignItems: 'center', marginTop: 'auto', paddingTop: 16 },
   version: { color: '#333', fontSize: 12, textAlign: 'center' },
   tagline: { color: '#222', fontSize: 11, textAlign: 'center', marginTop: 4 },
+  deleteAccountBtn: {
+    marginTop: 24,
+    marginBottom: 32,
+    alignSelf: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  deleteAccountText: {
+    color: '#555',
+    fontSize: 12,
+    textDecorationLine: 'underline',
+  },
 });

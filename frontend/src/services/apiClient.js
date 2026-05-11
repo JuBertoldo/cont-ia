@@ -115,4 +115,10 @@ export const apiClient = {
       body: JSON.stringify(body),
       ...options,
     }),
+
+  delete: (path, options = {}) =>
+    requestWithRetry(path, {
+      method: 'DELETE',
+      ...options,
+    }),
 };
