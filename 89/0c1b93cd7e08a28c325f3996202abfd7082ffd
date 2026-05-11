@@ -1,0 +1,28 @@
+frontend/src/services/__tests__/scannerService.test.js
+  s_39d5bc69090e8b::t_8b38b1264d403f 14-22
+frontend/__tests__/App.test.tsx
+  s_39d5bc69090e8b::t_5fe9c3df2d68b9 3,17-36,38
+frontend/src/services/__tests__/authService.test.js
+  s_39d5bc69090e8b::t_feb1c4da4310a6 145
+  s_39d5bc69090e8b::t_a83202fdac8424 163
+  s_39d5bc69090e8b::t_57fbaf862b0560 144,146-147,162,164
+frontend/src/services/__tests__/yoloService.test.js
+  s_39d5bc69090e8b::t_40703e90ba8b90 1
+  s_39d5bc69090e8b::t_3d80332d52a251 53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.6",
+  "base_commit_sha": "890c1b93cd7e08a28c325f3996202abfd7082ffd",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
