@@ -11,6 +11,15 @@ jest.mock('../inventoryService', () => ({
   createInventoryItem: jest.fn(),
 }));
 
+jest.mock('../inferenceMetricsService', () => ({
+  checkInferenceSLA: jest.fn(),
+  recordInferenceMetric: jest.fn(),
+}));
+
+jest.mock('../offlineScanQueueService', () => ({
+  enqueue: jest.fn(() => Promise.resolve()),
+}));
+
 global.fetch = jest.fn();
 global.FileReader = jest.fn(() => ({
   readAsDataURL: jest.fn(),

@@ -141,6 +141,10 @@ describe('registerWithEmail — empresa existente', () => {
   });
 
   it('lança erro se código de empresa não existir', async () => {
+    // registerWithEmail cria o Auth user ANTES de verificar o código → mock necessário
+    const fakeUser = { uid: 'uid-temp', delete: jest.fn().mockResolvedValue() };
+    mockCreateUser.mockResolvedValueOnce({ user: fakeUser });
+
     const { getEmpresaByCodigo } = require('../empresaService');
     getEmpresaByCodigo.mockResolvedValueOnce(null);
 
@@ -155,6 +159,9 @@ describe('registerWithEmail — empresa existente', () => {
   });
 
   it('lança erro se matrícula já estiver em uso na empresa', async () => {
+    // registerWithEmail cria o Auth user ANTES de verificar a matrícula → mock necessário
+    const fakeUser = { uid: 'uid-dup', delete: jest.fn().mockResolvedValue() };
+    mockCreateUser.mockResolvedValueOnce({ user: fakeUser });
     mockGetDocs.mockResolvedValueOnce({ empty: false }); // matrícula já existe
 
     await expect(

@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { detectWithYolo, summarizeDetections } from '../yoloService';
 import { apiClient } from '../apiClient';
 
@@ -49,7 +50,7 @@ describe('detectWithYolo', () => {
     expect(apiClient.post).toHaveBeenCalledWith('/v1/detect', {
       image_base64: validBase64,
       source: 'mobile',
-      platform: 'android',
+      platform: Platform.OS,
     });
   });
 
