@@ -16,6 +16,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 
 import { COLORS } from '../../constants/colors';
+import { ROLES } from '../../constants/roles';
+import { USER_STATUS } from '../../constants/config';
 import { ROUTES } from '../../constants/routes';
 import { isValidEmail } from '../../utils/validators';
 import { createUserWithEmailAndPassword, deleteUser } from 'firebase/auth';
@@ -65,8 +67,8 @@ export default function SupportRegisterScreen() {
         uid,
         nome: nome.trim(),
         email: email.trim().toLowerCase(),
-        role: 'support',
-        status: 'active',
+        role: ROLES.SUPPORT,
+        status: USER_STATUS.ACTIVE,
         empresaId: null,
         convidadoPor: invite.createdBy ?? '',
         createdAt: serverTimestamp(),

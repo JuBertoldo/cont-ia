@@ -19,6 +19,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 
 import { COLORS } from '../../constants/colors';
+import { ROLES } from '../../constants/roles';
 import { MESSAGES } from '../../constants/messages';
 import { auth } from '../../config/firebaseConfig';
 import { getUserProfile } from '../../services/authService';
@@ -42,7 +43,7 @@ export default function ProfileScreen({ navigation }) {
   const [userName, setUserName] = useState('');
   const [email, setEmail] = useState('');
   const [photoURL, setPhotoURL] = useState('');
-  const [role, setRole] = useState('user');
+  const [role, setRole] = useState(ROLES.USER);
   const [matricula, setMatricula] = useState('');
   const [empresa, setEmpresa] = useState(null);
   const [pushAtivo, setPushAtivo] = useState(false);
@@ -58,7 +59,7 @@ export default function ProfileScreen({ navigation }) {
         setUserName(profile.nome || auth.currentUser.displayName || '');
         setEmail(profile.email || auth.currentUser.email || '');
         setPhotoURL(profile.photoURL || auth.currentUser.photoURL || '');
-        setRole(profile.role || 'user');
+        setRole(profile.role || ROLES.USER);
         setMatricula(profile.matricula || '');
         setPushAtivo(profile.notificacoesHabilitadas === true);
 

@@ -19,6 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { COLORS } from '../../constants/colors';
+import { ROLES } from '../../constants/roles';
 import { ROUTES } from '../../constants/routes';
 import {
   detectWithYolo,
@@ -122,7 +123,7 @@ export default function ScannerScreen() {
   const [localText, setLocalText] = useState('');
   const [gpsLoading, setGpsLoading] = useState(false);
   const [empresaId, setEmpresaId] = useState(null);
-  const [usuarioRole, setUsuarioRole] = useState('user');
+  const [usuarioRole, setUsuarioRole] = useState(ROLES.USER);
 
   // Estado do modal de resultado
   const [modalVisible, setModalVisible] = useState(false);
@@ -146,7 +147,7 @@ export default function ScannerScreen() {
       if (!auth.currentUser) return;
       const profile = await getUserProfile(auth.currentUser.uid);
       setEmpresaId(profile?.empresaId || null);
-      setUsuarioRole(profile?.role || 'user');
+      setUsuarioRole(profile?.role || ROLES.USER);
     };
     loadProfile();
   }, []);

@@ -3,7 +3,14 @@
   "compilerOptions": {
     "types": ["jest"],
 
-    // ── QC: TypeScript strict mode ───────────────────────────────────────────
+    // ── Verificação de tipos ──────────────────────────────────────────────────
+    // allowJs: permite importar .js a partir de .ts sem erros de módulo
+    // checkJs: ativado somente para arquivos com comentário // @ts-check no topo
+    //          (migração incremental — não força toda a base legada de uma vez)
+    "allowJs": true,
+    "checkJs": false,
+
+    // ── TypeScript strict mode ────────────────────────────────────────────────
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -13,10 +20,17 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": false,
 
-    // ── Erros em código morto ────────────────────────────────────────────────
+    // ── Erros em código morto ─────────────────────────────────────────────────
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["**/node_modules", "**/Pods", "**/__tests__/**", "**/*.test.ts", "**/*.test.tsx"]
+  "exclude": [
+    "**/node_modules",
+    "**/Pods",
+    "**/vendor",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ]
 }

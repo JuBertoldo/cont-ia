@@ -1,3 +1,10 @@
+/**
+ * Serviço de operações do sistema de chamados (Support).
+ *
+ * Responsabilidade: operações no Firestore (criar, responder, assinar chamados,
+ * gerenciar convites de suporte). Constantes e utilitários de SLA estão em
+ * src/constants/supportConstants.js (importáveis sem dependência de rede).
+ */
 import { auth, db } from '../config/firebaseConfig';
 import { apiClient } from './apiClient';
 import {
@@ -19,100 +26,24 @@ import {
   where,
   onSnapshot,
   serverTimestamp,
-  Timestamp,
 } from 'firebase/firestore';
+import {
+  addHours,
+  getSlaInfo,
+  TICKET_SLA,
+  TICKET_STATUS,
+  TICKET_TRANSITIONS,
+  TICKET_TYPES,
+} from '../constants/supportConstants';
 
-export const TICKET_TYPES = [
-  { key: 'problema', label: 'Problema / Bug', icon: 'bug-outline' },
-  { key: 'sugestao', label: 'Sugestão de melhoria', icon: 'bulb-outline' },
-  {
-    key: 'configuracao',
-    label: 'Configuração da empresa',
-    icon: 'settings-outline',
-  },
-  { key: 'outro', label: 'Outro', icon: 'help-circle-outline' },
-];
-
-export const TICKET_STATUS = {
-  aberto: { label: 'Aberto', color: '#3b82f6' },
-  em_andamento: { label: 'Em andamento', color: '#f59e0b' },
-  aguardando_cliente: { label: 'Aguardando cliente', color: '#8b5cf6' },
-  resolvido: { label: 'Resolvido', color: '#22c55e' },
+// Re-exporta para não quebrar imports existentes nas telas
+export {
+  getSlaInfo,
+  TICKET_SLA,
+  TICKET_STATUS,
+  TICKET_TRANSITIONS,
+  TICKET_TYPES,
 };
-
-/** Transições de status permitidas */
-export const TICKET_TRANSITIONS = {
-  aberto: ['em_andamento'],
-  em_andamento: ['aguardando_cliente', 'resolvido'],
-  aguardando_cliente: ['em_andamento'],
-  resolvido: ['aberto'],
-};
-
-/** SLA por tipo de chamado (em horas) */
-export const TICKET_SLA = {
-  problema: {
-    prioridade: 'Alta',
-    prioridadeColor: '#ef4444',
-    respostaSuporteH: 2,
-    resolucaoH: 12,
-    respostaClienteH: 4,
-  },
-  configuracao: {
-    prioridade: 'Média',
-    prioridadeColor: '#f59e0b',
-    respostaSuporteH: 4,
-    resolucaoH: 48,
-    respostaClienteH: 8,
-  },
-  sugestao: {
-    prioridade: 'Baixa',
-    prioridadeColor: '#22c55e',
-    respostaSuporteH: 24,
-    resolucaoH: 720,
-    respostaClienteH: 48,
-  },
-  outro: {
-    prioridade: 'Média',
-    prioridadeColor: '#f59e0b',
-    respostaSuporteH: 8,
-    resolucaoH: 72,
-    respostaClienteH: 24,
-  },
-};
-
-/** Calcula info do SLA a partir de um deadline (Timestamp ou Date) */
-export function getSlaInfo(deadline) {
-  if (!deadline) return null;
-  const d = deadline?.toDate ? deadline.toDate() : new Date(deadline);
-  const msLeft = d - Date.now();
-  const hLeft = msLeft / 3_600_000;
-
-  if (msLeft <= 0)
-    return { status: 'vencido', color: '#ef4444', label: 'Vencido' };
-  if (hLeft < 1)
-    return {
-      status: 'critico',
-      color: '#f97316',
-      label: `${Math.ceil(hLeft * 60)}min restantes`,
-    };
-  if (hLeft < 4)
-    return {
-      status: 'atencao',
-      color: '#f59e0b',
-      label: `${Math.floor(hLeft)}h ${Math.round(
-        (hLeft % 1) * 60,
-      )}min restantes`,
-    };
-  return {
-    status: 'ok',
-    color: '#22c55e',
-    label: `${Math.floor(hLeft)}h restantes`,
-  };
-}
-
-function addHours(h) {
-  return Timestamp.fromDate(new Date(Date.now() + h * 3_600_000));
-}
 
 // ── Gera ID do chamado no formato CONTIA-DDMMYY01 ────────────────────────────
 

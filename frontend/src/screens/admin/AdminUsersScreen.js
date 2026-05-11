@@ -14,6 +14,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { COLORS } from '../../constants/colors';
 import { ROLES } from '../../constants/roles';
+import { USER_STATUS } from '../../constants/config';
 import {
   getAllUsers,
   approveUser,
@@ -42,7 +43,7 @@ export default function AdminUsersScreen({ navigation }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
-  const [activeTab, setActiveTab] = useState('active');
+  const [activeTab, setActiveTab] = useState(USER_STATUS.ACTIVE);
   const [search, setSearch] = useState('');
 
   const loadUsers = useCallback(async () => {
@@ -62,7 +63,9 @@ export default function AdminUsersScreen({ navigation }) {
   }, [loadUsers]);
 
   const filteredUsers = useMemo(() => {
-    const byTab = users.filter(u => (u.status || 'pending') === activeTab);
+    const byTab = users.filter(
+      u => (u.status || USER_STATUS.PENDING) === activeTab,
+    );
     if (!search.trim()) return byTab;
     const q = search.toLowerCase();
     return byTab.filter(
@@ -74,7 +77,10 @@ export default function AdminUsersScreen({ navigation }) {
   }, [users, activeTab, search]);
 
   const pendingCount = useMemo(
-    () => users.filter(u => (u.status || 'pending') === 'pending').length,
+    () =>
+      users.filter(
+        u => (u.status || USER_STATUS.PENDING) === USER_STATUS.PENDING,
+      ).length,
     [users],
   );
 
@@ -85,8 +91,10 @@ export default function AdminUsersScreen({ navigation }) {
       setUsers(prev =>
         prev.map(u => {
           if (u.id !== uid) return u;
-          if (action === approveUser) return { ...u, status: 'active' };
-          if (action === rejectUser) return { ...u, status: 'rejected' };
+          if (action === approveUser)
+            return { ...u, status: USER_STATUS.ACTIVE };
+          if (action === rejectUser)
+            return { ...u, status: USER_STATUS.REJECTED };
           return u;
         }),
       );
@@ -216,7 +224,7 @@ export default function AdminUsersScreen({ navigation }) {
         ) : (
           <View style={styles.actions}>
             {/* Pendentes: Aprovar / Recusar */}
-            {activeTab === 'pending' && (
+            {activeTab === USER_STATUS.PENDING && (
               <>
                 <TouchableOpacity
                   style={styles.btnApprove}
@@ -242,7 +250,7 @@ export default function AdminUsersScreen({ navigation }) {
             )}
 
             {/* Ativos: mudar role / revogar */}
-            {activeTab === 'active' && !isCurrentUser && (
+            {activeTab === USER_STATUS.ACTIVE && !isCurrentUser && (
               <>
                 <TouchableOpacity
                   style={styles.btnRole}
@@ -264,7 +272,7 @@ export default function AdminUsersScreen({ navigation }) {
             )}
 
             {/* Recusados: Reativar */}
-            {activeTab === 'rejected' && (
+            {activeTab === USER_STATUS.REJECTED && (
               <TouchableOpacity
                 style={styles.btnApprove}
                 onPress={() => handleReactivate(item)}
@@ -320,7 +328,7 @@ export default function AdminUsersScreen({ navigation }) {
         contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}
       >
         {TABS.map(tab => {
-          const isPending = tab.key === 'pending' && pendingCount > 0;
+          const isPending = tab.key === USER_STATUS.PENDING && pendingCount > 0;
           return (
             <TouchableOpacity
               key={tab.key}

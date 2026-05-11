@@ -1,3 +1,4 @@
+import { ROLES } from '../../constants/roles';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -86,14 +87,14 @@ const GUIDE_USER = [
 ];
 
 export default function QuickGuideScreen({ navigation }) {
-  const [role, setRole] = useState('user');
+  const [role, setRole] = useState(ROLES.USER);
   const [codigoEmpresa, setCodigoEmpresa] = useState('');
 
   useEffect(() => {
     const load = async () => {
       if (!auth.currentUser) return;
       const profile = await getUserProfile(auth.currentUser.uid);
-      setRole(profile?.role || 'user');
+      setRole(profile?.role || ROLES.USER);
       if (profile?.empresaId && profile?.role === 'admin') {
         const emp = await getEmpresaById(profile.empresaId);
         setCodigoEmpresa(emp?.codigo || '');

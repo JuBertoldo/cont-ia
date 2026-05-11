@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { COLORS } from '../../constants/colors';
+import { ROLES } from '../../constants/roles';
 import {
   getAllUsersGlobal,
   deleteUserGlobal,
@@ -83,14 +84,14 @@ export default function CompanyDetailScreen({ navigation, route }) {
   };
 
   const handleChangeRole = user => {
-    const roles = ['user', 'admin', 'super_admin'];
+    const roles = [ROLES.USER, ROLES.ADMIN, ROLES.SUPER_ADMIN];
     const options = roles
       .filter(r => r !== user.role)
       .map(r => ({
         text:
-          r === 'super_admin'
+          r === ROLES.SUPER_ADMIN
             ? 'Super Admin'
-            : r === 'admin'
+            : r === ROLES.ADMIN
             ? 'Admin'
             : 'Usuário',
         onPress: async () => {

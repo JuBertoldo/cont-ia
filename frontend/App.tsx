@@ -8,7 +8,7 @@ import ErrorBoundary from './src/components/common/ErrorBoundary';
 import { initSentry } from './src/config/sentryConfig';
 import { startConnectivityListener } from './src/services/offlineScanQueueService';
 
-export default function App() {
+export default function App(): React.JSX.Element {
   useEffect(() => {
     initSentry();
     const unsubscribe = startConnectivityListener();
