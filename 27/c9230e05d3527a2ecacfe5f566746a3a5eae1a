@@ -1,0 +1,28 @@
+frontend/src/services/__tests__/offlineScanQueueService.test.js
+  s_39d5bc69090e8b::t_141d8f06e63734 16-18,96,98,102,106,113,120,126-127,130,136-137,140,142,153,158
+frontend/App.tsx
+  s_39d5bc69090e8b::t_b588011ec594da 10,15-17
+frontend/src/services/offlineScanQueueService.js
+  s_39d5bc69090e8b::t_b53bec39751392 13-17,66-68,73-74,76,89,114-117,119-120,122,130
+frontend/__tests__/App.smoke.test.js
+  s_39d5bc69090e8b::t_faaef7cd49e674 94-100
+  s_39d5bc69090e8b::t_13b821320213d1 49-54
+frontend/__tests__/App.test.tsx
+  s_39d5bc69090e8b::t_1be4b38c784dbf 37-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.6",
+  "base_commit_sha": "27c9230e05d3527a2ecacfe5f566746a3a5eae1a",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
