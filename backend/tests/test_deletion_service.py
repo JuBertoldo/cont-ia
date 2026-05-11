@@ -8,6 +8,7 @@ from app.services.deletion_service import (
     DeletionResult,
     _anonymize_inventory,
     _anonymize_login_audit,
+    _create_deletion_ticket,
     _delete_collection_where,
     _delete_profile_photo,
     delete_user_account,
@@ -221,3 +222,76 @@ class TestDeleteUserAccount:
 
         # UserNotFoundError não deve gerar erro — conta já deletada
         assert result.to_dict()["success"] is True
+
+
+# ── _create_deletion_ticket ───────────────────────────────────────────────────
+
+
+class TestCreateDeletionTicket:
+    def _make_db(self, empresa_nome="Empresa Teste"):
+        db = MagicMock()
+
+        # Mock da empresa
+        emp_snap = MagicMock()
+        emp_snap.exists = True
+        emp_snap.to_dict.return_value = {"nome": empresa_nome}
+
+        # Mock do get de empresa
+        db.collection.return_value.document.return_value.get.return_value = emp_snap
+
+        # Mock do ticketCounter (transaction)
+        counter_snap = MagicMock()
+        counter_snap.exists = False
+        counter_snap.to_dict.return_value = {}
+        db.collection.return_value.document.return_value.get.return_value = counter_snap
+
+        # Mock do transaction
+        tx = MagicMock()
+        tx.get.return_value = counter_snap
+        db.transaction.return_value = tx
+
+        # Mock do add para chamados
+        db.collection.return_value.add.return_value = (None, MagicMock(id="ticket-id"))
+
+        return db
+
+    def test_retorna_numero_do_chamado(self):
+        db = self._make_db()
+        user_data = {"nome": "João Silva", "email": "joao@test.com", "empresaId": "emp-1"}
+
+        with patch("app.services.deletion_service._get_next_ticket_number") as mock_num:
+            mock_num.return_value = "CONTIA-2026051101"
+            result = _create_deletion_ticket(db, "uid-1", user_data)
+
+        assert result == "CONTIA-2026051101"
+
+    def test_chamado_criado_com_status_resolvido(self):
+        db = self._make_db()
+        user_data = {"nome": "João Silva", "email": "joao@test.com", "empresaId": "emp-1"}
+        captured = {}
+
+        def capture_add(data):
+            captured["data"] = data
+            return (None, MagicMock(id="ticket-id"))
+
+        db.collection.return_value.add.side_effect = capture_add
+
+        with patch("app.services.deletion_service._get_next_ticket_number") as mock_num:
+            mock_num.return_value = "CONTIA-2026051101"
+            _create_deletion_ticket(db, "uid-1", user_data)
+
+        assert captured["data"]["status"] == "resolvido"
+        assert captured["data"]["resolvidoAt"] is not None
+        assert captured["data"]["tipo"] == "outro"
+        assert "LGPD" in captured["data"]["titulo"]
+
+    def test_retorna_none_quando_falha(self):
+        db = self._make_db()
+        db.collection.return_value.add.side_effect = Exception("Firestore error")
+        user_data = {"nome": "João", "email": "joao@test.com", "empresaId": ""}
+
+        with patch("app.services.deletion_service._get_next_ticket_number") as mock_num:
+            mock_num.return_value = "CONTIA-2026051101"
+            result = _create_deletion_ticket(db, "uid-1", user_data)
+
+        assert result is None  # falha silenciosa — não bloqueia a exclusão

@@ -7,6 +7,7 @@ Referências legais:
   Art. 19      — resposta ao titular em até 15 dias
 
 Ações por tipo de dado:
+  /chamados               → criar chamado informativo (status=resolvido) ANTES de deletar
   Firebase Auth           → deletar conta
   /usuarios/{uid}         → deletar documento
   Storage /perfil/{uid}/  → deletar foto de perfil
@@ -35,6 +36,8 @@ COL_NOTIFS = "notificacoes"
 COL_AUDIT = "login_audit"
 COL_METRICS = "inference_metrics"
 COL_LOG = "deletion_log"
+COL_TICKETS = "chamados"
+COL_CONFIG = "config"
 
 ANONYMOUS_USER_ID = ""
 ANONYMOUS_USER_NAME = "Usuário removido"
@@ -92,6 +95,13 @@ async def delete_user_account(uid: str) -> DeletionResult:
     user_data = user_doc.to_dict() if user_doc.exists else {}
     empresa_id = user_data.get("empresaId", "")
 
+    # ── 2. Cria chamado informativo ANTES de deletar (Opção A — LGPD) ─────────
+    # O chamado precisa dos dados do usuário (nome, empresa) — criado antes
+    # de qualquer exclusão. Status = 'resolvido' imediatamente (informativo).
+    ticket_numero = _create_deletion_ticket(db, uid, user_data)
+    if ticket_numero:
+        logger.info("Chamado LGPD criado: %s", ticket_numero)
+
     # ── 2. Deleta notificações ────────────────────────────────────────────────
     count = _delete_collection_where(db, COL_NOTIFS, "paraUid", "==", uid, result, "notificacoes")
     logger.info("Notificações deletadas: %d", count)
@@ -144,6 +154,90 @@ async def delete_user_account(uid: str) -> DeletionResult:
 
 
 # ── Funções auxiliares ────────────────────────────────────────────────────────
+
+
+def _get_next_ticket_number(db) -> str:
+    """
+    Gera o próximo número de chamado usando a mesma lógica do frontend:
+    Firestore transaction em /config/ticketCounter → CONTIA-{YYYYMMDD}{seq:02d}
+    """
+    now = datetime.now(UTC)
+    date_key = now.strftime("%Y%m%d")
+    counter_ref = db.collection(COL_CONFIG).document("ticketCounter")
+
+    @firestore.transactional
+    def _run(transaction, ref):
+        snap = ref.get(transaction=transaction)
+        data = snap.to_dict() if snap.exists else {}
+        seq = (data.get("count", 0) or 0) + 1 if data.get("data") == date_key else 1
+        transaction.set(ref, {"data": date_key, "count": seq})
+        return seq
+
+    transaction = db.transaction()
+    seq = _run(transaction, counter_ref)
+    return f"CONTIA-{date_key}{str(seq).zfill(2)}"
+
+
+def _create_deletion_ticket(db, uid: str, user_data: dict) -> str | None:
+    """
+    Cria um chamado informativo com status 'resolvido' para registrar
+    a solicitação de exclusão de conta conforme LGPD art. 18, II.
+
+    Deve ser chamado ANTES de qualquer exclusão de dados — precisa do
+    nome e empresa do usuário para preencher o chamado corretamente.
+
+    Retorna o número do chamado criado, ou None em caso de falha.
+    """
+    now = datetime.now(UTC)
+
+    # Busca nome da empresa (dados ainda disponíveis neste momento)
+    empresa_id = user_data.get("empresaId", "")
+    empresa_nome = ""
+    if empresa_id:
+        emp_snap = db.collection("empresas").document(empresa_id).get()
+        if emp_snap.exists:
+            empresa_nome = (emp_snap.to_dict() or {}).get("nome", "")
+
+    try:
+        numero = _get_next_ticket_number(db)
+
+        db.collection(COL_TICKETS).add(
+            {
+                "numero": numero,
+                "titulo": "Exclusão de conta solicitada (LGPD)",
+                "descricao": (
+                    "O usuário solicitou a exclusão de todos os seus dados pessoais "
+                    "conforme LGPD art. 18, II. A exclusão foi processada automaticamente "
+                    "pelo sistema."
+                ),
+                "tipo": "outro",
+                "status": "resolvido",
+                "prioridade": "Baixa",
+                "prioridadeColor": "#22c55e",
+                "empresaId": empresa_id,
+                "empresaNome": empresa_nome,
+                "adminId": uid,
+                "adminNome": user_data.get("nome") or user_data.get("email") or "",
+                "adminEmail": user_data.get("email") or "",
+                "resposta": (
+                    "Conta excluída automaticamente conforme solicitação LGPD art. 18, II. "
+                    "Dados pessoais removidos. Registros fiscais anonimizados (CTN art. 173)."
+                ),
+                "respondidoPor": "Sistema Cont.IA",
+                "reaberturas": 0,
+                "slaRespostaSuporteAt": None,
+                "slaResolucaoAt": None,
+                "slaRespostaClienteAt": None,
+                "primeiraRespostaAt": now,
+                "resolvidoAt": now,
+                "createdAt": now,
+                "updatedAt": now,
+            }
+        )
+        return numero
+    except Exception as exc:
+        logger.warning("Falha ao criar chamado LGPD: %s", exc)
+        return None
 
 
 def _delete_collection_where(
