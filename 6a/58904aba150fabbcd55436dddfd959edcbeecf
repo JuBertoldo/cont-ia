@@ -1,0 +1,42 @@
+backend/app/main.py
+  s_39d5bc69090e8b::t_9c903e416b4aa0 16
+  s_39d5bc69090e8b::t_328a743e5ae749 100
+backend/app/services/deletion_service.py
+  s_39d5bc69090e8b::t_ee44b004860385 21,32,34-39,41,46,49,51,73,96,148,150-156,178,183,185-192,203,208,210-217,240,247,251-262
+  s_39d5bc69090e8b::t_15049abf0a3616 1-20,22-31,33,40,42-45,47-48,50,52-72,74-95,97-147,149,157-177,179-182,184,193-202,204-207,209,218-239,241-246,248-250,263-264
+frontend/src/services/deletionService.js
+  s_39d5bc69090e8b::t_c067e47d000f25 28-29
+  s_39d5bc69090e8b::t_6a3deb38471706 1-27,30-40
+frontend/src/services/apiClient.js
+  s_39d5bc69090e8b::t_ba8fd77f1487ce 118-123
+firestore.rules
+  s_39d5bc69090e8b::t_03c64cbed045c1 57-59
+backend/app/api/routes/user.py
+  s_39d5bc69090e8b::t_bedf103e84db3c 1-40,42-54
+  s_39d5bc69090e8b::t_c3d1b4669d8350 41
+backend/tests/test_deletion_service.py
+  s_39d5bc69090e8b::t_3bc8af1a21c24d 1-2,4-223
+  s_39d5bc69090e8b::t_ee44b004860385 3
+frontend/src/screens/profile/ProfileScreen.js
+  s_39d5bc69090e8b::t_ee0f8591474821 524-535
+  s_39d5bc69090e8b::t_c067e47d000f25 146-149,369-371
+  s_39d5bc69090e8b::t_ee120792e88519 362-368,372
+  s_39d5bc69090e8b::t_66ae506357da14 118-145,150-169
+  s_39d5bc69090e8b::t_ed39b3ca872a74 33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.5",
+  "base_commit_sha": "6a58904aba150fabbcd55436dddfd959edcbeecf",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
