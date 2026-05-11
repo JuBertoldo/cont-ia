@@ -1,0 +1,44 @@
+frontend/src/screens/inventory/ScannerScreen.js
+  s_39d5bc69090e8b::t_98106b5ea371e6 126,150
+  s_39d5bc69090e8b::t_f40e62b7c74d6b 22
+frontend/src/constants/supportConstants.js
+  s_39d5bc69090e8b::t_61189805662536 1-29,34-37,40,42-109,113-128
+  s_39d5bc69090e8b::t_0e51dd90f702fa 30-33,38-39,41,110-112
+frontend/src/hooks/useScannerScreen.js
+  s_39d5bc69090e8b::t_0e51dd90f702fa 38-41
+  s_39d5bc69090e8b::t_e8a2eab73ede42 1-37,42-71
+frontend/src/services/supportService.js
+  s_39d5bc69090e8b::t_f711111da3f275 1-7,30-37,39
+  s_39d5bc69090e8b::t_0e51dd90f702fa 40-45
+frontend/src/screens/auth/SupportRegisterScreen.js
+  s_39d5bc69090e8b::t_b6ff1367b77ced 19-20
+  s_39d5bc69090e8b::t_39b441d3f42aad 70-71
+frontend/tsconfig.json
+  s_39d5bc69090e8b::t_0cb28a37e98287 6-9,11,13,23,34
+  s_39d5bc69090e8b::t_d18bef33b49a6d 10,12,28-33,35
+frontend/src/screens/super_admin/CompanyDetailScreen.js
+  s_39d5bc69090e8b::t_ea4c8f32f89622 14,87,92,94
+frontend/App.tsx
+  s_39d5bc69090e8b::t_0ca9b435c6e8c1 11
+frontend/src/screens/admin/AdminUsersScreen.js
+  s_39d5bc69090e8b::t_0e51dd90f702fa 66-68,80-83,94-97
+  s_39d5bc69090e8b::t_c2c84bd278e4f3 17,46,227,253,275,331
+frontend/src/screens/profile/ProfileScreen.js
+  s_39d5bc69090e8b::t_c0024cd0cd511e 46,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.6",
+  "base_commit_sha": "f04ebba560d31636e2d0b16af7f6bcbd49a55cfb",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
