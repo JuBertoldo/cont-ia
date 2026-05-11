@@ -8,8 +8,9 @@
  * ciclos de build de 10+ minutos no Xcode.
  *
  * Quando adicionar um novo serviço que precisa ser inicializado:
- *   1. Adicione o wiring no App.js (useEffect ou chamada direta)
+ *   1. Adicione o wiring no App.js (useEffect)
  *   2. Adicione um teste aqui verificando que foi chamado
+ *   Veja CONTRIBUTING.md §8 — Regra de Ouro.
  */
 
 import React from 'react';
@@ -68,6 +69,22 @@ describe('App — smoke tests de inicialização', () => {
     expect(mockStartListener).toHaveBeenCalledTimes(1);
   });
 
+  it('inicializa Sentry E listener no mesmo useEffect — na ordem correta', () => {
+    // Garante que ninguém separe as inicializações em useEffects distintos.
+    // Se forem separados, a ordem pode mudar ou um pode falhar sem afetar o outro.
+    const callOrder = [];
+    mockInitSentry.mockImplementation(() => callOrder.push('sentry'));
+    mockStartListener.mockImplementation(() => {
+      callOrder.push('listener');
+      return jest.fn();
+    });
+
+    render(<App />);
+
+    expect(callOrder).toEqual(['sentry', 'listener']);
+    expect(callOrder).toHaveLength(2);
+  });
+
   it('cancela o listener de conectividade ao desmontar (sem memory leak)', () => {
     const mockUnsubscribe = jest.fn();
     mockStartListener.mockReturnValueOnce(mockUnsubscribe);
@@ -76,5 +93,12 @@ describe('App — smoke tests de inicialização', () => {
     unmount();
 
     expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('initSentry NÃO é chamado mais de uma vez por ciclo de vida', () => {
+    const { rerender } = render(<App />);
+    rerender(<App />);
+    // useEffect com [] só dispara uma vez — Sentry não deve ser reinicializado
+    expect(mockInitSentry).toHaveBeenCalledTimes(1);
   });
 });

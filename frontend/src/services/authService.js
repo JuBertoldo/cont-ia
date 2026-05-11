@@ -1,3 +1,16 @@
+/**
+ * Serviço de autenticação do Cont.IA.
+ *
+ * Gerencia registro, login, logout e recuperação de senha,
+ * integrando Firebase Auth com os documentos Firestore de usuário e empresa.
+ *
+ * Fluxos principais:
+ *  - Registro com nova empresa: usuário vira Admin com status 'active'
+ *  - Registro com código de empresa: usuário vira Operador com status 'pending'
+ *    (aguarda aprovação do Admin)
+ *  - Login: verifica bloqueio por tentativas, registra audit log, retorna perfil
+ *  - Token: obtém ou renova o JWT Firebase para autenticação no backend
+ */
 import { auth, db } from '../config/firebaseConfig';
 import {
   criarNotificacaoParaAdminsEmpresa,
@@ -28,6 +41,14 @@ import { createEmpresa, getEmpresaByCodigo } from './empresaService';
 
 // ── Matrícula ─────────────────────────────────────────────────────────────────
 
+/**
+ * Verifica se uma matrícula já está cadastrada na empresa.
+ * Usado no registro para garantir unicidade por empresa.
+ *
+ * @param {string} matricula - Matrícula a verificar
+ * @param {string} empresaId - ID da empresa
+ * @returns {Promise<boolean>} true se a matrícula já existe
+ */
 export const checkMatriculaExists = async (matricula, empresaId) => {
   const q = query(
     collection(db, COLLECTIONS.USERS),
@@ -40,6 +61,21 @@ export const checkMatriculaExists = async (matricula, empresaId) => {
 
 // ── Registro ──────────────────────────────────────────────────────────────────
 
+/**
+ * Registra um novo usuário com e-mail e senha.
+ *
+ * Dois fluxos possíveis:
+ *  - Se `nomeEmpresa` fornecido: cria nova empresa e registra como Admin (status=active)
+ *  - Se `codigoEmpresa` fornecido: vincula à empresa existente como Operador (status=pending)
+ *    → Operador fica aguardando aprovação do Admin da empresa
+ *
+ * Em caso de falha após criação do Firebase Auth, faz rollback automático
+ * (deleta a conta criada) para não deixar usuários órfãos.
+ *
+ * @param {{ name, email, password, matricula, codigoEmpresa?, nomeEmpresa? }} params
+ * @returns {Promise<import('firebase/auth').User>} Usuário Firebase criado
+ * @throws {Error} Em caso de falha em qualquer etapa
+ */
 export const registerWithEmail = async ({
   name,
   email,

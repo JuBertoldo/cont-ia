@@ -1,3 +1,15 @@
+"""
+Serviço de inferência YOLO11.
+
+Carrega o modelo YOLO11 como singleton thread-safe e executa
+a detecção de objetos em imagens recebidas como base64.
+
+Funcionalidades:
+  - Singleton com double-checked locking (seguro para ThreadPoolExecutor)
+  - Realce automático de imagens escuras (brilho médio < 100/255)
+  - Retorna detecções com label, confidence e bounding box [x1,y1,x2,y2]
+"""
+
 import base64
 import io
 import threading
@@ -17,6 +29,19 @@ _model_lock = threading.Lock()
 
 
 def get_model() -> YOLO:
+    """
+    Retorna a instância singleton do modelo YOLO11.
+
+    Usa double-checked locking para garantir que o modelo seja
+    inicializado apenas uma vez, mesmo sob carga paralela no
+    ThreadPoolExecutor do endpoint /v1/detect.
+
+    O modelo é pré-carregado no lifespan do FastAPI para evitar
+    timeout na primeira requisição.
+
+    Returns:
+        YOLO: Instância carregada e pronta para inferência.
+    """
     global _model
     if _model is None:
         with _model_lock:
@@ -29,6 +54,31 @@ def get_model() -> YOLO:
 
 
 def detect_from_base64(image_base64: str) -> dict:
+    """
+    Executa inferência YOLO11 em uma imagem codificada em base64.
+
+    Pré-processamento:
+      1. Decodifica base64 → bytes → PIL Image (RGB)
+      2. Se o brilho médio for < 100/255, aplica realce automático
+         (Brightness 1.5x + Contrast 1.3x) para melhorar detecção
+         em ambientes com pouca luz (depósitos, galpões)
+
+    Args:
+        image_base64: String base64 da imagem (sem prefixo data:image/...)
+
+    Returns:
+        dict com:
+            detections (list): Lista de objetos detectados, cada um com:
+                label (str): Nome da classe (ex: "bottle")
+                confidence (float): Confiança da detecção [0.0, 1.0]
+                bbox (list[float]): Bounding box [x1, y1, x2, y2] em pixels
+            meta (dict):
+                model (str): Nome do arquivo do modelo usado
+                processing_ms (int): Tempo de inferência em milissegundos
+
+    Raises:
+        ValueError: Se a string base64 for inválida ou corrompida.
+    """
     started = time.time()
 
     try:

@@ -1,3 +1,10 @@
+/**
+ * Serviço de inventário (coleção /inventario).
+ *
+ * Gerencia a criação e leitura em tempo real de registros de contagem.
+ * Toda escrita inclui automaticamente o `empresaId` do usuário logado,
+ * garantindo o isolamento entre empresas definido nas regras do Firestore.
+ */
 import { auth, db } from '../config/firebaseConfig';
 import {
   collection,
@@ -15,6 +22,13 @@ import { COLLECTIONS } from '../constants/collections';
 import { PAGE_SIZE } from '../constants/config';
 import { getCurrentEmpresaId } from '../utils/userUtils';
 
+/**
+ * Salva um novo registro de contagem no Firestore.
+ * Injeta automaticamente `empresaId` e timestamps de criação/atualização.
+ *
+ * @param {object} data - Dados do scan (detections, usuarioId, GPS, fotoUrl, etc.)
+ * @returns {Promise<string>} ID do documento criado
+ */
 export const createInventoryItem = async data => {
   const empresaId = await getCurrentEmpresaId();
 
@@ -28,6 +42,15 @@ export const createInventoryItem = async data => {
   return docRef.id;
 };
 
+/**
+ * Assina em tempo real os registros de inventário de um usuário específico.
+ * Retorna os primeiros PAGE_SIZE registros, ordenados do mais recente ao mais antigo.
+ *
+ * @param {string} uid - UID do usuário
+ * @param {(items: object[]) => void} callback - Chamado com a lista atualizada
+ * @param {(error: Error) => void} onError - Chamado em caso de erro no listener
+ * @returns {() => void} Função de cleanup (unsubscribe)
+ */
 export const subscribeToUserInventory = (uid, callback, onError) => {
   const q = query(
     collection(db, COLLECTIONS.INVENTORY),
@@ -49,7 +72,15 @@ export const subscribeToUserInventory = (uid, callback, onError) => {
   );
 };
 
-// Admin pode contestar contagens de OUTROS usuários (nunca a própria)
+/**
+ * Permite que um Admin conteste a contagem de OUTRO usuário da empresa.
+ * Um usuário nunca pode contestar sua própria contagem.
+ *
+ * @param {string} docId - ID do documento em /inventario
+ * @param {string} contestReason - Justificativa da contestação
+ * @param {string} ownerUid - UID do usuário que fez a contagem original
+ * @throws {Error} Se não autenticado ou se tentar contestar a própria contagem
+ */
 export const contestScan = async (docId, contestReason, ownerUid) => {
   const uid = auth?.currentUser?.uid;
   if (!uid) throw new Error('Não autenticado.');
@@ -64,6 +95,15 @@ export const contestScan = async (docId, contestReason, ownerUid) => {
   });
 };
 
+/**
+ * Assina em tempo real todos os registros de inventário de uma empresa.
+ * Se `empresaId` for null/undefined, retorna todos os registros (Super Admin).
+ *
+ * @param {string | null} empresaId - ID da empresa (null = todas as empresas)
+ * @param {(items: object[]) => void} callback - Chamado com a lista atualizada
+ * @param {(error: Error) => void} onError - Chamado em caso de erro no listener
+ * @returns {() => void} Função de cleanup (unsubscribe)
+ */
 export const subscribeToAllInventory = (empresaId, callback, onError) => {
   const q = empresaId
     ? query(
