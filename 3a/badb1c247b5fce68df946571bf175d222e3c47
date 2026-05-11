@@ -1,0 +1,27 @@
+backend/app/services/deletion_service.py
+  s_39d5bc69090e8b::t_9f7876efd47ee3 39-40
+  s_39d5bc69090e8b::t_0d1f5a84fff498 159-171,173-203,237-242
+  s_39d5bc69090e8b::t_b2d37ab5ce0684 10
+  s_39d5bc69090e8b::t_90964d3f728266 172
+  s_39d5bc69090e8b::t_54f3b4061ba09b 98-104
+  ai_agent 204-236
+backend/tests/test_deletion_service.py
+  s_39d5bc69090e8b::t_10becd59e10b72 11
+  s_39d5bc69090e8b::t_2c9a3e743f6cb2 225-297
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.6",
+  "base_commit_sha": "3abadb1c247b5fce68df946571bf175d222e3c47",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
