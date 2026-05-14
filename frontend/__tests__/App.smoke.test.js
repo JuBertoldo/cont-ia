@@ -52,6 +52,9 @@ jest.mock('../src/services/scannerService', () => ({
   processScan: mockProcessScan,
 }));
 
+// fetch nativo usado pelo connectivity listener
+global.fetch = jest.fn();
+
 const App = require('../App').default;
 
 // ── Testes ──────────────────────────────────────────────────────────────────

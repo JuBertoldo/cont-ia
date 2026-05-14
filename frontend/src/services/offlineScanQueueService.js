@@ -8,20 +8,25 @@
  * Fluxo:
  *   1. `processScan()` falha por erro de rede
  *   2. `enqueue()` salva o scan localmente
- *   3. Ao detectar conexão, `syncPendingScans()` drena a fila
+ *   3. A cada 30s, verifica conectividade (fetch HEAD no /health do backend)
+ *      e drena a fila automaticamente quando a rede retorna
  *
  * Injeção de dependência:
  *   `syncPendingScans` e `startConnectivityListener` recebem `processFunction`
  *   como parâmetro em vez de importar `processScan` diretamente.
  *   Isso quebra a dependência circular com scannerService.js.
  *
+ * Sem dependências externas de rede — usa fetch nativo do React Native.
+ *
  * Coleção local (AsyncStorage): OFFLINE_SCAN_QUEUE_KEY → JSON[]
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import NetInfo from '@react-native-community/netinfo';
+import Config from 'react-native-config';
 import logger from '../utils/logger';
 
 const QUEUE_KEY = '@contia:offline_scan_queue';
+const CONNECTIVITY_CHECK_INTERVAL_MS = 30_000; // verifica a cada 30 segundos
+const CONNECTIVITY_TIMEOUT_MS = 5_000;
 
 /** Retorna todos os scans pendentes na fila local. */
 async function getQueue() {
@@ -36,6 +41,32 @@ async function getQueue() {
 /** Persiste a fila atualizada no AsyncStorage. */
 async function saveQueue(queue) {
   await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+}
+
+/**
+ * Verifica conectividade com o backend fazendo um HEAD no /health.
+ * Não depende de @react-native-community/netinfo.
+ *
+ * @returns {Promise<boolean>} true se o backend estiver acessível
+ */
+async function isBackendReachable() {
+  const baseUrl = Config.YOLO_API_URL || '';
+  if (!baseUrl) return false;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      CONNECTIVITY_TIMEOUT_MS,
+    );
+    const response = await fetch(`${baseUrl}/health`, {
+      method: 'HEAD',
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -110,26 +141,34 @@ export async function syncPendingScans(processFunction) {
 }
 
 /**
- * Inicia o listener de conectividade.
- * Quando a rede voltar, dispara `syncPendingScans(processFunction)` automaticamente.
+ * Inicia o listener de conectividade via polling (sem dependências externas).
+ *
+ * A cada CONNECTIVITY_CHECK_INTERVAL_MS (30s), faz HEAD no /health do backend.
+ * Se o backend responder e houver scans na fila, sincroniza automaticamente.
  *
  * Recebe `processFunction` via injeção de dependência para evitar
  * dependência circular com scannerService.js.
  *
  * @param {function} processFunction — função com a mesma assinatura de processScan()
- * @returns {() => void} unsubscribe — use no cleanup do useEffect
+ * @returns {() => void} cleanup — cancela o intervalo; use no return do useEffect
  */
 export function startConnectivityListener(processFunction) {
-  const unsubscribe = NetInfo.addEventListener(async state => {
-    if (state.isConnected && state.isInternetReachable) {
+  const intervalId = setInterval(async () => {
+    try {
+      const reachable = await isBackendReachable();
+      if (!reachable) return;
+
       const count = await getPendingCount();
       if (count > 0) {
         logger.info(
-          `Conexão restaurada. Sincronizando ${count} scan(s) offline...`,
+          `Backend acessível. Sincronizando ${count} scan(s) offline...`,
         );
         await syncPendingScans(processFunction);
       }
+    } catch {
+      // falha silenciosa — tentará novamente no próximo intervalo
     }
-  });
-  return unsubscribe;
+  }, CONNECTIVITY_CHECK_INTERVAL_MS);
+
+  return () => clearInterval(intervalId);
 }

@@ -9,9 +9,15 @@ import {
 
 jest.mock('@react-native-async-storage/async-storage');
 
-jest.mock('@react-native-community/netinfo', () => ({
-  addEventListener: jest.fn(() => jest.fn()),
+// Sem mock de @react-native-community/netinfo — não é mais usado no serviço.
+// A detecção de conectividade usa fetch nativo (HEAD no /health do backend).
+
+jest.mock('react-native-config', () => ({
+  __esModule: true,
+  default: { YOLO_API_URL: 'http://localhost:8000' },
 }));
+
+global.fetch = jest.fn();
 
 // processFunction é injetada como parâmetro — não há mais mock de scannerService aqui
 const mockProcessScan = jest.fn();
@@ -148,14 +154,33 @@ describe('syncPendingScans', () => {
 // ── startConnectivityListener ─────────────────────────────────────────────────
 
 describe('startConnectivityListener', () => {
-  it('registra um listener no NetInfo', () => {
-    const NetInfo = require('@react-native-community/netinfo');
-    startConnectivityListener(mockProcessScan);
-    expect(NetInfo.addEventListener).toHaveBeenCalledTimes(1);
+  beforeEach(() => {
+    jest.useFakeTimers();
   });
 
-  it('retorna uma função de cleanup (unsubscribe)', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('retorna uma função de cleanup (cancela o intervalo)', () => {
     const unsubscribe = startConnectivityListener(mockProcessScan);
     expect(typeof unsubscribe).toBe('function');
+    unsubscribe(); // não deve lançar exceção
+  });
+
+  it('verifica conectividade a cada 30s via fetch HEAD no /health', async () => {
+    global.fetch.mockResolvedValue({ ok: true });
+
+    startConnectivityListener(mockProcessScan);
+    jest.advanceTimersByTime(30_000);
+
+    // Dá tempo para as promises resolverem
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://localhost:8000/health',
+      expect.objectContaining({ method: 'HEAD' }),
+    );
   });
 });
