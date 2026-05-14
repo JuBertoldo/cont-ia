@@ -128,3 +128,39 @@ def test_detect_meta_contem_nome_do_modelo(mock_yolo_cls):
     result = detect_from_base64(make_base64_png())
 
     assert result["meta"]["model"] == svc.settings.YOLO_MODEL
+
+
+# ── decode_and_detect ────────────────────────────────────────────────────────
+
+
+@patch("app.services.yolo_service.YOLO")
+def test_decode_and_detect_retorna_tripla(mock_yolo_cls):
+    mock_yolo_cls.return_value = build_mock_model(labels=["parafuso"], confidences=[0.9])
+
+    image_rgb, detections, meta = svc.decode_and_detect(make_base64_png())
+
+    import numpy as np
+
+    assert isinstance(image_rgb, np.ndarray)
+    assert image_rgb.ndim == 3  # HxWx3
+    assert len(detections) == 1
+    assert detections[0]["label"] == "parafuso"
+    assert "model" in meta
+    assert "processing_ms" in meta
+
+
+@patch("app.services.yolo_service.YOLO")
+def test_decode_and_detect_image_rgb_sem_deteccoes(mock_yolo_cls):
+    mock_yolo_cls.return_value = build_mock_model()
+
+    image_rgb, detections, meta = svc.decode_and_detect(make_base64_png())
+
+    assert image_rgb.shape[2] == 3
+    assert detections == []
+
+
+def test_decode_and_detect_lanca_value_error_para_base64_invalido():
+    svc._model = MagicMock()
+
+    with pytest.raises(ValueError, match="base64"):
+        svc.decode_and_detect("!@#$%não_é_base64")

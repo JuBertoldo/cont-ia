@@ -124,9 +124,9 @@ export async function processScan({
     const meta = yoloResult?.meta ?? {};
     recordInferenceMetric({
       inferenceMs,
-      yoloCount: meta?.ensemble?.yolo_count ?? detections.length,
-      rfdetrCount: meta?.ensemble?.rfdetr_count ?? 0,
-      mergedCount: meta?.ensemble?.merged_count ?? detections.length,
+      yoloCount: meta?.pipeline?.yolo_count ?? detections.length,
+      rfdetrCount: meta?.pipeline?.sam_count ?? 0,
+      mergedCount: detections.length,
       usuarioId: usuarioId ?? '',
       empresaId: empresaId ?? '',
       success: true,

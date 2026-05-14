@@ -3,21 +3,23 @@ import os
 
 class Settings:
     API_ENV: str = os.getenv("API_ENV", "development")
+
+    # ── YOLO ──────────────────────────────────────────────────────────────────
     YOLO_MODEL: str = os.getenv("YOLO_MODEL", "yolo11m.pt")
     YOLO_CONF: float = float(os.getenv("YOLO_CONF", "0.25"))
     YOLO_TIMEOUT_S: float = float(os.getenv("YOLO_TIMEOUT_S", "60"))
+
+    # ── MobileSAM ─────────────────────────────────────────────────────────────
+    SAM_MODEL_PATH: str = os.getenv("SAM_MODEL_PATH", "/app/mobile_sam.pt")
+    SAM_TIMEOUT_S: float = float(os.getenv("SAM_TIMEOUT_S", "30"))
+
+    # ── API ───────────────────────────────────────────────────────────────────
     CORS_ORIGINS: list[str] = os.getenv("CORS_ORIGINS", "*").split(",")
     FIREBASE_SERVICE_ACCOUNT_PATH: str = os.getenv(
         "FIREBASE_SERVICE_ACCOUNT_PATH", "firebase-service-account.json"
     )
     SENTRY_DSN: str = os.getenv("SENTRY_DSN", "")
     RATE_LIMIT: str = os.getenv("RATE_LIMIT", "30/minute")
-    ROBOFLOW_API_KEY: str = os.getenv("ROBOFLOW_API_KEY", "")
-    ROBOFLOW_WORKSPACE: str = os.getenv("ROBOFLOW_WORKSPACE", "julianas-workspace-fcaqd")
-    ROBOFLOW_WORKFLOW_ID: str = os.getenv(
-        "ROBOFLOW_WORKFLOW_ID", "smart-bottle-counting-pipeline-1776046255903"
-    )
-    ENSEMBLE_IOU_THRESHOLD: float = float(os.getenv("ENSEMBLE_IOU_THRESHOLD", "0.5"))
 
     # ── E-mail (SMTP) ─────────────────────────────────────────────────────────
     SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")

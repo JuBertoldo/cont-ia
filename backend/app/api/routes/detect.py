@@ -1,3 +1,11 @@
+"""
+Endpoint de detecção: pipeline YOLO11 → MobileSAM.
+
+YOLO11 detecta objetos e retorna bounding boxes.
+MobileSAM usa essas boxes como prompts para gerar máscaras de segmentação precisas.
+Pipeline 100% local — sem dependência de APIs externas.
+"""
+
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -15,22 +23,21 @@ from app.core.metrics import (
     detections_total,
 )
 from app.schemas.detect import DetectRequest, DetectResponse
-from app.services.ensemble import merge_detections
-from app.services.roboflow_service import detect_with_roboflow
-from app.services.yolo_service import detect_from_base64
+from app.services.sam_service import segment_from_boxes
+from app.services.yolo_service import decode_and_detect
 
 router = APIRouter(prefix="/v1", tags=["detect"])
 logger = get_logger(__name__)
 
-# Pool dedicado para inferência YOLO (operação bloqueante/CPU-bound).
-_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="yolo")
+# Pool dedicado para inferência CPU-bound (YOLO + SAM sequenciais).
+_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="inference")
 
 
 @router.post(
     "/detect",
     response_model=DetectResponse,
     status_code=status.HTTP_200_OK,
-    summary="Detecta objetos com ensemble YOLO + RF-DETR",
+    summary="Detecta e segmenta objetos com YOLO11 + MobileSAM",
 )
 @limiter.limit(settings.RATE_LIMIT)
 async def detect(
@@ -51,75 +58,69 @@ async def detect(
     try:
         loop = asyncio.get_running_loop()
 
-        # ── Executa YOLO e RF-DETR em paralelo ──────────────────────────────
-        yolo_future = asyncio.wait_for(
-            loop.run_in_executor(_executor, detect_from_base64, payload.image_base64),
+        # ── Passo 1: YOLO11 — decodifica imagem e detecta objetos ──────────
+        image_rgb, yolo_detections, yolo_meta = await asyncio.wait_for(
+            loop.run_in_executor(_executor, decode_and_detect, payload.image_base64),
             timeout=settings.YOLO_TIMEOUT_S,
         )
-        rfdetr_future = detect_with_roboflow(payload.image_base64)
+        detections_total.labels(source="yolo").inc(len(yolo_detections))
 
-        yolo_result, rfdetr_detections = await asyncio.gather(
-            yolo_future,
-            rfdetr_future,
-            return_exceptions=True,
-        )
+        # ── Passo 2: MobileSAM — segmenta cada objeto detectado pelo YOLO ──
+        sam_results: list[dict] = []
+        if yolo_detections:
+            boxes = [det["bbox"] for det in yolo_detections]
+            try:
+                sam_results = await asyncio.wait_for(
+                    loop.run_in_executor(_executor, segment_from_boxes, image_rgb, boxes),
+                    timeout=settings.SAM_TIMEOUT_S,
+                )
+            except Exception as sam_exc:
+                # SAM falhou — retorna bounding boxes sem máscaras (degradação graciosa)
+                logger.warning("SAM falhou — retornando só bounding boxes: %s", sam_exc)
+                detection_errors_total.labels(source="internal").inc()
 
-        # ── Trata falhas individuais sem derrubar a requisição ───────────────
-        if isinstance(yolo_result, Exception):
-            logger.error("YOLO falhou: %s", yolo_result)
-            detection_errors_total.labels(source="yolo").inc()
-            yolo_detections = []
-            yolo_meta = {}
-        else:
-            yolo_detections = yolo_result.get("detections", [])
-            yolo_meta = yolo_result.get("meta", {})
-            detections_total.labels(source="yolo").inc(len(yolo_detections))
-
-        if isinstance(rfdetr_detections, Exception):
-            logger.warning("RF-DETR falhou: %s", rfdetr_detections)
-            detection_errors_total.labels(source="rfdetr").inc()
-            rfdetr_detections = []
-        else:
-            detections_total.labels(source="rfdetr").inc(len(rfdetr_detections))
-
-        # ── Merge com NMS ────────────────────────────────────────────────────
-        merged = merge_detections(
-            yolo=yolo_detections,
-            rfdetr=rfdetr_detections,
-            iou_threshold=settings.ENSEMBLE_IOU_THRESHOLD,
-        )
+        # ── Passo 3: combina detecções YOLO com máscaras SAM ───────────────
+        detections = []
+        for i, det in enumerate(yolo_detections):
+            sam = sam_results[i] if i < len(sam_results) else {}
+            detections.append(
+                {
+                    **det,
+                    "source": "yolo+sam",
+                    "mask_polygon": sam.get("mask_polygon"),
+                    "mask_area": sam.get("mask_area"),
+                }
+            )
 
         elapsed = time.time() - started
         elapsed_ms = int(elapsed * 1000)
 
         detection_duration_seconds.observe(elapsed)
-        detections_total.labels(source="merged").inc(len(merged))
+        detections_total.labels(source="merged").inc(len(detections))
 
         logger.info(
-            "Ensemble concluído | yolo=%d rfdetr=%d merged=%d ms=%d",
+            "Pipeline concluído | yolo=%d sam=%d ms=%d",
             len(yolo_detections),
-            len(rfdetr_detections),
-            len(merged),
+            len(sam_results),
             elapsed_ms,
         )
 
         return {
-            "detections": merged,
+            "detections": detections,
             "meta": {
-                **yolo_meta,
+                "model": yolo_meta.get("model", settings.YOLO_MODEL),
                 "processing_ms": elapsed_ms,
-                "ensemble": {
+                "pipeline": {
                     "yolo_count": len(yolo_detections),
-                    "rfdetr_count": len(rfdetr_detections),
-                    "merged_count": len(merged),
-                    "iou_threshold": settings.ENSEMBLE_IOU_THRESHOLD,
+                    "sam_count": len(sam_results),
+                    "yolo_ms": yolo_meta.get("processing_ms", 0),
                 },
             },
         }
 
     except TimeoutError as exc:
         detection_errors_total.labels(source="timeout").inc()
-        logger.error("Timeout na inferência YOLO (uid=%s)", user.get("uid"))
+        logger.error("Timeout na inferência (uid=%s)", user.get("uid"))
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
             detail=f"Inferência excedeu o tempo limite de {settings.YOLO_TIMEOUT_S}s.",

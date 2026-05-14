@@ -14,6 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import Svg, { Polygon } from 'react-native-svg';
 import Geolocation from '@react-native-community/geolocation';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -34,6 +35,75 @@ import { getUserProfile } from '../../services/authService';
 import { reverseGeocode } from '../../utils/geocoding';
 
 const CROP_SIZE = 58;
+
+// Cores semi-transparentes para cada máscara SAM (uma cor por objeto)
+const MASK_COLORS = [
+  '#4CAF5066',
+  '#2196F366',
+  '#FF980066',
+  '#E91E6366',
+  '#9C27B066',
+  '#00BCD466',
+  '#FF572266',
+  '#8BC34A66',
+];
+
+function MaskOverlay({
+  detections,
+  imageWidth,
+  imageHeight,
+  containerWidth,
+  containerHeight,
+}) {
+  if (
+    !detections?.length ||
+    !imageWidth ||
+    !imageHeight ||
+    !containerWidth ||
+    !containerHeight
+  ) {
+    return null;
+  }
+
+  // resizeMode="contain": calcula dimensões reais da imagem renderizada no container
+  const scaleX = containerWidth / imageWidth;
+  const scaleY = containerHeight / imageHeight;
+  const scale = Math.min(scaleX, scaleY);
+  const offsetX = (containerWidth - imageWidth * scale) / 2;
+  const offsetY = (containerHeight - imageHeight * scale) / 2;
+
+  return (
+    <Svg
+      style={StyleSheet.absoluteFill}
+      width={containerWidth}
+      height={containerHeight}
+    >
+      {detections.map((det, idx) => {
+        if (!det.mask_polygon?.length) return null;
+        const color = MASK_COLORS[idx % MASK_COLORS.length];
+        const strokeColor = color.substring(0, 7);
+        const points = det.mask_polygon
+          .map(
+            ([x, y]) =>
+              `${(x * scale + offsetX).toFixed(1)},${(
+                y * scale +
+                offsetY
+              ).toFixed(1)}`,
+          )
+          .join(' ');
+        return (
+          <Polygon
+            key={idx}
+            points={points}
+            fill={color}
+            stroke={strokeColor}
+            strokeWidth={2}
+          />
+        );
+      })}
+    </Svg>
+  );
+}
 
 function BBoxCrop({ base64, bbox, imgWidth, imgHeight }) {
   if (!base64 || !bbox || bbox.length < 4 || !imgWidth || !imgHeight) {
@@ -129,6 +199,10 @@ export default function ScannerScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [detectionResult, setDetectionResult] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [modalContainerSize, setModalContainerSize] = useState({
+    width: 0,
+    height: 0,
+  });
   // Correções de label: { [labelOriginal]: 'nome corrigido' }
   const [labelOverrides, setLabelOverrides] = useState({});
   const [editingLabel, setEditingLabel] = useState(null); // label original sendo editado
@@ -500,13 +574,33 @@ export default function ScannerScreen() {
         onRequestClose={handleCancelModal}
       >
         <View style={styles.modalFull}>
-          {/* Imagem em destaque */}
+          {/* Imagem em destaque com overlay de máscaras SAM */}
           {imageUri ? (
-            <Image
-              source={{ uri: imageUri }}
+            <View
               style={styles.modalImage}
-              resizeMode="contain"
-            />
+              onLayout={e =>
+                setModalContainerSize({
+                  width: e.nativeEvent.layout.width,
+                  height: e.nativeEvent.layout.height,
+                })
+              }
+            >
+              <Image
+                source={{ uri: imageUri }}
+                style={StyleSheet.absoluteFill}
+                resizeMode="contain"
+              />
+              {modalContainerSize.width > 0 &&
+                detectionResult?.detections?.length > 0 && (
+                  <MaskOverlay
+                    detections={detectionResult.detections}
+                    imageWidth={detectionResult.imageWidth}
+                    imageHeight={detectionResult.imageHeight}
+                    containerWidth={modalContainerSize.width}
+                    containerHeight={modalContainerSize.height}
+                  />
+                )}
+            </View>
           ) : (
             <View style={styles.modalImagePlaceholder} />
           )}

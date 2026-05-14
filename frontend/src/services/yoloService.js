@@ -18,7 +18,9 @@ function normalizeDetection(det) {
     label: String(det?.label || 'desconhecido'),
     confidence: Number(det?.confidence ?? 0),
     bbox: Array.isArray(det?.bbox) ? det.bbox : [],
-    source: String(det?.source || 'yolo'),
+    source: String(det?.source || 'yolo+sam'),
+    mask_polygon: Array.isArray(det?.mask_polygon) ? det.mask_polygon : null,
+    mask_area: typeof det?.mask_area === 'number' ? det.mask_area : null,
   };
 }
 
