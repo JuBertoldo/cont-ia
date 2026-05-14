@@ -1,0 +1,47 @@
+docs/levantamento_custos.md
+  s_39d5bc69090e8b::t_a9ec6fdbf7dfe0 80,82-83,85,87-90,92,94,96-99,101
+  s_39d5bc69090e8b::t_14b813bbddacaf 240
+  s_39d5bc69090e8b::t_24bc3446ab6b77 321
+  s_39d5bc69090e8b::t_17371b22b311b6 331
+  s_39d5bc69090e8b::t_afac27a909ea93 375-376
+docs/pitch_banca.md
+  s_39d5bc69090e8b::t_e98c56a1789b9e 150,153-154,156-158,160
+  s_39d5bc69090e8b::t_9f81746e4c8538 140-141,145-146
+  s_39d5bc69090e8b::t_86d33c759fc2e5 427
+  s_39d5bc69090e8b::t_7c98f914b46b67 400,403-407
+docs/documentacao_tecnica.md
+  s_39d5bc69090e8b::t_5bff12cb9d5c21 949-950
+  s_39d5bc69090e8b::t_59478f31ac23a2 1038
+  s_39d5bc69090e8b::t_26b2e6223df70f 35-36
+  s_39d5bc69090e8b::t_1db8fe30597101 56
+  s_39d5bc69090e8b::t_6c83261edbbd61 744-746,750-754,757-764,769,772-777,785,787,790,793,795-796,798-801,803-810
+CONTRIBUTING.md
+  s_39d5bc69090e8b::t_506b4e48ce3ec1 499-501
+  s_39d5bc69090e8b::t_172cc2b81d9f37 194,196
+  s_39d5bc69090e8b::t_966ece8205869d 256
+README.md
+  s_39d5bc69090e8b::t_75f5065b71d7b1 5,22-23,41-42,48,72-73,133-134,142,200,251-254
+docs/revisao_geral.md
+  s_39d5bc69090e8b::t_8924577b2cd456 247
+  s_39d5bc69090e8b::t_f09be03cc432ea 130
+  s_39d5bc69090e8b::t_9281638ed83011 8
+  s_39d5bc69090e8b::t_b8fa3f4d51c749 123
+  s_39d5bc69090e8b::t_5a257b4d08116e 23-25
+  s_39d5bc69090e8b::t_f71d14b5632b54 168
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.6",
+  "base_commit_sha": "bc52da5f3ca6191eedb460ecb900db37d62984cf",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
