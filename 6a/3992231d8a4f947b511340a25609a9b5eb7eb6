@@ -1,0 +1,69 @@
+web/next.config.ts
+  s_39d5bc69090e8b::t_9776cab675d5fd 1-11
+web/package.json
+  s_39d5bc69090e8b::t_f074961acbbd8d 1-34
+web/app/dashboard/chamados/page.tsx
+  s_39d5bc69090e8b::t_7d08a433716fa9 1-272
+web/types/index.ts
+  s_39d5bc69090e8b::t_2b3b05b92a4212 1-108
+web/app/dashboard/empresas/page.tsx
+  s_39d5bc69090e8b::t_f5dd1ebb7ded21 1-107
+web/.env.example
+  s_39d5bc69090e8b::t_20480c6768b31d 1-23
+web/app/login/page.tsx
+  s_39d5bc69090e8b::t_58a09f482435a8 1-86
+web/postcss.config.mjs
+  s_39d5bc69090e8b::t_7ab88a3924aff5 1-4
+web/app/globals.css
+  s_39d5bc69090e8b::t_082db96e2bc3ff 1-20
+web/app/dashboard/page.tsx
+  s_39d5bc69090e8b::t_7c0577e91e9e67 1-148
+web/app/dashboard/financeiro/page.tsx
+  s_39d5bc69090e8b::t_ea4f4d407a63df 1-227
+web/app/dashboard/usuarios/page.tsx
+  s_39d5bc69090e8b::t_79812d363f0f15 1-76
+web/tsconfig.json
+  s_39d5bc69090e8b::t_43e0a915ce1b7b 1-20
+web/lib/aiValidation.ts
+  s_39d5bc69090e8b::t_10f3d5e8d3ffde 1-92
+web/app/layout.tsx
+  s_39d5bc69090e8b::t_25f028fa9aae34 1-15
+web/app/page.tsx
+  s_39d5bc69090e8b::t_f4c18aa4956a21 1-5
+web/app/dashboard/metrics/page.tsx
+  s_39d5bc69090e8b::t_6e2d1ae8646c4c 1-71
+web/app/api/validate-dataset/route.ts
+  s_39d5bc69090e8b::t_e250970b36e204 1-54
+web/tailwind.config.ts
+  s_39d5bc69090e8b::t_8680292a515c84 1-27
+web/app/dashboard/dataset/page.tsx
+  s_39d5bc69090e8b::t_4041f1eff2b71d 1-246
+web/.gitignore
+  s_39d5bc69090e8b::t_66cd4c2aabb819 1-4
+web/lib/firebase.ts
+  s_39d5bc69090e8b::t_5d3aad038dd529 1-19
+web/lib/authContext.tsx
+  s_39d5bc69090e8b::t_d5e8cca28f4eb3 1-75
+web/app/dashboard/licencas/page.tsx
+  s_39d5bc69090e8b::t_2db47995521319 1-140
+web/app/dashboard/deteccoes/page.tsx
+  s_39d5bc69090e8b::t_9118f007949ed9 1-133
+web/app/dashboard/layout.tsx
+  s_39d5bc69090e8b::t_99342ad52e2769 1-106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.6",
+  "base_commit_sha": "6a3992231d8a4f947b511340a25609a9b5eb7eb6",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
