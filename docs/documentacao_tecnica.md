@@ -32,8 +32,8 @@
                        ▼
 ┌────────────────────────────────────────────────────────┐
 │  Backend FastAPI (Docker + Cloudflare Tunnel)           │
-│  YOLO11m (CPU local) + RF-DETR (Roboflow API)          │
-│  Ensemble NMS · Rate Limit · Circuit Breaker           │
+│  YOLO11m (detecção) → MobileSAM (segmentação)          │
+│  Pipeline 100% local · Rate Limit · Sentry             │
 │  Sentry · Prometheus /metrics                          │
 └──────────────────────┬─────────────────────────────────┘
                        │ Firebase Admin SDK
@@ -53,7 +53,7 @@
 | Pasta / Arquivo | O que faz |
 |---|---|
 | `frontend/` | App React Native — telas, serviços, hooks, constantes |
-| `backend/` | API Python FastAPI com YOLO11 e RF-DETR |
+| `backend/` | API Python FastAPI com YOLO11 e MobileSAM |
 | `docs/diagramas/` | 14 diagramas PlantUML (arquitetura, fluxos, classes, sequência) |
 | `scripts/` | Scripts operacionais Python (export dataset, limpeza Storage) |
 | `Dataset/` | Dataset base treino YOLO11 + notebook Google Colab |
@@ -741,39 +741,40 @@ async def detect(request: Request, payload: DetectRequest,
 
     active_requests.inc()                  # Prometheus gauge
     try:
-        # YOLO e RF-DETR em paralelo
-        yolo_future   = asyncio.wait_for(
-            loop.run_in_executor(_executor, detect_from_base64, payload.image_base64),
+        # Passo 1: YOLO11 — detecta objetos e retorna image_rgb para o SAM
+        image_rgb, yolo_detections, yolo_meta = await asyncio.wait_for(
+            loop.run_in_executor(_executor, decode_and_detect, payload.image_base64),
             timeout=settings.YOLO_TIMEOUT_S,
         )
-        rfdetr_future = detect_with_roboflow(payload.image_base64)
 
-        yolo_result, rfdetr_result = await asyncio.gather(
-            yolo_future, rfdetr_future,
-            return_exceptions=True,        # falha de um não derruba o outro
+        # Passo 2: MobileSAM — segmenta cada objeto usando bbox como prompt
+        boxes = [det["bbox"] for det in yolo_detections]
+        sam_results = await asyncio.wait_for(
+            loop.run_in_executor(_executor, segment_from_boxes, image_rgb, boxes),
+            timeout=settings.SAM_TIMEOUT_S,
         )
 
-        merged = merge_detections(yolo=yolo_detections, rfdetr=rfdetr_detections)
-        return { "detections": merged, "meta": {...} }
+        # Passo 3: combina bbox (YOLO) + máscara (SAM) por índice
+        detections = [
+            {**det, "source": "yolo+sam",
+             "mask_polygon": sam_results[i].get("mask_polygon"),
+             "mask_area": sam_results[i].get("mask_area")}
+            for i, det in enumerate(yolo_detections)
+        ]
+        return { "detections": detections, "meta": {...} }
     finally:
         active_requests.dec()
 ```
 
-### `services/yolo_service.py` — Singleton thread-safe
+### `services/yolo_service.py` — Singleton thread-safe + decode_and_detect
 
 ```python
-_model: YOLO | None = None
-_model_lock = threading.Lock()
-
-def get_model() -> YOLO:
-    global _model
-    if _model is None:
-        with _model_lock:                  # double-checked locking
-            if _model is None:
-                _model = YOLO(settings.YOLO_MODEL)
-    return _model
-
-def detect_from_base64(image_base64: str) -> dict:
+def decode_and_detect(image_base64: str) -> tuple[np.ndarray, list[dict], dict]:
+    """
+    Decodifica base64, aplica realce se necessário, executa YOLO11.
+    Retorna (image_rgb, detections, meta) — image_rgb é reutilizado pelo SAM
+    sem precisar decodificar a imagem duas vezes.
+    """
     image = Image.open(io.BytesIO(base64.b64decode(image_base64))).convert("RGB")
 
     # Realce automático em imagens escuras (depósitos, galpões)
@@ -781,49 +782,32 @@ def detect_from_base64(image_base64: str) -> dict:
         image = ImageEnhance.Brightness(image).enhance(1.5)
         image = ImageEnhance.Contrast(image).enhance(1.3)
 
+    image_rgb = np.array(image)           # numpy array para o SAM
     results = get_model().predict(source=image, conf=settings.YOLO_CONF, verbose=False)
-    # ... extrai detecções
+    # ... extrai detecções, retorna (image_rgb, detections, meta)
 ```
 
-### `services/ensemble.py` — Merge NMS por label
+### `services/sam_service.py` — MobileSAM com box prompts
 
 ```python
-def merge_detections(yolo: list[dict], rfdetr: list[dict],
-                     iou_threshold: float = 0.5) -> list[dict]:
+def segment_from_boxes(image_rgb: np.ndarray, boxes: list[list[float]]) -> list[dict]:
     """
-    Combina detecções YOLO + RF-DETR eliminando duplicatas do MESMO label.
-    Objetos de labels diferentes são preservados mesmo com bbox sobreposto.
-    Ex: 'parafuso' e 'porca' no mesmo espaço → ambos mantidos.
-    """
-    all_dets  = [{**d, "source": "yolo"}   for d in yolo] + \
-                [{**d, "source": "rfdetr"} for d in rfdetr]
-    all_dets.sort(key=lambda d: d["confidence"], reverse=True)
+    Segmenta cada objeto usando as bounding boxes do YOLO como prompts.
+    MobileSAM (ViT-Tiny, 38 MB) é 100% local — sem custo por chamada.
 
-    kept = []
-    for det in all_dets:
-        duplicate = any(
-            d["label"] == det["label"] and _iou(d["bbox"], det["bbox"]) > iou_threshold
-            for d in kept
+    Retorna lista de dicts com:
+      mask_polygon: [[x,y], ...] — contorno externo simplificado (OpenCV)
+      mask_area: float           — área em pixels²
+      sam_score: float           — qualidade da máscara (IoU previsto)
+    """
+    predictor = get_predictor()           # singleton thread-safe
+    with _inference_lock:                 # serializa set_image + predict
+        predictor.set_image(image_rgb)
+        masks, scores, _ = predictor.predict_torch(
+            boxes=transformed_boxes,
+            multimask_output=False,
         )
-        if not duplicate:
-            kept.append(det)
-    return kept
-```
-
-### `core/circuit_breaker.py` — Proteção contra cascata
-
-```python
-class CircuitBreaker:
-    """
-    CLOSED  → requisições passam normalmente
-    OPEN    → após 3 falhas: bloqueia por 60s (retorna [] imediato)
-    HALF_OPEN → após 60s: testa 1 requisição. Sucesso → CLOSED. Falha → OPEN
-    """
-    def record_failure(self) -> None:
-        self._failure_count += 1
-        if self._failure_count >= self.failure_threshold:
-            self._state = CircuitState.OPEN
-            self._opened_at = time.monotonic()
+    # converte masks numpy → polígonos via cv2.findContours
 ```
 
 ### `services/deletion_service.py` — Exclusão LGPD
@@ -962,8 +946,8 @@ python scripts/cleanup_storage.py --execute --env production
 4. Toca "Analisar" → handleDetect()
    └── imageUriToBase64() → base64
    └── apiClient.post('/v1/detect', { image_base64 })
-       └── Backend: YOLO11 ‖ RF-DETR (paralelo, 55s timeout)
-       └── Ensemble NMS → retorna detecções
+       └── Backend: YOLO11 (detecção) → MobileSAM (segmentação)
+       └── Retorna bounding boxes + máscaras de segmentação
 5. Modal abre com resultado
    └── Crop de cada objeto detectado
    └── Label + % de confiança
@@ -1051,7 +1035,7 @@ Os 14 diagramas PlantUML estão em `docs/diagramas/`:
 | `05_implantacao.puml` | Nós: iOS, FastAPI, Firebase, Email, FCM, Prometheus |
 | `06_maquina_estados.puml` | Estados de usuário e scan |
 | `07_arquitetura.puml` | Componentes com Circuit Breaker e Prometheus |
-| `08_pipeline.puml` | Pipeline de detecção ensemble (IoU merge por label) |
+| `08_pipeline.puml` | Pipeline de detecção YOLO11 → MobileSAM (bboxes + máscaras) |
 | `09_perfis.puml` | Permissões detalhadas por role |
 | `10_estados_chamado.puml` | Máquina de estados dos tickets com SLA |
 | `11_cadastro_support.puml` | Fluxo de convite para técnico de suporte |

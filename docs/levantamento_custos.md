@@ -77,41 +77,28 @@ Plano necessário para produção: **Blaze (pay-as-you-go)**
 
 ---
 
-## 2. Roboflow (RF-DETR) — CRÍTICO
+## 2. MobileSAM — Segmentação Local (sem custo operacional)
 
-Plano atual: **API Key ativa** (free tier — ~1.000 chamadas/mês)  
-Uso: cada scan dispara **1 chamada** à Inference API do Roboflow
+**Pipeline atual:** YOLO11 detecta objetos → MobileSAM gera máscara de segmentação precisa  
+**Custo por scan:** $0 — ambos os modelos rodam 100% no servidor Docker local
 
-### 2.1 Limites e planos
+### 2.1 Comparativo com abordagem anterior (Roboflow RF-DETR)
 
-| Plano | Preço/mês | Calls/mês | Ponto de ruptura |
-|-------|-----------|-----------|-----------------|
-| **Starter (Free)** | $0 | ~1.000 | ~33 scans/dia |
-| **Grow** | $249 | 100.000 | ~3.300 scans/dia |
-| **Pro** | $1.249 | 1.000.000 | ~33.000 scans/dia |
-| **Enterprise** | sob consulta | ilimitado | — |
+| Abordagem | Custo por scan | Dependência externa | Qualidade |
+|-----------|---------------|--------------------|-----------| 
+| YOLO + Roboflow RF-DETR (anterior) | $249/mês a partir de 34 usuários | API externa (falha se offline) | Detecção dupla |
+| **YOLO + MobileSAM (atual)** | **$0** | **Nenhuma** | **Detecção + segmentação precisa** |
 
-### 2.2 Ponto de cobrança por número de usuários
+### 2.2 Vantagem estratégica
 
-| Usuários ativos | Scans estimados/mês | Situação | Custo |
-|-----------------|---------------------|----------|-------|
-| até 10 | ~500 | ✅ Free tier | $0 |
-| 11–33 | 500–1.000 | ⚠️ Na borda | $0 |
-| **34–50** | 1.000–1.500 | 💰 **Ultrapassa free** | $249/mês |
-| 51–200 | 1.500–6.000 | 💰 Grow obrigatório | $249/mês |
-| 201–3.300 | 6.000–100.000 | 💰 Grow | $249/mês |
+O MobileSAM (Meta AI, 2023) é um modelo de segmentação destilado do SAM original, com apenas 38 MB e ~150ms de latência em CPU. O checkpoint é baixado uma única vez no build do Docker e não gera custo recorrente.
 
-> ⚠️ Com apenas **34 usuários fazendo 1 scan/dia** já ultrapassa o free tier.  
-> O salto de $0 para $249/mês é abrupto — não tem plano intermediário.
+- Sem API Key
+- Sem plano pago
+- Sem risco de ruptura de limite
+- Máscaras de segmentação precisas para separar objetos encostados (caso real em prateleiras)
 
-### 2.3 Recomendação: desabilitar Roboflow no MVP
-
-| Cenário | Qualidade detecção | Custo Roboflow |
-|---------|-------------------|----------------|
-| Apenas YOLO local | 85–90% | **$0** |
-| YOLO + Roboflow | 90–95% | **$249/mês** |
-
-**Conclusão:** para o MVP, desabilitar Roboflow (`ROBOFLOW_API_KEY=` vazio) economiza $249/mês com perda mínima de qualidade. Reativar quando o faturamento justificar.
+> Esta mudança eliminou um risco de $249/mês que surgiria com 34+ usuários ativos.
 
 ---
 
@@ -250,7 +237,7 @@ por um app fechado que usa YOLO, você está em violação da licença.
 | **YOLOv5 (licença GPL-3.0)** | $0 | Mesmo problema |
 | **YOLOv8 com licença alternativa** | $0–300 | Verificar versão específica |
 | **Treinar modelo próprio** | $0 (após treino) | Dataset próprio = sem restrição |
-| **Usar API externa apenas** | $0 (via Roboflow) | Sem código local = sem problema de licença |
+| **Usar modelo próprio treinado** | $0 (após treino) | Dataset próprio = sem restrição de licença |
 
 ### 8.3 Impacto por cenário
 
@@ -331,7 +318,7 @@ Situação: **apenas desenvolvimento local** — não entra em produção.
 
 ## CALCULADORA DE PRECIFICAÇÃO
 
-### Custo total real por faixa de usuários ativos (sem Roboflow, sem licença YOLO)
+### Custo total real por faixa de usuários ativos (sem licença YOLO — MobileSAM é gratuito)
 
 | Usuários | Firebase | Servidor | Domínio | Apple Dev | Sentry | Claude Code | **TOTAL/mês** | **TOTAL R$/mês** |
 |----------|---------|---------|---------|-----------|--------|-------------|--------------|-----------------|
@@ -341,7 +328,7 @@ Situação: **apenas desenvolvimento local** — não entra em produção.
 | **201–500** | $25 | $12 | $0,90 | $8,25 | $26 | $100 | **$172** | **~R$ 946** |
 | **501–1.000** | $60 | $30 | $0,90 | $8,25 | $26 | $100 | **$225** | **~R$ 1.238** |
 
-> Se Roboflow ativo: somar $249/mês a partir de 34 usuários.  
+> MobileSAM não gera custo adicional — é executado localmente no servidor.  
 > Se licença YOLO necessária: somar $300–500/mês a partir do 1º cliente.
 
 ---
@@ -384,10 +371,9 @@ Fórmula: **Custo total ÷ nº clientes × margem mínima 5x**
 | Custo | Quando aparece | Impacto |
 |-------|---------------|---------|
 | **Licença YOLO** | Ao cobrar o 1º cliente | +R$ 1.650–2.750/mês → exige 8–14 clientes Starter para cobrir |
-| **Roboflow** | Com 34+ usuários ativos | +R$ 1.370/mês → exige 7 clientes Starter a mais |
-
 > Se resolver a licença YOLO via modelo próprio (dataset que já está sendo coletado),  
-> os preços propostos são sustentáveis e com margem saudável desde o 2º cliente.
+> os preços propostos são sustentáveis e com margem saudável desde o 2º cliente.  
+> MobileSAM não adiciona custo — elimina o risco de $249/mês que havia com Roboflow.
 
 ---
 

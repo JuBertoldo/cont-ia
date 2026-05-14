@@ -5,7 +5,7 @@
 
 ## 1. RESUMO EXECUTIVO
 
-O Cont.IA é um sistema SaaS mobile de **auditoria e contagem inteligente de inventário** que usa Inteligência Artificial (YOLO11 + Roboflow) para identificar, contar e registrar objetos fotografados em ambientes reais — com foto de auditoria, GPS, histórico e gestão de equipe.
+O Cont.IA é um sistema SaaS mobile de **auditoria e contagem inteligente de inventário** que usa Inteligência Artificial (YOLO11 + MobileSAM) para identificar, segmentar e contar objetos fotografados em ambientes reais — com foto de auditoria, GPS, histórico e gestão de equipe.
 
 **Plataformas:** iOS (React Native) · Backend Python/FastAPI · Firebase  
 **Modelo de negócio:** SaaS por assinatura mensal (R$ 197–997/mês)  
@@ -20,8 +20,9 @@ O Cont.IA é um sistema SaaS mobile de **auditoria e contagem inteligente de inv
 | Funcionalidade | Status | Evidência |
 |---------------|--------|-----------|
 | Detecção YOLO11m (80 classes COCO) | ✅ Funcionando | Testado no Juliana — identificou keyboard, bottle, scissors, etc. |
-| Ensemble YOLO + Roboflow em paralelo | ✅ Funcionando | asyncio.gather() com timeout e fallback |
-| NMS por classe (sem suprimir objetos diferentes) | ✅ Corrigido | Bug corrigido — parafuso não elimina porca |
+| Segmentação MobileSAM (box prompt) | ✅ Funcionando | Máscaras precisas sobre cada objeto detectado |
+| Overlay SVG de máscaras no app | ✅ Funcionando | Cores distintas por objeto, escaladas para o container |
+| Degradação graciosa (SAM falha) | ✅ Funcionando | Se SAM falhar, retorna só bounding boxes do YOLO |
 | Realce automático em imagens escuras | ✅ Funcionando | PIL brightness/contrast quando brilho < 100 |
 | Recorte (BBox crop) por objeto no modal | ✅ Funcionando | Usuário vê exatamente o que a IA detectou |
 
@@ -119,15 +120,14 @@ O Cont.IA é um sistema SaaS mobile de **auditoria e contagem inteligente de inv
     └── Backend (FastAPI + Docker)
             │
             ├── YOLO11m     → detecção local (CPU, sem custo por chamada)
-            ├── Roboflow    → RF-DETR via API (ensemble)
-            ├── NMS Ensemble→ merge das detecções por classe
+            ├── MobileSAM   → segmentação precisa por box prompt (100% local)
             ├── E-mail      → SMTP (Gmail) via smtplib
             └── Push        → Firebase Admin SDK (FCM)
 ```
 
 **Stack completa:**
 - Frontend: React Native 0.84 · Firebase JS SDK · @react-native-firebase/messaging
-- Backend: Python 3.11 · FastAPI · Ultralytics YOLO11 · Inference SDK (Roboflow)
+- Backend: Python 3.11 · FastAPI · Ultralytics YOLO11 · MobileSAM · OpenCV
 - Banco: Cloud Firestore · Firebase Storage · Firebase Auth
 - Infra: Docker · Cloudflare Tunnel · GitHub Actions · ngrok (dev)
 
@@ -165,7 +165,7 @@ A maioria dos apps de contagem de inventário disponíveis no Brasil:
 | Diferencial | Cont.IA | Concorrência típica |
 |-------------|---------|---------------------|
 | **Identificação automática** | IA detecta sem cadastro prévio | Cadastro manual obrigatório |
-| **Dois modelos em paralelo** | YOLO + Roboflow (ensemble) | Nenhum ou apenas 1 modelo |
+| **Pipeline IA em dois estágios** | YOLO detecção + MobileSAM segmentação | Nenhum ou apenas 1 modelo |
 | **Foto de auditoria** | Foto salva no Firebase para validação | Sem evidência visual |
 | **Correção de label** | Usuário e Super Admin corrigem o YOLO | Não existe |
 | **Auto-treinamento** | Correções viram dataset para modelo próprio | Não existe |
@@ -244,7 +244,7 @@ Detecção mais precisa → menos correções necessárias
 
 ### Os 3 pontos que impressionam tecnicamente
 
-1. **Dois modelos de IA em paralelo** (YOLO local + Roboflow na nuvem) com merge inteligente por NMS — arquitetura ensemble que poucos startups implementam
+1. **Pipeline IA em dois estágios** (YOLO11 detecção + MobileSAM segmentação) — 100% local, sem dependência de API externa, com máscaras de segmentação precisas por objeto
 2. **Pipeline completo de MLOps** — da coleta de correções em campo até o treino no Google Colab e deploy do modelo próprio, tudo integrado no sistema
 3. **Arquitetura de segurança por camadas** — Firebase Auth + JWT no backend + regras Firestore granulares por role (user/admin/support/super_admin)
 

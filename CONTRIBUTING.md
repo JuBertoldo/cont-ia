@@ -191,9 +191,9 @@ curl -X POST http://localhost:8000/v1/detect \
 curl http://localhost:8000/metrics
 
 # Métricas disponíveis:
-# contia_detections_total{source="yolo|rfdetr|merged"}
+# contia_detections_total{source="yolo|sam|merged"}
 # contia_detection_duration_seconds (histograma)
-# contia_detection_errors_total{source="yolo|rfdetr|timeout|internal"}
+# contia_detection_errors_total{source="yolo|sam|timeout|internal"}
 # contia_active_requests (gauge)
 ```
 
@@ -253,7 +253,7 @@ cd backend
 pytest tests/ -v --cov=app --cov-fail-under=80
 
 # Arquivo específico
-pytest tests/test_circuit_breaker.py -v
+pytest tests/test_sam_service.py -v
 
 # Por categoria (unit / integration)
 pytest tests/ -m unit -v
@@ -495,13 +495,10 @@ FIREBASE_SERVICE_ACCOUNT_PATH=./contia-firebase-adminsdk.json
 YOLO_MODEL=yolo11m.pt
 YOLO_CONF=0.35
 YOLO_TIMEOUT_S=55
-ENSEMBLE_IOU_THRESHOLD=0.5
 
-# Roboflow (opcional)
-ROBOFLOW_API_KEY=
-ROBOFLOW_WORKSPACE=
-ROBOFLOW_PROJECT=
-ROBOFLOW_VERSION=
+# MobileSAM (checkpoint baixado automaticamente pelo Docker)
+SAM_MODEL_PATH=/app/mobile_sam.pt
+SAM_TIMEOUT_S=30
 
 # E-mail (opcional)
 SMTP_HOST=smtp.gmail.com

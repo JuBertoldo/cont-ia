@@ -137,26 +137,27 @@ Inteligência que conta.
    Auth · Firestore                   │
    Storage · Messaging          ┌─────┴─────┐
                                 ▼           ▼
-                            YOLO11      Roboflow
-                          (local CPU)  (API nuvem)
+                            YOLO11      MobileSAM
+                          (detecção)  (segmentação)
                                 │           │
                                 └─────┬─────┘
                                       ▼
-                               Ensemble NMS
-                               (merge inteligente)
+                             Bounding boxes +
+                             Máscaras precisas
 ```
 
 ### Fala
-> "Por dentro, o Cont.IA usa dois modelos de IA ao mesmo tempo.
+> "Por dentro, o Cont.IA usa dois modelos de IA em sequência.
 >
 > O primeiro é o YOLO11 — modelo de detecção de objetos de última geração
-> rodando no próprio servidor. O segundo é o Roboflow RF-DETR,
-> uma API de visão computacional na nuvem especializada em contagem.
+> rodando no próprio servidor. Ele identifica o que é cada objeto e
+> retorna a posição de cada um na imagem.
 >
-> Os dois rodam em paralelo e os resultados são combinados por um
-> algoritmo chamado NMS — Non-Maximum Suppression — que elimina
-> duplicatas e retorna o melhor resultado.
+> O segundo é o MobileSAM — um modelo de segmentação desenvolvido pela Meta,
+> que usa as posições do YOLO para desenhar a máscara exata de cada objeto.
+> Isso resolve o principal desafio: separar itens encostados na prateleira.
 >
+> Os dois rodam localmente, sem dependência de API externa.
 > Tudo isso acontece em menos de 2 segundos."
 
 ---
@@ -317,14 +318,19 @@ github.com/JuBertoldo/cont-ia
 
 ---
 
-### "Por que usar dois modelos de IA ao mesmo tempo?"
+### "Por que usar dois modelos de IA em sequência?"
 
-> "Cada modelo tem pontos fortes diferentes. O YOLO11 é extremamente
-> rápido e eficiente em objetos comuns do COCO dataset. O Roboflow
-> RF-DETR é especialista em contagem de objetos específicos.
-> Combinando os dois com NMS, eliminamos os falsos positivos de um
-> e compensamos os pontos cegos do outro. O resultado é mais preciso
-> do que qualquer um dos dois sozinho."
+> "Cada modelo resolve um problema diferente. O YOLO11 é extremamente
+> rápido na detecção — ele localiza cada objeto em milissegundos.
+> Mas bounding boxes (retângulos) não separam bem objetos que estão
+> encostados uns nos outros, o que é comum em prateleiras de estoque.
+>
+> O MobileSAM resolve isso: ele recebe as coordenadas do YOLO e
+> desenha a máscara exata de cada objeto — o contorno real, não um
+> retângulo. Isso melhora a contagem em cenários densos.
+>
+> Os dois rodam 100% localmente no servidor, sem custo por chamada
+> e sem dependência de internet para funcionar."
 
 ---
 
@@ -391,12 +397,14 @@ github.com/JuBertoldo/cont-ia
 
 ---
 
-### "O que acontece se o Roboflow ou o Firebase ficar fora do ar?"
+### "O que acontece se o Firebase ficar fora do ar?"
 
 > "O sistema foi construído com degradação graciosa — graceful degradation.
-> Se o Roboflow falha, o sistema usa só o YOLO local e continua
-> funcionando. Se o Firebase Storage fica fora, a foto não é salva
-> mas o scan é registrado sem foto. O usuário sempre vê uma resposta,
+> O pipeline de IA (YOLO + MobileSAM) roda 100% local no servidor — não
+> depende de internet para detectar objetos. Se o Firebase Storage
+> fica fora, a foto não é salva mas o scan é registrado sem foto.
+> Se o Firestore fica temporariamente lento, o app usa o cache local do
+> Firebase SDK. O usuário sempre vê uma resposta,
 > nunca uma tela de erro sem explicação."
 
 ---
@@ -416,7 +424,7 @@ github.com/JuBertoldo/cont-ia
 
 ### Linguagem
 - Use palavras simples para explicar a IA: "a câmera aprende a contar"
-- Evite siglas sem explicar: NMS = "elimina duplicatas", YOLO = "modelo de visão computacional"
+- Evite siglas sem explicar: SAM = "desenha o contorno exato do objeto", YOLO = "modelo de visão computacional que detecta objetos"
 - Fale em benefícios para o cliente, não em tecnologia
 
 ### Demo ao vivo

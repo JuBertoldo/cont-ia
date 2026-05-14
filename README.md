@@ -2,7 +2,7 @@
 
 O **Cont.IA** é um aplicativo mobile multiplataforma que **identifica, classifica e conta itens físicos** usando a câmera do celular e Inteligência Artificial. Substitui a prancheta e a contagem manual — entregando o dado pronto, rastreável e auditável.
 
-> Não é um sistema de gestão de estoque. O foco é a **contagem visual precisa**: o app aponta a câmera, reconhece o objeto com YOLO11 + RF-DETR em ensemble, diz o que é e quantos têm.
+> Não é um sistema de gestão de estoque. O foco é a **contagem visual precisa**: o app aponta a câmera, o YOLO11 detecta cada objeto e o MobileSAM traça a máscara exata de segmentação — o sistema diz o que é e quantos têm.
 
 ---
 
@@ -19,8 +19,8 @@ O **Cont.IA** é um aplicativo mobile multiplataforma que **identifica, classifi
 ┌──────────────────────────────────────────────────────────────┐
 │  Backend FastAPI (Docker + Cloudflare Tunnel)                │
 │  Valida token Firebase Admin SDK                             │
-│  YOLO11 (local CPU) + RF-DETR (Roboflow API) em paralelo     │
-│  Ensemble NMS → retorna detecções mergeadas                  │
+│  YOLO11 (detecção) → MobileSAM (segmentação) — 100% local   │
+│  Retorna bounding boxes + máscaras de segmentação            │
 │  GET /metrics → Prometheus                                   │
 └──────────────────────┬───────────────────────────────────────┘
                        │
@@ -38,13 +38,14 @@ O **Cont.IA** é um aplicativo mobile multiplataforma que **identifica, classifi
 | Camada | Tecnologia |
 |---|---|
 | Mobile | React Native 0.84 (iOS + Android) |
-| Detecção IA | YOLO11m (Ultralytics) + RF-DETR (Roboflow) em ensemble |
+| Detecção IA | YOLO11m (Ultralytics) — detecção de objetos |
+| Segmentação IA | MobileSAM (Meta / ViT-Tiny) — máscaras precisas |
 | Backend | Python 3.11 + FastAPI 0.115 |
 | Auth | Firebase Authentication |
 | Banco de dados | Cloud Firestore (paginação + 9 índices compostos) |
 | Storage | Firebase Storage |
 | Containerização | Docker + Cloudflare Tunnel |
-| Resiliência | Retry backoff exponencial · Queue offline · Circuit Breaker |
+| Resiliência | Retry backoff exponencial · Queue offline · SAM com degradação graciosa |
 | Observabilidade | Sentry (erros) + Prometheus `/metrics` + telemetria de inferência |
 | CI/CD | GitHub Actions (lint, testes, pip-audit, npm audit, secrets scan) |
 | Testes | pytest 80%+ (backend) · Jest 80%+ (frontend) · Detox E2E |
@@ -68,9 +69,8 @@ Cont.IA/
 │   │   │   ├── metrics.py    # Contadores Prometheus
 │   │   │   └── limiter.py    # Rate limiting (slowapi)
 │   │   ├── services/
-│   │   │   ├── yolo_service.py
-│   │   │   ├── roboflow_service.py
-│   │   │   ├── ensemble.py   # NMS merge YOLO + RF-DETR
+│   │   │   ├── yolo_service.py   # YOLO11 singleton thread-safe
+│   │   │   ├── sam_service.py    # MobileSAM segmentação por box prompt
 │   │   │   ├── email_service.py
 │   │   │   └── push_service.py
 │   │   └── schemas/
@@ -130,8 +130,8 @@ O sistema implementa **4 perfis** com permissões distintas:
 
 ### Scanner e Contagem
 - Captura via câmera ou galeria
-- Dois modelos de IA em paralelo: **YOLO11** (local) + **RF-DETR** (Roboflow)
-- Merge inteligente por **label + IoU** — sem duplicatas, preserva objetos de classes diferentes
+- Pipeline IA sequencial: **YOLO11** detecta objetos → **MobileSAM** segmenta cada objeto com máscara precisa
+- Overlay visual com máscaras coloridas por objeto no app (react-native-svg)
 - **GPS automático** + geocodificação reversa (OpenStreetMap)
 - Campo de local descritivo (ex: "Almoxarifado A")
 - Modal com recorte de cada objeto detectado e % de confiança
@@ -139,7 +139,7 @@ O sistema implementa **4 perfis** com permissões distintas:
 - Realce automático em imagens escuras (PIL brightness/contrast)
 - **Retry automático** com backoff exponencial (3 tentativas: 500ms → 1s → 2s)
 - **Queue offline** — scans sem conexão são salvos localmente e sincronizados ao reconectar
-- **Circuit Breaker** no Roboflow — após 3 falhas consecutivas, bloqueia chamadas por 60s e continua com YOLO
+- **Degradação graciosa** — se SAM falhar, retorna bounding boxes do YOLO sem interromper o fluxo
 
 ### Histórico e Exportação
 - Filtros por período: Hoje / 7 / 30 / 60 / 90 dias
@@ -197,7 +197,7 @@ O sistema implementa **4 perfis** com permissões distintas:
 cp backend/.env.example backend/.env
 # Edite backend/.env com suas chaves
 
-# Subir com Docker
+# Subir com Docker (baixa o checkpoint MobileSAM de 38 MB automaticamente)
 docker compose up --build
 
 # Verificar
@@ -248,10 +248,10 @@ npm run test:e2e         # executa os cenários
 | `API_ENV` | `development` | Ambiente (`development` / `production`) |
 | `FIREBASE_SERVICE_ACCOUNT_PATH` | `./contia-firebase-adminsdk.json` | Credencial Firebase Admin |
 | `YOLO_MODEL` | `yolo11m.pt` | Arquivo do modelo YOLO |
-| `YOLO_CONF` | `0.35` | Threshold de confiança |
-| `YOLO_TIMEOUT_S` | `55` | Timeout da inferência em segundos |
-| `ENSEMBLE_IOU_THRESHOLD` | `0.5` | Limiar IoU para NMS |
-| `ROBOFLOW_API_KEY` | — | Chave Roboflow (RF-DETR) |
+| `YOLO_CONF` | `0.35` | Threshold de confiança YOLO |
+| `YOLO_TIMEOUT_S` | `55` | Timeout da inferência YOLO em segundos |
+| `SAM_MODEL_PATH` | `/app/mobile_sam.pt` | Caminho do checkpoint MobileSAM |
+| `SAM_TIMEOUT_S` | `30` | Timeout da segmentação SAM em segundos |
 | `RATE_LIMIT` | `30/minute` | Rate limiting do endpoint `/detect` |
 | `SENTRY_DSN` | — | DSN do Sentry (opcional) |
 | `SMTP_USER` / `SMTP_PASSWORD` | — | Credenciais SMTP para e-mail |
