@@ -85,7 +85,7 @@ export default function FinanceiroPage() {
     await setDoc(doc(db, "planos", editando.empresaId), {
       plano: novoPlano,
       valor: PLANO_VALOR[novoPlano],
-      vencimento: novoVenc ? new Date(novoVenc) : editando.vencimento,
+      vencimento: novoVenc.trim() ? new Date(`${novoVenc}T00:00:00`) : editando.vencimento,
       status: novoStatus,
       historico: editando.historico,
     }, { merge: true });

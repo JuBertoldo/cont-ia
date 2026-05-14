@@ -23,6 +23,7 @@ export default function DatasetPage() {
   const [loading, setLoading] = useState(true);
   const [validating, setValidating] = useState<string | null>(null);
   const [aiRunning, setAiRunning] = useState(false);
+  const [aiResult, setAiResult] = useState<{ approved: number; rejected: number } | null>(null);
   const [selected, setSelected] = useState<ScanDataset | null>(null);
   const [stats, setStats] = useState({ pendentes: 0, validados: 0, rejeitados: 0 });
 
@@ -78,14 +79,20 @@ export default function DatasetPage() {
     setAiRunning(true);
     let autoApproved = 0; let autoRejected = 0;
 
-    for (const scan of scans) {
+    const snapshot = [...scans]; // cópia estável para não iterar estado mutante
+    for (const scan of snapshot) {
       if (!scan.fotoUrl || !scan.item) continue;
       try {
         const res = await fetch(scan.fotoUrl);
+        if (!res.ok) continue; // foto indisponível — pula sem derrubar o loop
         const blob = await res.blob();
-        const base64 = await new Promise<string>((resolve) => {
+        const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
-          reader.onloadend = () => resolve((reader.result as string).split(",")[1]);
+          reader.onloadend = () => {
+            const result = (reader.result as string).split(",")[1];
+            result ? resolve(result) : reject(new Error("base64 vazio"));
+          };
+          reader.onerror = () => reject(new Error("Erro ao ler blob"));
           reader.readAsDataURL(blob);
         });
         const result = await validateDatasetEntry(base64, scan.item);
@@ -98,9 +105,11 @@ export default function DatasetPage() {
           await handleAction(scan.id, "rejeitado");
           autoRejected++;
         }
-      } catch { /* continua próximo */ }
+      } catch (err) {
+        console.warn(`Validação IA falhou para scan ${scan.id}:`, err);
+      }
     }
-    alert(`IA concluída: ${autoApproved} aprovados, ${autoRejected} rejeitados automaticamente.`);
+    setAiResult({ approved: autoApproved, rejected: autoRejected });
     setAiRunning(false);
   }
 
@@ -139,6 +148,15 @@ export default function DatasetPage() {
           <div><p className="text-2xl font-bold text-white">{stats.rejeitados}</p><p className="text-xs text-slate-400">Rejeitados</p></div>
         </div>
       </div>
+
+      {aiResult && (
+        <div className="flex items-center justify-between bg-brand/10 border border-brand/30 rounded-2xl px-5 py-3">
+          <p className="text-brand text-sm font-medium">
+            IA concluída — {aiResult.approved} aprovados, {aiResult.rejected} rejeitados automaticamente.
+          </p>
+          <button onClick={() => setAiResult(null)} className="text-slate-400 hover:text-white text-xs">Fechar</button>
+        </div>
+      )}
 
       {scans.length === 0 ? (
         <div className="text-center py-16 text-slate-500">

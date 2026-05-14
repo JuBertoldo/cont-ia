@@ -5,8 +5,7 @@ import { collection, getDocs, query, orderBy, limit, Timestamp } from "firebase/
 import { db } from "@/lib/firebase";
 import type { DetectionStat } from "@/types";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  Cell, PieChart, Pie, Legend,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
 import { BarChart3, AlertTriangle, TrendingDown } from "lucide-react";
 

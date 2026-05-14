@@ -9,7 +9,7 @@ import { useAuth } from "@/lib/authContext";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
-import { Building2, Users, ScanLine, Ticket, TrendingUp, AlertTriangle } from "lucide-react";
+import { Building2, Users, ScanLine, Ticket, TrendingUp, AlertTriangle, BarChart3 } from "lucide-react";
 
 interface Stats {
   empresas: number;
@@ -113,7 +113,7 @@ export default function DashboardPage() {
 
       <div className="bg-surface-card border border-surface-border rounded-2xl p-6">
         <div className="flex items-center gap-2 mb-6">
-          <BarChart size={20} className="text-brand" />
+          <BarChart3 size={20} className="text-brand" />
           <h3 className="text-white font-semibold">Objetos Mais Detectados</h3>
           <span className="ml-auto text-xs text-slate-500">últimos 500 scans</span>
         </div>

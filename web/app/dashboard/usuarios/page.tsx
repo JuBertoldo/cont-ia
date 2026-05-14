@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { collection, getDocs, doc, updateDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Usuario } from "@/types";
-import { Search, CheckCircle, XCircle, Shield } from "lucide-react";
+import { Search, CheckCircle, XCircle } from "lucide-react";
 
 const ROLE_LABEL: Record<string, string> = { user: "Usuário", admin: "Admin", super_admin: "Super Admin", support: "Suporte" };
 const STATUS_COLOR: Record<string, string> = { active: "text-brand", pending: "text-yellow-400", rejected: "text-red-400" };

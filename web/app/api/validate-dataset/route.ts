@@ -9,6 +9,21 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { getAuth } from "firebase-admin/auth";
+import { initializeApp, getApps, cert } from "firebase-admin/app";
+
+// Inicializa Firebase Admin para verificar o token
+if (!getApps().length) {
+  initializeApp({
+    credential: cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+    }),
+  });
+}
+
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL ?? "claude-haiku-4-5-20251001";
 
 const VALIDATION_PROMPT = (label: string) => `
 Analise esta imagem e responda em JSON:
@@ -25,12 +40,33 @@ Responda APENAS com JSON válido:
 `;
 
 export async function POST(req: NextRequest) {
+  // Verifica token Firebase — apenas super_admin pode chamar
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+  try {
+    const decoded = await getAuth().verifyIdToken(authHeader.slice(7));
+    if (decoded.role !== "super_admin") {
+      return NextResponse.json({ error: "Acesso negado — plano Enterprise" }, { status: 403 });
+    }
+  } catch {
+    return NextResponse.json({ error: "Token inválido" }, { status: 401 });
+  }
+
+  const apiKey = process.env.CLAUDE_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json({ error: "CLAUDE_API_KEY não configurada" }, { status: 503 });
+  }
+
   const { imageBase64, label } = await req.json();
+  if (!imageBase64 || !label) {
+    return NextResponse.json({ error: "imageBase64 e label são obrigatórios" }, { status: 400 });
+  }
 
-  const client = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
-
+  const client = new Anthropic({ apiKey });
   const message = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
+    model: CLAUDE_MODEL,
     max_tokens: 256,
     messages: [
       {
@@ -46,9 +82,14 @@ export async function POST(req: NextRequest) {
     ],
   });
 
-  const text = (message.content[0] as { type: "text"; text: string }).text.trim();
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) return NextResponse.json({ error: "Resposta inválida da IA" }, { status: 500 });
+  const block = message.content[0];
+  if (block.type !== "text") {
+    return NextResponse.json({ error: "Resposta inesperada da IA" }, { status: 500 });
+  }
+  const jsonMatch = block.text.trim().match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    return NextResponse.json({ error: "Resposta sem JSON válido" }, { status: 500 });
+  }
 
   return NextResponse.json({ ...JSON.parse(jsonMatch[0]), provider: "claude" });
 }
