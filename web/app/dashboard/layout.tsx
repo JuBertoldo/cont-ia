@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { useAuth, AuthProvider } from "@/lib/authContext";
+import { useAuth } from "@/lib/authContext";
 import {
   LayoutDashboard, Building2, Users, Ticket, DollarSign,
   Database, Key, BarChart3, LogOut, Cpu,
@@ -98,9 +98,5 @@ function DashboardGuard({ children }: { children: React.ReactNode }) {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <AuthProvider>
-      <DashboardGuard>{children}</DashboardGuard>
-    </AuthProvider>
-  );
+  return <DashboardGuard>{children}</DashboardGuard>;
 }
