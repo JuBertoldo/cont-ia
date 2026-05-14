@@ -1,6 +1,6 @@
 @startuml 08_pipeline
 !pragma layout smetana
-title Cont.IA — Pipeline de Detecção (Ensemble)
+title Cont.IA — Pipeline de Detecção (YOLO11 + MobileSAM)
 
 skinparam backgroundColor #FFFFFF
 skinparam activityBackgroundColor #F0FFF4
@@ -18,64 +18,64 @@ skinparam noteFontColor #E65100
 
 start
 
-:Receber imagem\ncomo Base64;
+:Receber imagem como Base64;
 
-:Decodificar e converter\npara formato PIL/OpenCV;
+partition "Passo 1 — YOLO11 (detecção)" {
+    :Decodificar Base64 → PIL Image (RGB);
 
-note right
-  Validação:
-  tamanho mínimo
-  e formato
-end note
+    note right
+      Realce automático se brilho médio < 100:
+      Brightness x1.5 + Contrast x1.3
+      (melhora detecção em galpões escuros)
+    end note
 
-fork
-    partition "YOLO11 (Thread)" {
-        :Carregar modelo\nyolo11m.pt;
-        :Inferência na imagem;
-        :Extrair BBoxes +\nconfiança + labels;
+    :Converter para numpy array (image_rgb)\n→ compartilhado com MobileSAM;
+
+    :Inferência YOLO11m\n(yolo11m.pt — CPU local);
+
+    :Extrair para cada detecção:\n• label (classe do objeto)\n• confidence (0.0 – 1.0)\n• bbox [x1, y1, x2, y2] em pixels;
+
+    note right
+      Modelo: yolo11m.pt
+      80 classes COCO (traduzidas PT-BR)
+      Threshold: YOLO_CONF (padrão 0.25)
+    end note
+}
+
+if (Alguma detecção encontrada?) then (Sim)
+
+    partition "Passo 2 — MobileSAM (segmentação)" {
+        :Passar image_rgb + lista de bbox\ncomo box prompts para o MobileSAM;
+
+        note right
+          MobileSAM (ViT-Tiny, 38 MB)
+          100% local — sem API externa
+          Checkpoint: /app/mobile_sam.pt
+        end note
+
+        :Transformar boxes para escala do modelo;
+
+        :predict_torch(\n  boxes=transformed_boxes,\n  multimask_output=False\n);
+
+        :Para cada máscara retornada:\n• Converter ndarray → contorno (cv2.findContours)\n• Simplificar polígono (approxPolyDP ε=0.5%)\n• Calcular área em pixels²\n• Retornar sam_score (qualidade prevista);
     }
-fork again
-    partition "RF-DETR (Async + Circuit Breaker)" {
-        if (Circuit Breaker OPEN?) then (Sim)
-            :Retornar lista vazia\n(falha rápida);
-        else (Não)
-            :Chamar Roboflow\nInference API;
-            if (Chamada OK?) then (Sim)
-                :record_success();
-                :Extrair BBoxes +\nconfiança + labels;
-            else (Falha)
-                :record_failure();
-                :Retornar lista vazia;
-            endif
-        endif
-    }
-end fork
 
-:Combinar resultados\ndos dois modelos;
+    :Combinar YOLO + SAM por índice:\n{label, confidence, bbox,\nmask_polygon, mask_area, source: "yolo+sam"};
+
+else (Não)
+    :Retornar lista vazia;
+endif
+
+:Registrar métricas Prometheus\n(contia_detections_total, duration);
+
+:Retornar JSON:\n{\n  detections: [\n    {label, confidence, bbox,\n     mask_polygon, mask_area, source}\n  ],\n  meta: {model, processing_ms,\n         pipeline: {yolo_count, sam_count}}\n};
 
 note right
-  Ensemble:
-  YOLO + RF-DETR
-  juntos
+  Degradação graciosa:
+  Se SAM falhar → retorna só bbox YOLO
+  (mask_polygon: null, mask_area: null)
+  O app continua funcionando normalmente.
 end note
-
-:Calcular IoU entre\ntodas as BBoxes;
-
-:Merge por label + IoU\n(threshold = 0.5);
-
-note right
-  Elimina duplicatas
-  apenas do MESMO label.
-  Objetos de labels diferentes
-  são preservados mesmo com
-  alto IoU (ex: parafuso ≠ porca)
-end note
-
-:Agrupar por label\ne somar quantidades;
-
-:Calcular confiança\nmédia por label;
-
-:Retornar JSON\n{itens[], totalGeral,\ntempoProcessamento};
 
 stop
 

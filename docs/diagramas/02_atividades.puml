@@ -34,14 +34,11 @@ end fork
 |Backend|
 :Receber imagem (Base64);
 
-fork
-    :Processar com YOLO11 (local);
-fork again
-    :Processar com RF-DETR (Roboflow);
-end fork
+:Processar com YOLO11 (local)\n→ bounding boxes + labels + confiança;
 
-:Merge por label + IoU\n(elimina duplicatas do mesmo objeto,\npreserva objetos de classes diferentes);
-:Retornar objetos detectados;
+:Segmentar com MobileSAM\n(box prompt → máscara precisa por objeto);
+
+:Retornar objetos detectados\n(bbox + mask_polygon + mask_area);
 
 |Operador|
 :Visualizar resultado\n(foto + recorte por objeto + label + confianca);

@@ -35,14 +35,11 @@ node "Servidor Local\n(Mac — Docker)" as SERVER {
     node "Docker Container\n(python:3.11-slim)" as DOCKER {
         component "API REST\nFastAPI + Uvicorn" as API
         component "YOLO11m\n(Ultralytics — CPU)" as YOLO
-        component "Ensemble\n(IoU merge por label)" as NMS
-        component "Circuit Breaker\n(Roboflow — 3 falhas → 60s off)" as CB
+        component "MobileSAM\n(ViT-Tiny — 38 MB — CPU)" as SAM
 
-        API --> YOLO : detect(image)
-        API --> CB : guarda chamada RF-DETR
-        CB --> NMS : detecções RF-DETR (ou vazio se OPEN)
-        API --> NMS : merge(yolo, rfdetr)
-        YOLO --> NMS : detecções locais
+        API --> YOLO : decode_and_detect(image_base64)
+        YOLO --> SAM : image_rgb + bounding_boxes
+        SAM --> API : mask_polygon + mask_area
     }
 
     component "Cloudflare Tunnel / ngrok\n(URL pública — desenvolvimento)" as TUNNEL
@@ -58,12 +55,6 @@ node "Notificações\n(Serviços Externos)" as NOTIF {
     component "Firebase Cloud Messaging\n(push notifications — tickets)" as FCM_PUSH
 }
 
-' ── Roboflow (API externa) ───────────────────────────────────────────────────
-
-node "Roboflow\n(API Cloud)" as ROBOFLOW {
-    component "RF-DETR Workflow\n(smart-bottle-counting)" as RFDETR
-}
-
 ' ── Firebase (Google Cloud) ──────────────────────────────────────────────────
 
 node "Firebase\n(Google Cloud)" as FIREBASE {
@@ -75,10 +66,7 @@ node "Firebase\n(Google Cloud)" as FIREBASE {
 ' ── Conexoes ─────────────────────────────────────────────────────────────────
 
 APP --> TUNNEL : HTTPS POST /v1/detect\n(Base64 + Bearer JWT)
-API --> RFDETR : inference-sdk\n(paralelo com YOLO)
-RFDETR --> NMS : deteccoes nuvem
-NMS --> API : resultado final
-API --> APP : JSON {detections[], meta}
+API --> APP : JSON {detections[{bbox, mask_polygon}], meta}
 
 APP --> AUTH : login / getIdToken
 AUTH --> API : verify_id_token() [Admin SDK]
@@ -100,10 +88,10 @@ end note
 ' ── Nota ─────────────────────────────────────────────────────────────────────
 
 note bottom of DOCKER
-  Docker resolve o problema do _lzma
-  no Python/pyenv do macOS.
+  Docker resolve o problema do _lzma no macOS.
   Imagem: python:3.11-slim (lzma nativo).
   Volumes: yolo11m.pt + firebase-service-account.json
+  Checkpoint MobileSAM (38 MB) baixado no build.
   Métricas Prometheus: GET /metrics
   (contia_detections_total, duration, errors, active_requests)
 end note

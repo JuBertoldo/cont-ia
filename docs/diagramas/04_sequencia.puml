@@ -20,7 +20,7 @@ actor "Operador" as OP
 participant "App Mobile\n(React Native)" as APP
 participant "Backend\n(FastAPI)" as API
 participant "YOLO11\nService" as YOLO
-participant "Roboflow\n(RF-DETR)" as RF
+participant "MobileSAM\nService" as SAM
 participant "Firebase\nFirestore" as FS
 participant "Firebase\nStorage" as STORAGE
 
@@ -32,17 +32,20 @@ APP -> APP : Obtém GPS (latitude, longitude)
 APP -> API : POST /v1/detect\n{image_base64, platform}
 note right of API : Valida token JWT\nFirebase Auth
 
-group Detecção em Paralelo (asyncio)
-    API ->> YOLO : detectar(image_base64)
-    API ->> RF : executarWorkflow(image_base64)
-    YOLO --> API : List<BBox> + confiança
-    RF --> API : List<BBox> + confiança
+group Pipeline YOLO → SAM (sequencial)
+    API ->> YOLO : decodeAndDetect(image_base64)
+    YOLO --> API : (image_rgb, List<BBox>, meta)
+    note right of API
+      image_rgb reutilizado pelo SAM
+      sem re-decodificar a imagem
+    end note
+    API ->> SAM : segmentFromBoxes(image_rgb, boxes)
+    SAM --> API : List<{mask_polygon, mask_area, sam_score}>
 end
 
-API -> API : mesclarResultados(yolo, rfdetr)
-API -> API : aplicarNMS(IoU threshold = 0.5)
+API -> API : combinar(yolo_dets, sam_masks)
 
-API --> APP : {itens[], totalGeral, tempoProcessamento}
+API --> APP : {detections[{bbox, mask_polygon, mask_area}], meta}
 
 APP -> OP : Exibe resultado da detecção
 

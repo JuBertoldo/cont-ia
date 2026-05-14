@@ -34,7 +34,7 @@ rectangle "Sistema Cont.IA" {
     rectangle "Contagem / Scanner" {
         usecase "Capturar imagem" as UC4
         usecase "Selecionar da galeria" as UC5
-        usecase "Identificar e contar objetos (YOLO + Roboflow)" as UC6
+        usecase "Identificar e contar objetos (YOLO + MobileSAM)" as UC6
         usecase "Corrigir labels detectados (edição inline)" as UC6B
         usecase "Confirmar e salvar contagem" as UC7
         usecase "Registrar GPS automático" as UC8

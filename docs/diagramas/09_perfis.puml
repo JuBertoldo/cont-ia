@@ -33,7 +33,7 @@ rectangle "👤  Operador  (role = user)" as PERFIL_USER #E8F5E9 {
     }
     rectangle "Scanner" {
         card "✅ Fotografar itens (câmera / galeria)" as U4
-        card "✅ Detectar com YOLO + Roboflow" as U5
+        card "✅ Detectar com YOLO + MobileSAM" as U5
         card "✅ Ver recorte por objeto detectado" as U5B
         card "✅ Corrigir label incorreto (edição inline)" as U6
         card "✅ Confirmar e salvar contagem" as U7

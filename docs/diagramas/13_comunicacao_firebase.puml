@@ -56,7 +56,7 @@ node "📱 App Mobile (React Native)" as MOBILE {
 
 node "⚙️ Backend (FastAPI + Docker)" as BACKEND {
     component "deps.py\nverify_id_token()" as DEPS
-    component "YOLO + Roboflow\nEnsemble (IoU merge)" as YOLO_RF
+    component "YOLO11 + MobileSAM\n(pipeline local — sem API externa)" as YOLO_RF
     component "email_service.py\npush_service.py\n(notificações de ticket)" as NOTIF_SVC
 }
 
@@ -88,7 +88,7 @@ node "🗄️ Cloud Firestore" as FIRESTORE {
 
     database "/login_audit/{id}\n──────────────\nuid, email, ip\ncreatedAt (imutável)" as COL_AUDIT
 
-    database "/inference_metrics/{id}\n──────────────\ndeviceModel, platform\nosVersion, inferenceMs\nyoloCount, rfdetrCount\nmergedCount, success\nusuarioId, empresaId" as COL_METRICS
+    database "/inference_metrics/{id}\n──────────────\ndeviceModel, platform\nosVersion, inferenceMs\nyoloCount, samCount\nmergedCount, success\nusuarioId, empresaId" as COL_METRICS
 
     database "/config/ticketCounter\n──────────────\ndata, count\n(número sequencial)" as COL_CFG
 }
@@ -146,9 +146,9 @@ MEDIA_SVC --> COL_INV : salva fotoUrl no documento
 ' ══════════════════════════════════════════════════════════
 
 HTTP_SVC --> BACKEND : POST /v1/detect\n{image_base64, platform}
-BACKEND --> YOLO_RF : inferência paralela
-YOLO_RF --> BACKEND : detecções + NMS
-BACKEND --> HTTP_SVC : {detections[], meta}
+BACKEND --> YOLO_RF : pipeline YOLO → SAM
+YOLO_RF --> BACKEND : detecções + máscaras
+BACKEND --> HTTP_SVC : {detections[{bbox,mask_polygon}], meta}
 
 ' ══════════════════════════════════════════════════════════
 ' NOTAS

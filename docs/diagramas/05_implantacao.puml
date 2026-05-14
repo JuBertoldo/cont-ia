@@ -30,8 +30,10 @@ node "Dispositivo Móvel\n(iOS / Android)" as DEVICE {
 node "Servidor de Produção\n(Cloud / VPS)" as SERVER {
     component "Backend\n(FastAPI + Uvicorn)" as API
     component "YOLO11\n(yolo11m.pt)" as YOLO
+    component "MobileSAM\n(mobile_sam.pt — 38 MB)" as SAM
     component "Python 3.11" as PY
     API --> YOLO
+    API --> SAM
     PY --> API
 }
 
@@ -39,10 +41,6 @@ node "Google Firebase\n(Google Cloud)" as FIREBASE {
     database "Cloud Firestore\n(Banco de dados)" as FS
     database "Cloud Storage\n(Imagens)" as STORAGE
     component "Firebase Auth\n(JWT)" as AUTH
-}
-
-node "Roboflow\n(API Cloud)" as ROBOFLOW {
-    component "RF-DETR Workflow\n(Inference API)" as RFDETR
 }
 
 node "E-mail\n(Serviço Externo)" as EMAIL {
@@ -58,7 +56,6 @@ node "Observabilidade" as OBS {
 }
 
 APP --> API : HTTPS\nPOST /v1/detect\n(Base64 + JWT)
-API --> RFDETR : HTTPS\nInference SDK
 API --> FS : Firebase Admin SDK
 APP --> FS : Firebase SDK\n(Firestore)
 APP --> STORAGE : Firebase SDK\n(Upload imagem)

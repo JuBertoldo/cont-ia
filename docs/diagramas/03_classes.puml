@@ -86,12 +86,10 @@ class DeteccaoService {
     +imageWidth: Integer
     +imageHeight: Integer
     +yoloConf: Float
-    +roboflowApiKey: String
     --
-    +detectarComYolo(): List<ItemDetectado>
-    +detectarComRoboflow(): List<ItemDetectado>
-    +mergeComIoU(): List<ItemDetectado>
-    +mesclarResultados(): List<ItemDetectado>
+    +decodeAndDetect(): Tuple<NDArray, List<ItemDetectado>, dict>
+    +segmentarComSAM(imageRgb, boxes): List<MascaraSegmentacao>
+    +combinarResultados(): List<ItemDetectado>
     +realcarBrilho(imagem): Image
 }
 
@@ -104,13 +102,19 @@ class YoloModel {
     +converterFormato(): List<ItemDetectado>
 }
 
-class RoboflowClient {
-    +apiKey: String
-    +workspaceId: String
-    +workflowId: String
+class SamService {
+    +modelPath: String
+    +device: String
     --
-    +executarWorkflow(imagem): List<ItemDetectado>
-    +parsearResposta(): List<ItemDetectado>
+    +carregarPredictor(): SamPredictor
+    +segmentarPorBoxes(image, boxes): List<MascaraSegmentacao>
+    +mascaraParaPoligono(mask): List<Ponto>
+}
+
+class MascaraSegmentacao {
+    +mask_polygon: List<List<Float>>
+    +mask_area: Float
+    +sam_score: Float
 }
 
 class Chamado {
@@ -196,7 +200,7 @@ enum TipoChamado {
 
 enum SourceDeteccao {
     YOLO
-    RFDETR
+    YOLO_SAM
 }
 
 enum StatusDataset {
@@ -212,7 +216,7 @@ class InferenceMetrics {
     +osVersion: String
     +inferenceMs: Integer
     +yoloCount: Integer
-    +rfdetrCount: Integer
+    +samCount: Integer
     +mergedCount: Integer
     +success: Boolean
     +errorSource: String
@@ -227,8 +231,9 @@ Usuario "1" --> "*" RegistroContagem : realiza
 RegistroContagem "1" --> "*" ItemDetectado : contém
 RegistroContagem "1" --> "*" CorrecaoLabel : registra
 DeteccaoService --> YoloModel : usa
-DeteccaoService --> RoboflowClient : usa
+DeteccaoService --> SamService : usa
 DeteccaoService --> ItemDetectado : retorna
+DeteccaoService --> MascaraSegmentacao : gera
 Usuario --> Role : possui
 Usuario --> StatusUsuario : possui
 ItemDetectado --> SourceDeteccao : origina de
