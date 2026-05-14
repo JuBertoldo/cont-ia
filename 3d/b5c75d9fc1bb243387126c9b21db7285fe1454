@@ -1,0 +1,38 @@
+web/app/api/validate-dataset/route.ts
+  s_39d5bc69090e8b::t_927e717fceeef7 12-26,43-60,62-65,67,69,85-92
+web/app/dashboard/deteccoes/page.tsx
+  s_39d5bc69090e8b::t_7492622a0fd407 8
+web/app/dashboard/usuarios/page.tsx
+  s_39d5bc69090e8b::t_4ad176d87d3bf1 7
+web/lib/aiValidation.ts
+  s_39d5bc69090e8b::t_8e367e9072f6f8 4-5,7-9,12-14,23-27,30-31,33-34,36-37,39,41,44-47,57-61
+web/app/dashboard/page.tsx
+  s_39d5bc69090e8b::t_84530fe42912ad 12
+  s_39d5bc69090e8b::t_6074dba4c1b4b3 116
+web/app/dashboard/financeiro/page.tsx
+  s_39d5bc69090e8b::t_c54de6ee115212 88
+web/app/dashboard/dataset/page.tsx
+  s_39d5bc69090e8b::t_766c699d706682 82-83,87,89,91-95,108-110,112
+  s_39d5bc69090e8b::t_b968e2b4acaeba 26
+  s_39d5bc69090e8b::t_d3b6afbc4c4323 152-160
+web/app/api/validate-dataset-gemini/route.ts
+  s_39d5bc69090e8b::t_7806df82db75c5 1-49
+web/.env.example
+  s_39d5bc69090e8b::t_de007081c041c4 18-19,24-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.6",
+  "base_commit_sha": "3db5c75d9fc1bb243387126c9b21db7285fe1454",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
