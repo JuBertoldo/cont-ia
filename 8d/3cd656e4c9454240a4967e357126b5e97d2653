@@ -1,0 +1,55 @@
+frontend/src/screens/inventory/ScannerScreen.js
+  s_39d5bc69090e8b::t_83d1628fbe79d3 39-55,57-107
+  s_39d5bc69090e8b::t_e385cc5054abcd 577,579,581-603
+  s_39d5bc69090e8b::t_d53568786df3e5 202-203,205
+  s_39d5bc69090e8b::t_31601ea5d878ab 17
+backend/app/schemas/detect.py
+  ai_agent 24,37
+  s_39d5bc69090e8b::t_591a258fc657a9 1-2,22-23,25-31
+backend/tests/test_sam_service.py
+  s_39d5bc69090e8b::t_2cc47c3130207a 2-4,7,9,12,16-18,20,23-24,27,30-31,35-49,53-85
+  ai_agent 50-52
+backend/app/api/routes/detect.py
+  s_39d5bc69090e8b::t_fa356a826b0ddc 1-8,26-27,32-33,40,61-63,66-93,99,102,104,109,111,113,115-116,123
+backend/tests/test_detect_contract.py
+  s_39d5bc69090e8b::t_d3c7829678df45 142
+  s_39d5bc69090e8b::t_e0b48d693e42aa 65-66,68
+  s_39d5bc69090e8b::t_dd86f78658bbce 74,104,168,193
+  s_39d5bc69090e8b::t_7c9f662346ee57 6-7,67,76,101,106,131-133,137,139,144-167,170-192,194-195,209,213
+backend/tests/test_yolo_service.py
+  s_39d5bc69090e8b::t_6793a7bd9590e1 131-166
+frontend/src/services/yoloService.js
+  s_39d5bc69090e8b::t_6077385e97cae0 21-23
+frontend/src/services/scannerService.js
+  s_39d5bc69090e8b::t_0110f4006638ab 127-129
+backend/Dockerfile
+  s_39d5bc69090e8b::t_1c21c819f47ea3 6,14-18,22
+backend/app/services/yolo_service.py
+  s_39d5bc69090e8b::t_a217280d6084dd 96
+  s_39d5bc69090e8b::t_3e91746ee01e5c 83-86
+  s_39d5bc69090e8b::t_9247698742f349 11
+  s_39d5bc69090e8b::t_62c9d07936eba2 57-82,87-95,97-120
+backend/requirements.txt
+  s_39d5bc69090e8b::t_28816dcd90b461 11-14
+backend/app/services/sam_service.py
+  ai_agent 88
+  s_39d5bc69090e8b::t_857d13f02538d1 1-2,4-5,7-9,11-14,16-17,19-21,23-24,26,28-60,63,65,67-69,71-78,80-82,84-85,87,90-94,97,99-108
+backend/app/core/config.py
+  s_39d5bc69090e8b::t_3c590fcd732b7c 6-7,11-16
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.6",
+  "base_commit_sha": "8d3cd656e4c9454240a4967e357126b5e97d2653",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
