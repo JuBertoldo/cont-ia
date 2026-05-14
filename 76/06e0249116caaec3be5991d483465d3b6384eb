@@ -1,0 +1,28 @@
+web/lib/aiValidation.ts
+  s_39d5bc69090e8b::t_21c2690ce7472e 52
+  s_39d5bc69090e8b::t_7719915fc366cb 24,27-28
+web/.env.example
+  s_39d5bc69090e8b::t_9880028b839f90 26-29
+web/app/api/validate-dataset/route.ts
+  s_39d5bc69090e8b::t_2d984bc33e0fd0 2-3,5-6,28-30,44-66,69-71,73-76
+web/app/api/validate-dataset-gemini/route.ts
+  s_39d5bc69090e8b::t_d93a7a0cd088f2 2,4,8-10,37-51,53-56,58-60
+web/.npmrc
+  s_39d5bc69090e8b::t_b7224440c0dee8 1-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.6",
+  "base_commit_sha": "7606e0249116caaec3be5991d483465d3b6384eb",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
