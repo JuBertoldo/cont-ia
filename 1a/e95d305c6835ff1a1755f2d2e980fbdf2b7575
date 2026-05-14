@@ -1,0 +1,43 @@
+docs/diagramas/03_classes.puml
+  s_39d5bc69090e8b::t_15c82308a480f4 234,236
+  s_39d5bc69090e8b::t_b3cfe8d76cd6b3 90-92,105-107,109-117
+  s_39d5bc69090e8b::t_eb00a53cd79008 219
+  s_39d5bc69090e8b::t_48a1f545fd4390 203
+docs/diagramas/08_pipeline.puml
+  s_39d5bc69090e8b::t_4fd91efa1b3f99 3,21,23-24,26-30,32,34,36,38-43,45,47-54,56,58,60-78
+docs/diagramas/09_perfis.puml
+  s_39d5bc69090e8b::t_d35b4a971dd02e 36
+docs/diagramas/02_atividades.puml
+  s_39d5bc69090e8b::t_343a611f896efb 37-39,41
+docs/diagramas/13_comunicacao_firebase.puml
+  s_39d5bc69090e8b::t_f3bca619090129 149-151
+  s_39d5bc69090e8b::t_ee73696800a35b 91
+  s_39d5bc69090e8b::t_40931e7f00d73b 59
+docs/diagramas/05_implantacao.puml
+  s_39d5bc69090e8b::t_ac8dccbe6b6855 33,36
+docs/diagramas/07_arquitetura.puml
+  s_39d5bc69090e8b::t_dfeb7852bc2ec2 91,94
+  s_39d5bc69090e8b::t_4a39404bc238ab 69
+  s_39d5bc69090e8b::t_db2c217ac700aa 38-42
+docs/diagramas/01_casos_de_uso.puml
+  s_39d5bc69090e8b::t_85f0beb4a1aa0e 37
+docs/diagramas/04_sequencia.puml
+  s_39d5bc69090e8b::t_f187c27e585c29 35-43,46,48
+  s_39d5bc69090e8b::t_f1abf4221541f1 23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.6",
+  "base_commit_sha": "1ae95d305c6835ff1a1755f2d2e980fbdf2b7575",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
