@@ -101,9 +101,11 @@ Cont.IA/
 
 O sistema implementa **4 perfis** com permissões distintas:
 
-### Perfil Usuário (`user`)
-- Realiza scans e vê **seu próprio** histórico
-- Dashboard com seus dados pessoais
+### Perfil Super Admin (`super_admin`)
+- Acesso irrestrito a **todas** as empresas
+- Curadoria do dataset: valida, edita e rejeita correções de labels
+- Visualiza detalhes de qualquer empresa e usuário
+- Acessa painel de todas as empresas cadastradas
 
 ### Perfil Admin (`admin`)
 - Vê inventário de **todos** os usuários da empresa
@@ -112,17 +114,15 @@ O sistema implementa **4 perfis** com permissões distintas:
 - Exporta CSV do inventário completo
 - Abre e acompanha chamados de suporte
 
-### Perfil Super Admin (`super_admin`)
-- Acesso irrestrito a **todas** as empresas
-- Curadoria do dataset: valida, edita e rejeita correções de labels
-- Visualiza detalhes de qualquer empresa e usuário
-- Acessa painel de todas as empresas cadastradas
-
 ### Perfil Support (`support`)
 - **Cadastro por convite** — acesso restrito via link secreto gerado pelo Super Admin
 - Vê e responde chamados de **todas** as empresas
 - Drawer exclusivo: sem acesso ao scanner, histórico ou dados de inventário
 - Atualiza status dos chamados e notifica os admins automaticamente
+
+  ### Perfil Usuário (`user`)
+- Realiza scans e vê **seu próprio** histórico
+- Dashboard com seus dados pessoais
 
 ---
 
