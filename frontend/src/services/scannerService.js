@@ -125,7 +125,7 @@ export async function processScan({
     recordInferenceMetric({
       inferenceMs,
       yoloCount: meta?.pipeline?.yolo_count ?? detections.length,
-      rfdetrCount: meta?.pipeline?.sam_count ?? 0,
+      samCount: meta?.pipeline?.sam_count ?? 0,
       mergedCount: detections.length,
       usuarioId: usuarioId ?? '',
       empresaId: empresaId ?? '',
@@ -160,7 +160,7 @@ export async function processScan({
     recordInferenceMetric({
       inferenceMs: 0,
       yoloCount: 0,
-      rfdetrCount: 0,
+      samCount: 0,
       mergedCount: 0,
       usuarioId: usuarioId ?? '',
       empresaId: empresaId ?? '',

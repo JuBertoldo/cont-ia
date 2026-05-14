@@ -8,7 +8,7 @@ from prometheus_client import Counter, Gauge, Histogram
 detections_total = Counter(
     "contia_detections_total",
     "Total de objetos detectados pelo pipeline",
-    ["source"],  # yolo | rfdetr | merged
+    ["source"],  # yolo | sam | merged
 )
 
 detection_duration_seconds = Histogram(
@@ -20,7 +20,7 @@ detection_duration_seconds = Histogram(
 detection_errors_total = Counter(
     "contia_detection_errors_total",
     "Total de erros no pipeline de detecção",
-    ["source"],  # yolo | rfdetr | timeout | internal
+    ["source"],  # yolo | sam | timeout | internal
 )
 
 active_requests = Gauge(

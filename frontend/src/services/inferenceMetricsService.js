@@ -28,7 +28,7 @@ function getDeviceModel() {
  * @param {{
  *   inferenceMs: number,
  *   yoloCount: number,
- *   rfdetrCount: number,
+ *   samCount: number,
  *   mergedCount: number,
  *   usuarioId: string,
  *   empresaId: string,
@@ -39,7 +39,7 @@ function getDeviceModel() {
 export async function recordInferenceMetric({
   inferenceMs,
   yoloCount,
-  rfdetrCount,
+  samCount,
   mergedCount,
   usuarioId,
   empresaId,
@@ -57,7 +57,7 @@ export async function recordInferenceMetric({
     osVersion: String(Platform.Version),
     inferenceMs,
     yoloCount,
-    rfdetrCount,
+    samCount,
     mergedCount,
     success,
     errorSource,
