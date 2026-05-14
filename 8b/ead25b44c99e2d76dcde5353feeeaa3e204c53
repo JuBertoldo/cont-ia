@@ -1,0 +1,32 @@
+frontend/__tests__/App.smoke.test.js
+  s_39d5bc69090e8b::t_aa359604a316a2 55-57
+frontend/ios/Podfile.lock
+  ai_agent 2632
+frontend/src/services/offlineScanQueueService.js
+  s_39d5bc69090e8b::t_a2314b243004da 11-12,19-20,24,28-29,46-71,144-147,153,156-160,168-169,171-173
+  s_39d5bc69090e8b::t_af78f5ef69923c 164
+frontend/src/services/__tests__/offlineScanQueueService.test.js
+  s_39d5bc69090e8b::t_3b9b3127276be9 12-14,20
+  s_39d5bc69090e8b::t_af78f5ef69923c 15-17
+  s_39d5bc69090e8b::t_7b514096cd52c5 157-158,161-165,168-184
+frontend/package.json
+  s_39d5bc69090e8b::t_27a86b17297e80 42
+frontend/ios/Podfile
+  s_39d5bc69090e8b::t_e5ceb17a89aee9 37-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.6",
+  "base_commit_sha": "8bead25b44c99e2d76dcde5353feeeaa3e204c53",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
