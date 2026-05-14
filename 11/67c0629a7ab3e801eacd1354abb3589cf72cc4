@@ -1,0 +1,26 @@
+web/app/layout.tsx
+  s_39d5bc69090e8b::t_3db17d72345419 3,13-15
+web/app/dashboard/layout.tsx
+  s_39d5bc69090e8b::t_6c92e25277e398 6
+  s_39d5bc69090e8b::t_08edb144207e37 101
+web/app/login/page.tsx
+  s_39d5bc69090e8b::t_2c538ef69ab3b8 3,8,10-14
+web/package.json
+  s_39d5bc69090e8b::t_6ec1c1f883e03e 16-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.6",
+  "base_commit_sha": "1167c0629a7ab3e801eacd1354abb3589cf72cc4",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
