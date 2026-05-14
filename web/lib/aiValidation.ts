@@ -9,9 +9,6 @@
  * - claude: Claude Haiku 4.5, ~$0.001/validação — plano Enterprise
  */
 
-import { getIdToken } from "firebase/auth";
-import { auth } from "./firebase";
-
 export interface ValidationResult {
   valid: boolean;
   suggestedLabel: string;
@@ -20,21 +17,15 @@ export interface ValidationResult {
   provider: "gemini" | "claude";
 }
 
-async function getAuthHeader(): Promise<string> {
-  const user = auth.currentUser;
-  if (!user) throw new Error("Usuário não autenticado");
-  const token = await getIdToken(user);
-  return `Bearer ${token}`;
-}
-
 async function callValidationRoute(
   endpoint: string,
   imageBase64: string,
   label: string,
-  withAuth = false
+  withSecret = false
 ): Promise<ValidationResult> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (withAuth) headers["Authorization"] = await getAuthHeader();
+  // Rota Claude usa segredo interno (INTERNAL_API_SECRET) em vez de Firebase JWT
+  if (withSecret) headers["X-Internal-Secret"] = process.env.NEXT_PUBLIC_INTERNAL_API_SECRET ?? "";
 
   const res = await fetch(endpoint, {
     method: "POST",
@@ -58,7 +49,7 @@ export async function validateDatasetEntry(
   if (provider === "claude") {
     return callValidationRoute("/api/validate-dataset", imageBase64, label, true);
   }
-  return callValidationRoute("/api/validate-dataset-gemini", imageBase64, label);
+  return callValidationRoute("/api/validate-dataset-gemini", imageBase64, label, false);
 }
 
 export function shouldAutoApprove(result: ValidationResult): boolean {

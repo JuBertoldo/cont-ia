@@ -1,27 +1,12 @@
 /**
- * API Route — Validação de dataset com Claude API.
- * Só ativa quando AI_PROVIDER=claude no .env.
- * Mantém a chave Claude no servidor (não exposta ao cliente).
+ * API Route — Validação de dataset com Claude API (fetch nativo, sem SDK).
+ * Mantém a chave Claude no servidor, não exposta ao cliente.
  *
- * Custo estimado: ~$0.001 por validação (Claude Haiku 4.5).
- * Feature exclusiva do plano Enterprise.
+ * Auth: verifica INTERNAL_API_SECRET no header X-Internal-Secret.
+ * Custo: ~$0.001/validação com Claude Haiku. Feature plano Enterprise.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
-import { getAuth } from "firebase-admin/auth";
-import { initializeApp, getApps, cert } from "firebase-admin/app";
-
-// Inicializa Firebase Admin para verificar o token
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    }),
-  });
-}
 
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL ?? "claude-haiku-4-5-20251001";
 
@@ -40,18 +25,10 @@ Responda APENAS com JSON válido:
 `;
 
 export async function POST(req: NextRequest) {
-  // Verifica token Firebase — apenas super_admin pode chamar
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
+  // Proteção por segredo compartilhado — evita chamadas externas ao endpoint
+  const secret = req.headers.get("X-Internal-Secret");
+  if (secret !== process.env.INTERNAL_API_SECRET) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-  try {
-    const decoded = await getAuth().verifyIdToken(authHeader.slice(7));
-    if (decoded.role !== "super_admin") {
-      return NextResponse.json({ error: "Acesso negado — plano Enterprise" }, { status: 403 });
-    }
-  } catch {
-    return NextResponse.json({ error: "Token inválido" }, { status: 401 });
   }
 
   const apiKey = process.env.CLAUDE_API_KEY;
@@ -64,29 +41,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "imageBase64 e label são obrigatórios" }, { status: 400 });
   }
 
-  const client = new Anthropic({ apiKey });
-  const message = await client.messages.create({
-    model: CLAUDE_MODEL,
-    max_tokens: 256,
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "image",
-            source: { type: "base64", media_type: "image/jpeg", data: imageBase64 },
-          },
-          { type: "text", text: VALIDATION_PROMPT(label) },
-        ],
-      },
-    ],
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: 256,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: { type: "base64", media_type: "image/jpeg", data: imageBase64 },
+            },
+            { type: "text", text: VALIDATION_PROMPT(label) },
+          ],
+        },
+      ],
+    }),
   });
 
-  const block = message.content[0];
-  if (block.type !== "text") {
-    return NextResponse.json({ error: "Resposta inesperada da IA" }, { status: 500 });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    return NextResponse.json({ error: err.error?.message ?? "Claude API falhou" }, { status: 502 });
   }
-  const jsonMatch = block.text.trim().match(/\{[\s\S]*\}/);
+
+  const data = await response.json();
+  const text: string = data.content?.[0]?.text ?? "";
+  const jsonMatch = text.trim().match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     return NextResponse.json({ error: "Resposta sem JSON válido" }, { status: 500 });
   }
