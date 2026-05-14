@@ -304,7 +304,55 @@ Situação: **apenas desenvolvimento local** — não entra em produção.
 
 ---
 
-## 12. Ferramentas sem custo (open source)
+## 12. IA de Validação de Dataset (Claude API / Gemini)
+
+**Função:** validar automaticamente se o label de um scan corresponde à imagem antes de entrar no dataset de treino. Reduz trabalho manual do Super Admin e melhora a qualidade do modelo.
+
+**Arquitetura:** camada de abstração com variável de ambiente `AI_PROVIDER=gemini|claude`. Troca de provedor sem alterar lógica de negócio.
+
+### 12.1 Custo por provedor
+
+| Provedor | Modelo | Custo por validação | 500 validações/mês | 5.000 validações/mês |
+|----------|--------|--------------------|--------------------|----------------------|
+| **Gemini Flash** | gemini-1.5-flash | **$0** (free tier) | **$0** | **$0** |
+| **Claude Haiku 4.5** | claude-haiku-4-5 | ~$0.001 | ~$0.50 | ~$5 |
+| **Claude Sonnet 4.6** | claude-sonnet-4-6 | ~$0.008 | ~$4 | ~$40 |
+
+> Estratégia: **Gemini Flash** como provedor padrão (free tier generoso: 1M tokens/dia).  
+> Claude Haiku entra quando volume superar o free tier ou quando precisar de maior precisão.
+
+### 12.2 Custo mensal estimado por faixa de clientes
+
+| Faixa | Validações/mês | Gemini Flash | Claude Haiku | Claude Sonnet |
+|-------|---------------|-------------|-------------|--------------|
+| até 5 empresas | ~500 | **$0** | ~$0.50 | ~$4 |
+| 5–20 empresas | ~2.000 | **$0** | ~$2 | ~$16 |
+| 20–50 empresas | ~5.000 | **$0** | ~$5 | ~$40 |
+| 50–200 empresas | ~20.000 | ~$2 (acima do free) | ~$20 | ~$160 |
+
+### 12.3 Regra de negócio por plano
+
+| Plano | Validação de dataset | Provedor | Custo repassado |
+|-------|---------------------|----------|----------------|
+| **Starter** | Manual (Super Admin) | — | $0 |
+| **Business** | Semi-automática (regras heurísticas) | Sem IA externa | $0 |
+| **Enterprise** | IA automática (Gemini/Claude) + relatório de qualidade | Gemini Flash → Claude | Absorvido na margem |
+
+> A validação IA é **feature exclusiva do plano Enterprise** (R$997/mês).  
+> O custo de Claude Haiku (~$5–20/mês para 20–50 empresas Enterprise) é absorvido  
+> pela margem de 92% do plano, sem impacto no preço ao cliente.
+
+### 12.4 Ponto de migração Gemini → Claude
+
+| Evento | Ação |
+|--------|------|
+| Volume de validações < 1M tokens/dia | Continuar com Gemini Flash ($0) |
+| Volume supera free tier OU precisão insatisfatória | Migrar para Claude Haiku ($0.001/val) |
+| Clientes Enterprise > 50 OU validações > 50k/mês | Avaliar Claude Sonnet para maior precisão |
+
+---
+
+## 13. Ferramentas sem custo (open source)
 
 | Ferramenta | Licença | Custo |
 |------------|---------|-------|
@@ -339,11 +387,11 @@ Fórmula: **Custo total ÷ nº clientes × margem mínima 5x**
 
 #### Cenário: 10 clientes pagantes (mix Starter + Business)
 
-| Plano | Usuários | Scans/mês | Custo/cliente (estimado) | Preço sugerido | Margem |
-|-------|----------|-----------|--------------------------|----------------|--------|
-| **Starter** | até 5 | 300 | ~R$ 20 | **R$ 197/mês** | ~90% |
-| **Business** | até 20 | 1.500 | ~R$ 35 | **R$ 497/mês** | ~93% |
-| **Enterprise** | ilimitado | ilimitado | ~R$ 80 | **R$ 997/mês** | ~92% |
+| Plano | Usuários | Scans/mês | Validação IA | Custo/cliente | Preço sugerido | Margem |
+|-------|----------|-----------|-------------|---------------|----------------|--------|
+| **Starter** | até 5 | 300 | Manual | ~R$ 20 | **R$ 197/mês** | ~90% |
+| **Business** | até 20 | 1.500 | Heurística | ~R$ 35 | **R$ 497/mês** | ~93% |
+| **Enterprise** | ilimitado | ilimitado | IA (Gemini/Claude) | ~R$ 90 | **R$ 997/mês** | ~91% |
 
 #### Break-even por número de clientes
 
@@ -366,14 +414,18 @@ Fórmula: **Custo total ÷ nº clientes × margem mínima 5x**
 
 ---
 
-### Alerta: os dois custos que mudam o jogo
+### Alerta: os custos que mudam o jogo
 
 | Custo | Quando aparece | Impacto |
 |-------|---------------|---------|
 | **Licença YOLO** | Ao cobrar o 1º cliente | +R$ 1.650–2.750/mês → exige 8–14 clientes Starter para cobrir |
-> Se resolver a licença YOLO via modelo próprio (dataset que já está sendo coletado),  
-> os preços propostos são sustentáveis e com margem saudável desde o 2º cliente.  
-> MobileSAM não adiciona custo — elimina o risco de $249/mês que havia com Roboflow.
+| **Claude API (Haiku)** | Quando volume superar free tier Gemini | +~R$ 10–110/mês (absorvido na margem Enterprise) |
+| **Claude API (Sonnet)** | Escala acima de 50 empresas Enterprise | +~R$ 220/mês → ainda dentro da margem de 91% |
+
+> Estratégia: começar com **Gemini Flash gratuito** → migrar para **Claude Haiku** quando necessário.  
+> O custo de IA de validação nunca ultrapassa 5% da receita do plano Enterprise.  
+> Se resolver a licença YOLO via modelo próprio, os preços são sustentáveis desde o 2º cliente.  
+> MobileSAM não adiciona custo — pipeline 100% local.
 
 ---
 
