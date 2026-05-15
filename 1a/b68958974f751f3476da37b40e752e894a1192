@@ -1,0 +1,25 @@
+frontend/src/screens/inventory/ScannerScreen.js
+  s_39d5bc69090e8b::t_fb7ad6f4439ac9 36
+  s_39d5bc69090e8b::t_208675cc9ba128 334-340
+  s_39d5bc69090e8b::t_dbb7c886f8ff87 350-358,360-367
+CONTRIBUTING.md
+  s_39d5bc69090e8b::t_5d9aec1f9c40c9 601
+  s_39d5bc69090e8b::t_fd80a73f5229d1 19
+  s_39d5bc69090e8b::t_26301b89851161 574-600,602-619
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.6",
+  "base_commit_sha": "1ab68958974f751f3476da37b40e752e894a1192",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
