@@ -16,6 +16,7 @@
 8. [**Regra de Ouro — Novos Serviços**](#8-regra-de-ouro--novos-serviços)
 9. [Variáveis de ambiente](#9-variáveis-de-ambiente)
 10. [Troubleshooting](#10-troubleshooting)
+11. [Rodando o painel web (Admin)](#11-rodando-o-painel-web-admin)
 
 ---
 
@@ -566,6 +567,52 @@ firebase setup:emulators:storage
 # Instale o react-native-config se não estiver instalado
 cd frontend && npm install react-native-config
 cd ios && pod install
+```
+
+---
+
+## 11. Rodando o painel web (Admin)
+
+Painel Next.js para Super Admin e Suporte Técnico. Requer internet aberta para `npm install` (o registry corporativo bloqueia pacotes Next.js).
+
+### 11.1 Configuração
+
+```bash
+cd web
+cp .env.example .env.local
+# Preencha com as mesmas chaves Firebase do app mobile
+# Adicione GEMINI_API_KEY (free tier: console.cloud.google.com)
+```
+
+### 11.2 Instalação e execução
+
+```bash
+# Instalar dependências (fora da rede corporativa)
+npm install
+
+# Rodar em desenvolvimento
+npm run dev
+# Acessa: http://localhost:3000
+```
+
+### 11.3 Acesso
+
+| Perfil | Acesso | Páginas disponíveis |
+| --- | --- | --- |
+| `super_admin` | Todas as páginas | Dashboard, Empresas, Usuários, Financeiro, Licenças, Dataset, Detecções, Métricas, Chamados |
+| `support` | Apenas chamados | Chamados |
+
+> Login com o mesmo e-mail/senha do app mobile. Outros perfis (`user`, `admin`) são bloqueados na entrada.
+
+### 11.4 Validação IA do dataset
+
+Por padrão usa **Gemini Flash** (free tier). Para usar Claude (plano Enterprise):
+
+```bash
+# .env.local
+NEXT_PUBLIC_AI_PROVIDER=claude
+CLAUDE_API_KEY=sua_chave
+INTERNAL_API_SECRET=string_aleatoria_segura
 ```
 
 ---

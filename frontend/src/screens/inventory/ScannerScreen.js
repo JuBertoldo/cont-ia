@@ -33,6 +33,7 @@ import { auth, storage } from '../../config/firebaseConfig';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { getUserProfile } from '../../services/authService';
 import { reverseGeocode } from '../../utils/geocoding';
+import logger from '../../utils/logger';
 
 const CROP_SIZE = 58;
 
@@ -330,16 +331,13 @@ export default function ScannerScreen() {
   };
 
   const uploadPhoto = async (base64, uid) => {
-    try {
-      const path = `scans/${uid}/${Date.now()}.jpg`;
-      const storageRef = ref(storage, path);
-      await uploadString(storageRef, base64, 'base64', {
-        contentType: 'image/jpeg',
-      });
-      return await getDownloadURL(storageRef);
-    } catch (_err) {
-      return '';
-    }
+    if (!base64 || !uid) return '';
+    const path = `scans/${uid}/${Date.now()}.jpg`;
+    const storageRef = ref(storage, path);
+    await uploadString(storageRef, base64, 'base64', {
+      contentType: 'image/jpeg',
+    });
+    return getDownloadURL(storageRef);
   };
 
   // Passo 2: usuário confirma → aplica correções, faz upload e salva no Firestore
@@ -349,7 +347,24 @@ export default function ScannerScreen() {
     try {
       const result = applyOverrides();
       const { summary, detections, yoloMeta, base64, correcoes } = result;
-      const fotoUrl = base64 ? await uploadPhoto(base64, currentUser.uid) : '';
+
+      // Upload da foto — falha não impede salvar a contagem
+      let fotoUrl = '';
+      if (base64) {
+        try {
+          fotoUrl = await uploadPhoto(base64, currentUser.uid);
+        } catch (uploadErr) {
+          logger.error(
+            'Falha ao fazer upload da foto de auditoria:',
+            uploadErr,
+          );
+          // Salva sem foto para não perder o scan — avisa o usuário
+          Alert.alert(
+            'Foto não enviada',
+            'A contagem foi salva, mas a foto de auditoria não pôde ser carregada. Verifique a conexão.',
+          );
+        }
+      }
 
       await createInventoryItem({
         scanId: `scan_${currentUser.uid}_${Date.now()}`,
