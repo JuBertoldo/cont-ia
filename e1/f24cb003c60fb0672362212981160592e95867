@@ -1,0 +1,19 @@
+backend/app/services/scan_quality_service.py
+  s_39d5bc69090e8b::t_4e78d204f1a023 4-5,8-20,41,43-44,46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "e1f24cb003c60fb0672362212981160592e95867",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
