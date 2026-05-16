@@ -1,9 +1,22 @@
 """
 Serviço de avaliação de qualidade de scan.
 
-Implementação mínima para passar nos testes (fase Green do ciclo TDD).
-Refatoração posterior pode adicionar persistência, alertas, etc.
+Determina se um scan tem qualidade suficiente para entrar no dataset de treino
+e para exibição confiável no histórico do operador.
 """
+
+_THRESHOLDS = {"baixa": 0, "media": 1, "alta": 5}
+_SCORE_BASE = {"baixa": 0.2, "media": 0.6, "alta": 1.0}
+_CONFIANCA_MINIMA = 0.50
+_PENALIZACAO = {"alta": "media", "media": "baixa"}
+
+
+def _nivel_por_quantidade(n: int) -> str:
+    if n >= _THRESHOLDS["alta"]:
+        return "alta"
+    if n >= _THRESHOLDS["media"]:
+        return "media"
+    return "baixa"
 
 
 def avaliar_qualidade_scan(
@@ -25,21 +38,12 @@ def avaliar_qualidade_scan(
             score (float): pontuação normalizada [0.0, 1.0]
             ausente_foto (bool): True se foto não foi enviada
     """
-    n = len(deteccoes)
+    nivel = _nivel_por_quantidade(len(deteccoes))
 
-    if n == 0:
-        nivel = "baixa"
-    elif n < 5:
-        nivel = "media"
-    else:
-        nivel = "alta"
+    if confianca_media < _CONFIANCA_MINIMA and nivel in _PENALIZACAO:
+        nivel = _PENALIZACAO[nivel]
 
-    # confiança baixa penaliza um nível
-    if confianca_media < 0.50 and nivel != "baixa":
-        nivel = "baixa" if nivel == "media" else "media"
-
-    score_map = {"baixa": 0.2, "media": 0.6, "alta": 1.0}
-    score = score_map[nivel] * min(confianca_media + 0.1, 1.0)
+    score = _SCORE_BASE[nivel] * min(confianca_media + 0.1, 1.0)
 
     return {
         "qualidade": nivel,
