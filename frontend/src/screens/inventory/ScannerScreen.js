@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -216,18 +216,7 @@ export default function ScannerScreen() {
     return unsubscribe;
   }, []);
 
-  useEffect(() => {
-    fetchLocation();
-    const loadProfile = async () => {
-      if (!auth.currentUser) return;
-      const profile = await getUserProfile(auth.currentUser.uid);
-      setEmpresaId(profile?.empresaId || null);
-      setUsuarioRole(profile?.role || ROLES.USER);
-    };
-    loadProfile();
-  }, []);
-
-  const fetchLocation = async () => {
+  const fetchLocation = useCallback(async () => {
     setGpsLoading(true);
     setLocationName('');
     const coords = await getLocation();
@@ -237,9 +226,20 @@ export default function ScannerScreen() {
       setLocationName(name || '');
     }
     setGpsLoading(false);
-  };
+  }, []);
 
-  const openGallery = async () => {
+  useEffect(() => {
+    fetchLocation();
+    const loadProfile = async () => {
+      if (!auth.currentUser) return;
+      const profile = await getUserProfile(auth.currentUser.uid);
+      setEmpresaId(profile?.empresaId || null);
+      setUsuarioRole(profile?.role || ROLES.USER);
+    };
+    loadProfile();
+  }, [fetchLocation]);
+
+  const openGallery = useCallback(async () => {
     if (actionInProgressRef.current) return;
     actionInProgressRef.current = true;
     try {
@@ -263,9 +263,9 @@ export default function ScannerScreen() {
     } finally {
       actionInProgressRef.current = false;
     }
-  };
+  }, []);
 
-  const openCamera = async () => {
+  const openCamera = useCallback(async () => {
     if (actionInProgressRef.current) return;
     actionInProgressRef.current = true;
     try {
@@ -289,7 +289,7 @@ export default function ScannerScreen() {
     } finally {
       actionInProgressRef.current = false;
     }
-  };
+  }, []);
 
   // Passo 1: só detecta, mostra modal
   const handleDetect = async () => {
@@ -408,12 +408,12 @@ export default function ScannerScreen() {
     }
   };
 
-  const handleCancelModal = () => {
+  const handleCancelModal = useCallback(() => {
     setModalVisible(false);
     setDetectionResult(null);
     setLabelOverrides({});
     setEditingLabel(null);
-  };
+  }, []);
 
   const startEditLabel = (originalLabel, currentDisplay) => {
     setEditingLabel(originalLabel);
@@ -489,6 +489,8 @@ export default function ScannerScreen() {
         <TouchableOpacity
           onPress={() => navigation?.goBack()}
           style={styles.backBtn}
+          accessibilityLabel="Voltar"
+          accessibilityRole="button"
         >
           <Ionicons name="arrow-back" size={26} color={COLORS.PRIMARY} />
         </TouchableOpacity>
@@ -552,6 +554,8 @@ export default function ScannerScreen() {
           style={styles.btnSecondary}
           onPress={openCamera}
           disabled={detecting}
+          accessibilityLabel="Abrir câmera"
+          accessibilityRole="button"
         >
           <Ionicons name="camera-outline" size={18} color={COLORS.WHITE} />
           <Text style={styles.btnSecondaryText}>Câmera</Text>
@@ -560,6 +564,8 @@ export default function ScannerScreen() {
           style={styles.btnSecondary}
           onPress={openGallery}
           disabled={detecting}
+          accessibilityLabel="Abrir galeria de fotos"
+          accessibilityRole="button"
         >
           <Ionicons name="images-outline" size={18} color={COLORS.WHITE} />
           <Text style={styles.btnSecondaryText}>Galeria</Text>
@@ -570,6 +576,10 @@ export default function ScannerScreen() {
         style={styles.btnPrimary}
         onPress={handleDetect}
         disabled={detecting}
+        accessibilityLabel={
+          detecting ? 'Identificando itens' : 'Identificar e contar itens'
+        }
+        accessibilityRole="button"
       >
         {detecting ? (
           <ActivityIndicator color={COLORS.BLACK} />

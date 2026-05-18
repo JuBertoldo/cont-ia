@@ -60,3 +60,12 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "raise NotImplementedError",
 ]
+
+# ── Mutation Testing — mutmut ─────────────────────────────────────────────────
+# Instalar (fora da rede ML): pip install mutmut
+# Rodar: mutmut run && mutmut results
+# Relatório HTML: mutmut html  (gera html/)
+[tool.mutmut]
+paths_to_mutate = "app/services/scan_quality_service.py"
+runner = "python -m pytest tests/test_scan_quality_service.py -x -q --no-header"
+tests_dir = "tests/"
