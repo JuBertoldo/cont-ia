@@ -1,7 +1,7 @@
 """
 Testes unitários para app.services.sam_service.
 
-MobileSAM é sempre mockado — nenhum checkpoint .pt é necessário.
+ultralytics.SAM é sempre mockado — nenhum checkpoint .pt é necessário.
 """
 
 from unittest.mock import MagicMock, patch
@@ -13,11 +13,11 @@ import app.services.sam_service as svc
 
 
 @pytest.fixture(autouse=True)
-def reset_predictor():
-    """Garante que o singleton _predictor seja limpo entre os testes."""
-    svc._predictor = None
+def reset_model():
+    """Garante que o singleton _model seja limpo entre os testes."""
+    svc._model = None
     yield
-    svc._predictor = None
+    svc._model = None
 
 
 def make_image_rgb(h: int = 64, w: int = 64) -> np.ndarray:
@@ -32,33 +32,26 @@ def test_segment_retorna_lista_vazia_sem_boxes():
     assert result == []
 
 
-@patch("app.services.sam_service.get_predictor")
-def test_segment_retorna_um_resultado_por_box(mock_get_predictor):
-    predictor = MagicMock()
-    predictor.model.parameters.return_value = iter([MagicMock(device="cpu")])
-
-    h, w = 64, 64
+@patch("app.services.sam_service._get_sam_model")
+def test_segment_retorna_um_resultado_por_box(mock_get_model):
     n_boxes = 3
+    h, w = 64, 64
+
+    fake_mask = MagicMock()
+    fake_mask.cpu.return_value.numpy.return_value = np.zeros((h, w), dtype=bool)
+
+    fake_polygon = np.array([[10.0, 20.0], [30.0, 20.0], [30.0, 50.0]])
+
     fake_masks = MagicMock()
-    fake_masks.__iter__ = MagicMock(
-        return_value=iter(
-            [MagicMock(side_effect=lambda i: np.zeros((h, w), dtype=bool)) for _ in range(n_boxes)]
-        )
-    )
+    fake_masks.data = [fake_mask] * n_boxes
+    fake_masks.xy = [fake_polygon] * n_boxes
 
-    mask_tensor = MagicMock()
-    mask_tensor.__getitem__ = MagicMock(
-        return_value=MagicMock(cpu=lambda: MagicMock(numpy=lambda: np.zeros((h, w), dtype=bool)))
-    )
-    score_tensor = MagicMock()
-    score_tensor.__getitem__ = MagicMock(return_value=MagicMock(item=lambda: 0.9))
+    fake_result = MagicMock()
+    fake_result.masks = fake_masks
 
-    masks_list = [mask_tensor] * n_boxes
-    scores_list = [score_tensor] * n_boxes
-
-    predictor.predict_torch.return_value = (masks_list, scores_list, None)
-    predictor.transform.apply_boxes_torch.return_value = MagicMock()
-    mock_get_predictor.return_value = predictor
+    mock_model = MagicMock()
+    mock_model.predict.return_value = [fake_result]
+    mock_get_model.return_value = mock_model
 
     boxes = [[0.0, 0.0, 10.0, 10.0]] * n_boxes
     result = svc.segment_from_boxes(make_image_rgb(h, w), boxes)
@@ -70,16 +63,24 @@ def test_segment_retorna_um_resultado_por_box(mock_get_predictor):
         assert "sam_score" in item
 
 
-def test_mask_to_polygon_retorna_lista_vazia_para_mascara_vazia():
-    mask = np.zeros((32, 32), dtype=bool)
-    polygon = svc._mask_to_polygon(mask)
-    assert polygon == []
+@patch("app.services.sam_service._get_sam_model")
+def test_segment_retorna_lista_vazia_quando_masks_none(mock_get_model):
+    fake_result = MagicMock()
+    fake_result.masks = None
+
+    mock_model = MagicMock()
+    mock_model.predict.return_value = [fake_result]
+    mock_get_model.return_value = mock_model
+
+    result = svc.segment_from_boxes(make_image_rgb(), [[0.0, 0.0, 10.0, 10.0]])
+    assert result == []
 
 
-def test_mask_to_polygon_retorna_pontos_para_regiao_preenchida():
-    mask = np.zeros((64, 64), dtype=bool)
-    mask[10:30, 10:40] = True  # retângulo preenchido
-    polygon = svc._mask_to_polygon(mask)
-    assert len(polygon) >= 3  # pelo menos um triângulo
-    for point in polygon:
-        assert len(point) == 2  # [x, y]
+@patch("app.services.sam_service._get_sam_model")
+def test_segment_retorna_lista_vazia_quando_results_vazio(mock_get_model):
+    mock_model = MagicMock()
+    mock_model.predict.return_value = []
+    mock_get_model.return_value = mock_model
+
+    result = svc.segment_from_boxes(make_image_rgb(), [[0.0, 0.0, 10.0, 10.0]])
+    assert result == []
