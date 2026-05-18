@@ -34,7 +34,7 @@ jobs:
         run: pytest tests/ --cov=app --cov-report=xml --cov-fail-under=80
 
       - name: Upload cobertura
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         if: always()
         with:
           files: backend/coverage.xml
