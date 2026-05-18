@@ -1,0 +1,21 @@
+.github/workflows/docker.yml
+  s_39d5bc69090e8b::t_cebc4da94e5de0 26,29,37,45
+.github/workflows/ci.yml
+  s_39d5bc69090e8b::t_8ae61311848150 37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "b5e65b85a52b80ffe34aea8cf60016f60017159a",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
