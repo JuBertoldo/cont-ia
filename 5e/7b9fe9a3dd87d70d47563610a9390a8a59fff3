@@ -1,0 +1,48 @@
+backend/tests/load/README.md
+  s_39d5bc69090e8b::t_511705f7d075dc 1-51
+frontend/src/screens/inventory/__tests__/HistoryScreen.test.js
+  s_39d5bc69090e8b::t_5b9e1af77ac109 7,47,67-70,80-81,85-86,108-109,111,119
+  s_39d5bc69090e8b::t_5591499cb42bd8 1-2,4-6,8-15,17,19-46,49-55,57-61,64-66,71-74,77-78,82-84,87-88,104-105,110,116-118,123-126
+  s_39d5bc69090e8b::t_2ce7d32126cd7f 3,56,62-63,89-90,94-97,102-103
+  s_39d5bc69090e8b::t_ea6ebf29be351f 16,18,48,75-76,79,91-93,98-101,106-107,112-115,120-122
+backend/app/core/logging.py
+  ai_agent 48
+  s_39d5bc69090e8b::t_eaf541e616ce81 1-11,18-26,28-34,40-47,49
+backend/pyproject.toml
+  s_39d5bc69090e8b::t_d59080fac43b5a 63-71
+.secrets.baseline
+  s_39d5bc69090e8b::t_74635606ba59cb 1-25
+backend/tests/load/locustfile.py
+  s_39d5bc69090e8b::t_106903ae7c83ae 1-104
+frontend/src/screens/profile/__tests__/ProfileScreen.test.js
+  s_39d5bc69090e8b::t_612f4ed8f323e1 3,8,19-22,71-75,80-82,86-88,94-97,101,113-117,120-121,123
+  s_39d5bc69090e8b::t_d92087884711b7 1-2,4-7,9-18,23-65,67-70,76-79,83-85,91-93,98,100,102,111-112,118,122,136-137
+  s_39d5bc69090e8b::t_5d90ba9e35198a 66,89-90,99,103-110,119,124-135
+frontend/src/screens/inventory/ScannerScreen.js
+  s_39d5bc69090e8b::t_3186555e0c31f7 292
+  s_39d5bc69090e8b::t_45ec73f4128ab3 411,416
+  s_39d5bc69090e8b::t_d8f00d7162a0bc 230-240
+  s_39d5bc69090e8b::t_bd4814eaea358b 579-581
+  s_39d5bc69090e8b::t_f83c86b75dd65f 492-493
+  s_39d5bc69090e8b::t_39523a7cbf85c7 557-558,567-568,582
+  s_39d5bc69090e8b::t_834346f5f272cb 219
+  s_39d5bc69090e8b::t_288e210accc1dd 266,268
+  s_39d5bc69090e8b::t_a87d41d5944e22 229,242
+  s_39d5bc69090e8b::t_b31bea9d677760 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "5e7b9fe9a3dd87d70d47563610a9390a8a59fff3",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
