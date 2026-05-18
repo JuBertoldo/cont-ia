@@ -10,7 +10,8 @@ sentry-sdk[fastapi]==2.19.2
 httpx==0.27.2
 
 # Segmentação — YOLO11 + MobileSAM pipeline
-mobile-sam==1.0.0
+# mobile-sam instalado via Dockerfile com --ignore-requires-python
+# (mobile-sam==1.0.0 declara Requires-Python<=3.11 mas funciona no 3.11.x)
 opencv-python-headless==4.10.0.84
 
 # Testing
