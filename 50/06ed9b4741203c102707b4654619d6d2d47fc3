@@ -1,0 +1,21 @@
+backend/requirements.txt
+  s_39d5bc69090e8b::t_573fce56753160 13-14
+backend/Dockerfile
+  s_39d5bc69090e8b::t_59c8a2c12eb9ff 14-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "5006ed9b4741203c102707b4654619d6d2d47fc3",
+  "prompts": {},
+  "sessions": {
+    "s_39d5bc69090e8b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8ea401d2-1d63-4d77-a97d-e62dc2b4520a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "JuBertoldo <julianabertoldo@hotmail.com>"
+    }
+  }
+}
