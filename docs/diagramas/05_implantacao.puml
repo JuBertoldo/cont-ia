@@ -55,7 +55,14 @@ node "Observabilidade" as OBS {
     component "GET /metrics\n(Prometheus scraping)" as PROM
 }
 
+node "Painel Web (Admin)\n(Next.js — navegador)" as WEB {
+    component "Super Admin Dashboard\n(empresas, usuarios, chamados,\nfinanceiro, dataset, metricas)" as WEBADMIN
+    component "Suporte Tecnico\n(fila de chamados, SLA)" as WEBSUPPORT
+}
+
 APP --> API : HTTPS\nPOST /v1/detect\n(Base64 + JWT)
+WEB --> FS : Firebase SDK\n(Firestore — mesmo projeto)
+WEB --> AUTH : Firebase SDK\n(login super_admin / support)
 API --> FS : Firebase Admin SDK
 APP --> FS : Firebase SDK\n(Firestore)
 APP --> STORAGE : Firebase SDK\n(Upload imagem)

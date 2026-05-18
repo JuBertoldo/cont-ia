@@ -63,18 +63,27 @@ node "Firebase\n(Google Cloud)" as FIREBASE {
     component "Firebase Auth\n(JWT — email/password)" as AUTH
 }
 
+' ── Painel Web (Admin) ───────────────────────────────────────────────────────
+
+node "Painel Web\n(Next.js — navegador)" as WEB {
+    component "Super Admin\n(empresas, financeiro, dataset,\nmetricas, licencas)" as WEBSA
+    component "Suporte Tecnico\n(chamados, SLA)" as WEBSUP
+}
+
 ' ── Conexoes ─────────────────────────────────────────────────────────────────
 
 APP --> TUNNEL : HTTPS POST /v1/detect\n(Base64 + Bearer JWT)
 API --> APP : JSON {detections[{bbox, mask_polygon}], meta}
 
 APP --> AUTH : login / getIdToken
+WEB --> AUTH : login super_admin / support
 AUTH --> API : verify_id_token() [Admin SDK]
 
 API --> GMAIL : smtplib STARTTLS\n(alerta de ticket)
 API --> FCM_PUSH : Firebase Admin SDK\n(push notification)
 
 APP --> FS : onSnapshot / addDoc\n(tempo real)
+WEB --> FS : onSnapshot / getDocs\n(dados administrativos)
 APP --> STORAGE : uploadString(base64)\ngetDownloadURL()
 
 note right of APP

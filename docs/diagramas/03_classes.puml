@@ -104,11 +104,18 @@ class YoloModel {
 
 class SamService {
     +modelPath: String
-    +device: String
     --
-    +carregarPredictor(): SamPredictor
-    +segmentarPorBoxes(image, boxes): List<MascaraSegmentacao>
-    +mascaraParaPoligono(mask): List<Ponto>
+    +_get_sam_model(): ultralytics.SAM
+    +segment_from_boxes(image_rgb, boxes): List<MascaraSegmentacao>
+}
+
+class ScanQualityService {
+    --
+    +avaliar_qualidade_scan(deteccoes, confianca_media, foto_url): dict
+    --
+    -- Regras de negocio:
+    -- 0 det → baixa | 1-4 → media | 5+ → alta
+    -- confianca < 0.5 → penaliza nivel
 }
 
 class MascaraSegmentacao {
@@ -234,6 +241,7 @@ DeteccaoService --> YoloModel : usa
 DeteccaoService --> SamService : usa
 DeteccaoService --> ItemDetectado : retorna
 DeteccaoService --> MascaraSegmentacao : gera
+RegistroContagem --> ScanQualityService : avalia qualidade
 Usuario --> Role : possui
 Usuario --> StatusUsuario : possui
 ItemDetectado --> SourceDeteccao : origina de

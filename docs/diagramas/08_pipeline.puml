@@ -44,20 +44,19 @@ partition "Passo 1 — YOLO11 (detecção)" {
 
 if (Alguma detecção encontrada?) then (Sim)
 
-    partition "Passo 2 — MobileSAM (segmentação)" {
-        :Passar image_rgb + lista de bbox\ncomo box prompts para o MobileSAM;
+    partition "Passo 2 — SAM via ultralytics (segmentação)" {
+        :Passar image_rgb + lista de bbox\ncomo box prompts para o SAM;
 
         note right
-          MobileSAM (ViT-Tiny, 38 MB)
+          ultralytics.SAM — mesmo pacote do YOLO11
           100% local — sem API externa
-          Checkpoint: /app/mobile_sam.pt
+          Checkpoint: /app/mobile_sam.pt (38 MB)
+          Sem dependência extra no requirements.txt
         end note
 
-        :Transformar boxes para escala do modelo;
+        :model.predict(\n  source=image_rgb,\n  bboxes=boxes,\n  verbose=False\n);
 
-        :predict_torch(\n  boxes=transformed_boxes,\n  multimask_output=False\n);
-
-        :Para cada máscara retornada:\n• Converter ndarray → contorno (cv2.findContours)\n• Simplificar polígono (approxPolyDP ε=0.5%)\n• Calcular área em pixels²\n• Retornar sam_score (qualidade prevista);
+        :Para cada máscara retornada:\n• Polígono via results[0].masks.xy (pronto, sem OpenCV)\n• Calcular área via masks.data.sum()\n• sam_score: 1.0 (ultralytics não expõe IoU diretamente);
     }
 
     :Combinar YOLO + SAM por índice:\n{label, confidence, bbox,\nmask_polygon, mask_area, source: "yolo+sam"};
